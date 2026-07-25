@@ -415,6 +415,10 @@ const VOICE_SPEC=[
   // At or above 0.09 it becomes a real pause and is silenced, which is the old behaviour and
   // what `off` restores.
   {k:'wgap', lo:0.015,  hi:0.30,    d:0.045, off:0.14, p8:1,},
+  // Phase 9. The time constant of a critically damped articulator. 0 tracks the keyframes
+  // exactly, which is every version of this engine until now; anything above 0 means the tract
+  // has inertia and stops being able to arrive everywhere it is asked to.
+  {k:'artT', lo:0,      hi:0.06,    d:0, off:0,},
 ];
 const VOICES = {
   // Measured from a real goal cry: the pitch falls the whole way (158 -> 93 Hz) and the
@@ -486,7 +490,7 @@ const VOICE_GROUPS = {
   source: ['rd','press','jit','brth','folds','damp','lipR'],
   pitch:  ['f0a','f0b','f0c','pert'],
   stress: ['wkdur','wklev','acc'],
-  rhythm: ['per','drawl','glide','stopT','vlen','coda','fnl','poly','stopVc','apw','gcap','onset','wgap'],
+  rhythm: ['per','drawl','glide','stopT','vlen','coda','fnl','poly','stopVc','apw','gcap','onset','wgap','artT'],
   tract:  ['sect','open','burst','hiss'],
 };
 

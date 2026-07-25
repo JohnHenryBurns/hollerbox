@@ -1213,6 +1213,54 @@ check("index.html's engine URLs carry the current version token", () => {
                             : `all three at ?v=${want}` };
 });
 
+// ── Phase 9: the articulators can be given mass ────────────────────────────
+check("artT bounds articulator speed and produces undershoot", () => {
+  const P = H.P, S = require(__dirname + "/../engine/spelling.js"), bad = [];
+  const V = P.VOICES.john.v, n = Math.round(V.sect);
+  const r = S.g2p("I love my daughter");
+  // Shipped OFF. This check exists so the machinery cannot rot while it is off, and so the
+  // trade-off it carries stays measured rather than remembered.
+  const run = tau => {
+    const v = { ...P.defaultVoice(), ...V, artT: tau };
+    const W = P.buildWord(r.ph, { D: Math.max(0.8, r.ph.length*v.per), n, stress: r.stress,
+                                  pros: v, glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    const p = H.makeProcessor(n);
+    p.port.onmessage({ data: { type: "voice", v } });
+    p.port.onmessage({ data: { type: "goal",
+      seq: { keys: W.keys, f0: P.buildF0(W.end, v, { stress: r.stress, seg: W.seg }), end: W.end } } });
+    const out = [new Float32Array(128)];
+    let peak = 0, miss = 0, cnt = 0, seal = 9, prev = null;
+    for (let b = 0; b < Math.ceil(W.end*H.SR/128); b++) {
+      p.process([], [out]);
+      const t = b*128/H.SR;
+      let cl = 9, d = 0, e = 0;
+      for (let i = 1; i < n-1; i++) if (p.diam[i] < cl) cl = p.diam[i];
+      for (let i = 0; i < n; i++) { if (prev) d += Math.abs(p.diam[i]-prev[i]); e += Math.abs(p.diam[i]-p.tgt[i]); }
+      if (prev) peak = Math.max(peak, d*(H.SR/128));
+      miss += e; cnt++; prev = Float64Array.from(p.diam);
+      for (const s of W.seg) if (P.STOP_KEYS.includes(s.sym) && t >= s.a && t <= s.b) seal = Math.min(seal, cl);
+    }
+    return { peak, miss: miss/cnt, seal };
+  };
+  const off = run(0), on = run(0.025);
+  // 1. Off is exact tracking — the behaviour of every version before this.
+  if (off.miss > 1e-9) bad.push(`artT=0 does not track exactly (miss ${off.miss.toFixed(3)})`);
+  // 2. On, the tract is genuinely slower AND genuinely falls short. Both, or it is not doing
+  //    the thing: a filter that only slowed it would not produce undershoot, and undershoot
+  //    without a speed bound would just be a wrong target.
+  if (!(on.peak < off.peak*0.5)) bad.push(`artT=0.025 barely slows it (${on.peak.toFixed(0)} vs ${off.peak.toFixed(0)})`);
+  if (!(on.miss > 2)) bad.push(`artT=0.025 produces no undershoot (${on.miss.toFixed(2)})`);
+  // 3. And stops still SEAL, because a closure that is not reached is not a reduced stop, it
+  //    is a different sound. That works only because a closure target is aimed past the
+  //    surface and contact clamps it — without that, /d/ and /t/ reach 0.308 against a 0.14
+  //    requirement and the stop simply stops existing.
+  if (!(on.seal < 0.14)) bad.push(`stops no longer seal under artT=0.025 (${on.seal.toFixed(3)})`);
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ")
+               : `off: ${off.peak.toFixed(0)}/s exact; on: ${on.peak.toFixed(0)}/s, miss ${on.miss.toFixed(1)}, stops seal at ${on.seal.toFixed(3)}` };
+});
+
 check("no word clicks", () => {
   // A stop release is a transient, but an outlier far above the signal's own motion is a
   // click. The white-noise burst once measured 13.5x.

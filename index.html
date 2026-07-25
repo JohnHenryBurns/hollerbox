@@ -658,10 +658,16 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
 
         <p>Two remain. Every fricative is measurably in the right band — /s/ at 4700 Hz, /ʃ/ at
         3000 — and several are still heard as undifferentiated hiss, so spectrum is not what is
-        wrong with them. And the nasal side branch is about 1.6 cm where a real nasal tract is
-        10–12, so it produces no antiformant: /m n ŋ/ collapse into one generic voiced
-        continuant, and they take /z ð l r j w/ with them. That is the largest single defect
-        left, and the next real piece of work.</p>
+        wrong with them. And the consonants have no measured targets: the vowel shapes were
+        solved against real formant data and score ten out of ten, while the consonants were
+        placed by hand, so nothing has ever noticed when two of them drifted onto the same
+        sound. A listening sweep identifies about two in three.</p>
+
+        <p>The nasal tract is 11 cm, which is the real range, and you can watch it open — the
+        second cavity swings out from the velum on every /m/, /n/ and /ŋ/, with its own standing
+        wave coloured the same way. The little stub near the lips is the pocket that makes an
+        /l/. Both were invisible until recently, which is a poor thing to hide: the coupling of
+        two cavities through a velum is the most interesting thing in here.</p>
 
         <p>Below that sit the things nobody has got to: prosody beyond a pitch arc, and
         frequency-dependent losses — which were built, measured, and reverted, because the loss
@@ -702,10 +708,10 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
      exactly what happened: a fix landed in phonemes.js, the bench had it and this
      page did not, and the same phrase in the same voice sounded different in the
      two. The gate recomputes this hash and fails if it has not been bumped. -->
-<script src="engine/phonemes.js?v=886c3472f5"></script>
+<script src="engine/phonemes.js?v=3ebe4b190e"></script>
 <!-- The speller: g2p rules, the built-in dictionary, the personal one on top. Shared with
      the gate, which runs it with no storage and therefore tests the shipped dictionary. -->
-<script src="engine/spelling.js?v=886c3472f5"></script>
+<script src="engine/spelling.js?v=3ebe4b190e"></script>
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
 // The tract shapes, solved offline by searching tube geometry until the
@@ -725,7 +731,7 @@ const articulate = HOLLER.articulate;
 // stop consonants are the same move at three places along the tract
 const STOPS = HOLLER.STOPS;
 const VELAR = HOLLER.VELAR;
-const ENGINE_URL = new URL('engine/tract-worklet.js?v=886c3472f5', document.baseURI).href;
+const ENGINE_URL = new URL('engine/tract-worklet.js?v=3ebe4b190e', document.baseURI).href;
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -735,6 +741,7 @@ const ENGINE_URL = new URL('engine/tract-worklet.js?v=886c3472f5', document.base
 // ─────────────────────────────────────────────────────────────────────────────
 let ctx=null, node=null, analyser=null, gainNode=null, N=44, started=false;
 let energy=null, liveDiam=null, voicedNow=false, voicing=0;
+let nOpen=0, nEnergy=null, bOpenLive=0, bEnergy=null;
 let curShape=null, sequencing=false;      // the tube exists before the wind does
 let curArt={jaw:0.19,bodyPos:0.35,bodyHi:0.37,tipPos:0.84,tipHi:0,lip:0.16};
 let playSeg=null;                  // which sound is being spoken right now
@@ -785,6 +792,8 @@ async function start(){
       return;
     }
     energy=e.data.e; liveDiam=e.data.d; voicedNow=e.data.on;
+    nOpen=e.data.nOpen||0; nEnergy=e.data.nE||null;
+    bOpenLive=e.data.bOpen||0; bEnergy=e.data.bE||null;
     const changed = (e.data.seq!==sequencing) || (e.data.v!==voicing);
     sequencing=e.data.seq; voicing=e.data.v;
     if(changed) paintBtn();                                   // a word ends by itself
@@ -1411,7 +1420,25 @@ function ramp(t){
   return [a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f, a[2]+(b[2]-a[2])*f];
 }
 
-let tubes=[], ghost=null;
+let tubes=[], ghost=null, nasalTubes=[], pocketTubes=[];
+
+// The two side branches, which the 3D view never drew.
+//
+// A nasal is the single most interesting thing this model does — two cavities coupled through a
+// velum that opens and closes — and it was invisible: an /m/ showed a sealed tube and no hint
+// that anything was leaving through the nose. The lateral pocket had the same problem, and
+// seeing that it is a 1.6 cm stub explains /l/ faster than any measurement does.
+//
+// Both branch off the oral path at the same fractions the engine uses: the velum at 0.44 along,
+// the pocket at 0.84. The nasal cavity runs up and forward from there, because that is where a
+// nose is.
+const NASAL_AT = 0.44, POCKET_AT = 0.84;
+function branchPath(atU, dir, lengthFrac, lift){
+  const p0 = path.getPointAt(atU);
+  const end = p0.clone().add(dir.clone().normalize().multiplyScalar(path.getLength()*lengthFrac));
+  const mid = p0.clone().lerp(end, 0.5).add(new THREE.Vector3(0, lift, 0));
+  return new THREE.CatmullRomCurve3([p0, mid, end]);
+}
 function buildTubes(){
   tubes.forEach(t=>{scene.remove(t.mesh); t.mesh.geometry.dispose(); t.mesh.material.dispose();});
   tubes=[];
@@ -1426,6 +1453,42 @@ function buildTubes(){
     m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),tan.clone().normalize());
     m.scale.set(0.6,0.28,0.6);
     scene.add(m); tubes.push({mesh:m,u});
+  }
+  buildBranch(nasalTubes, branchPath(NASAL_AT, new THREE.Vector3(1.6,1.5,0), 0.63, 0.35), 28, 0.30);
+  buildBranch(pocketTubes, branchPath(POCKET_AT, new THREE.Vector3(0.2,-1,0), 0.09, -0.05), 4, 0.22);
+}
+/** One row of cylinders along a branch curve. Same material and ramp as the main tube, so the
+ *  colour means the same thing in all three. */
+function buildBranch(into, curve, count, radius){
+  into.forEach(t=>{scene.remove(t.mesh); t.mesh.geometry.dispose(); t.mesh.material.dispose();});
+  into.length = 0;
+  const geo = new THREE.CylinderGeometry(1,1,1,16,1,true);
+  for(let i=0;i<count;i++){
+    const u = count===1 ? 0 : i/(count-1);
+    const p = curve.getPointAt(u), tan = curve.getTangentAt(u);
+    const mat = new THREE.MeshStandardMaterial({color:0x454f55, emissive:0x000000,
+      roughness:0.45, metalness:0.12, side:THREE.DoubleSide, transparent:true, opacity:0});
+    const m = new THREE.Mesh(geo, mat);
+    m.position.copy(p);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), tan.clone().normalize());
+    m.scale.set(radius, curve.getLength()/count*1.15, radius);
+    scene.add(m); into.push({mesh:m, u});
+  }
+}
+/** Fade a branch in with how far open it is, and colour it by its own standing wave. */
+function paintBranch(list, open, nrg){
+  if(!list.length) return;
+  let peak = 1e-6;
+  if(nrg) for(let i=0;i<nrg.length;i++) peak = Math.max(peak, nrg[i]);
+  for(let i=0;i<list.length;i++){
+    const t = list[i];
+    t.mesh.material.opacity = 0.94*Math.min(1, open*1.4);
+    t.mesh.visible = open > 0.01;
+    const k = nrg ? Math.min(nrg.length-1, Math.round(t.u*(nrg.length-1))) : 0;
+    const e = nrg ? Math.pow(nrg[k]/peak, 0.6) : 0;
+    const c = ramp(e);
+    t.mesh.material.color.setRGB(0.27+c[0]*0.30, 0.30+c[1]*0.24, 0.33+c[2]*0.18);
+    t.mesh.material.emissive.setRGB(c[0]*e*0.95, c[1]*e*0.95, c[2]*e*0.95);
   }
 }
 function resize(){
@@ -1650,6 +1713,8 @@ function frame(){
       t.mesh.material.emissive.setRGB(c[0]*e*0.95, c[1]*e*0.95, c[2]*e*0.95);
     }
   }
+  paintBranch(nasalTubes, nOpen, nEnergy);
+  paintBranch(pocketTubes, bOpenLive, bEnergy);
   bounceWord();
   drawSpectro();
   const md=document.getElementById('mode');

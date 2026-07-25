@@ -1785,6 +1785,44 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── the page draws the branches the engine has ─────────────────────────────
+check("the 3D view knows about both side branches", () => {
+  // The nasal tract is an 11 cm cavity with its own standing wave and the view drew none of it:
+  // an /m/ showed a sealed tube and no sign that anything was leaving through the nose. The
+  // lateral pocket was invisible too, which mattered less but explains /l/ faster than any
+  // measurement does once you can see it is a stub.
+  //
+  // Structural, since the gate cannot look at a screen. It asserts the page draws them, that
+  // they tap in where the ENGINE says they do, and that the engine tells the page how open they
+  // are — three things that have to agree and are in three different files.
+  const fs = require("fs"), bad = [];
+  const page = fs.readFileSync(__dirname + "/../index.html", "utf8");
+  const wk = fs.readFileSync(__dirname + "/../engine/tract-worklet.js", "utf8");
+
+  for (const bit of ["nasalTubes", "pocketTubes", "buildBranch", "paintBranch"])
+    if (!new RegExp("\\b" + bit + "\\b").test(page)) bad.push(`the page has no ${bit}`);
+  // the engine must send what the page needs to draw them
+  // matched inside the postMessage call rather than anywhere in the file, and allowing
+  // shorthand — `bE}` is a property just as much as `bE:` is, which the first version of this
+  // check did not know and reported as missing.
+  // ALL of them joined, not the first. The first postMessage in that file is the build
+  // announcement, which contains none of these — so matching one call found the wrong call and
+  // reported every key missing.
+  const post = (wk.match(/postMessage\(\{[\s\S]*?\}\)/g) || []).join(" ");
+  for (const key of ["nOpen", "nE", "bOpen", "bE"])
+    if (!new RegExp("\\b" + key + "\\s*[:,}]").test(post)) bad.push(`the worklet never sends ${key}`);
+  // and they must tap in where the engine puts them, not somewhere that merely looks right
+  const nEng = (wk.match(/nPos\s*=\s*Math\.round\(n\*([0-9.]+)\)/) || [])[1];
+  const bEng = (wk.match(/bPos\s*=\s*Math\.round\(n\*([0-9.]+)\)/) || [])[1];
+  const nPage = (page.match(/NASAL_AT\s*=\s*([0-9.]+)/) || [])[1];
+  const bPage = (page.match(/POCKET_AT\s*=\s*([0-9.]+)/) || [])[1];
+  if (nEng && nPage && Math.abs(+nEng - +nPage) > 1e-9) bad.push(`velum drawn at ${nPage}, engine has ${nEng}`);
+  if (bEng && bPage && Math.abs(+bEng - +bPage) > 1e-9) bad.push(`pocket drawn at ${bPage}, engine has ${bEng}`);
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ") : `velum at ${nPage}, pocket at ${bPage}, both matching the engine` };
+});
+
 // ── /h/ is a voiceless vowel ───────────────────────────────────────────────
 check("/h/ takes the shape of the vowel beside it", () => {
   // /h/ has no posture of its own. The tongue is already in position for the "ee" in "he" and

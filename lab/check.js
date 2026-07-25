@@ -1710,6 +1710,45 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── the head is one shape, not five drawings of one ────────────────────────
+check("the Mouth view defines its geometry once", () => {
+  // The roof curve was written out FOUR times inside drawMouth, in two different sign
+  // conventions — one returning 0.34 and another -0.34 for the same place — with the nasal roof
+  // and floor defined twice more in different scopes with different bodies, and the tongue a
+  // fifth time. Every repair fixed one copy and let the others drift, which is why the lines
+  // ended up crossing: a palate through a nasal floor, a velum through both, and an air path
+  // that went where none of them were.
+  //
+  // Three passes at that view each fixed one thing and broke another. This is what stops a
+  // fourth.
+  const fs = require("fs"), bad = [];
+  const page = fs.readFileSync(__dirname + "/../index.html", "utf8");
+  const code = page.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const fn = (code.match(/function drawMouth\(\)[\s\S]*?\n\}/) || [""])[0];
+
+  // nothing inside may define the roof again, in either sign
+  const redef = (fn.match(/=>\s*-?\(?\s*u\s*<\s*0\.30/g) || []).length;
+  if (redef) bad.push(`${redef} local copy of the roof curve inside drawMouth`);
+  if (/A\.bodyHi\s*\*\s*0\.78/.test(fn)) bad.push("the tongue curve is written out again");
+  for (const f of ["ROOF", "NASAL_ROOF", "NASAL_FLOOR", "TONGUE_AT"])
+    if (!new RegExp("const " + f + "\\b").test(code)) bad.push(`no shared ${f}`);
+
+  // and the shapes must not intersect, which is what the duplication caused
+  const V_HINGE = 0.62, NASO_BK = 0.20;
+  const ROOF = u => -(u<0.30 ? 0.95-u*0.6 : u<V_HINGE ? 0.77-(u-0.30)*1.35 : 0.34);
+  const NR = u => -(1.12 - Math.pow(Math.max(0,u-NASO_BK)/(1-NASO_BK),1.5)*0.16);
+  const NF = u => u<V_HINGE ? -(0.80+(V_HINGE-u)*0.10) : ROOF(u);
+  let cross = 0;
+  for (let u = NASO_BK; u <= 0.99; u += 0.01) {
+    if (NR(u) >= NF(u)) cross++;              // nasal roof must stay above its floor
+    if (NF(u) > ROOF(u) + 1e-9) cross++;      // and the floor above the oral roof
+  }
+  if (cross) bad.push(`the drawn shapes intersect at ${cross} points`);
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ") : "one roof, one nasal cavity, one tongue, none crossing" };
+});
+
 // ── a voiced fricative is not just a voice ─────────────────────────────────
 check("voiced fricatives are frication, not voicing with a trace on top", () => {
   // Measured in a word, /ð/ had 99% of its energy below 800 Hz and /ʒ/ 83% — almost entirely
@@ -2022,6 +2061,7 @@ check("the 3D view knows about both side branches", () => {
   // are — three things that have to agree and are in three different files.
   const fs = require("fs"), bad = [];
   const page = fs.readFileSync(__dirname + "/../index.html", "utf8");
+  const code = page.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   const wk = fs.readFileSync(__dirname + "/../engine/tract-worklet.js", "utf8");
 
   for (const bit of ["nasalTubes", "pocketTubes", "buildBranch", "paintBranch"])
@@ -2039,10 +2079,13 @@ check("the 3D view knows about both side branches", () => {
   // one on screen, and y grows downward here.
   // shut is UP against the pharynx wall, open is hanging DOWN into it, and y grows downward
   // here — so the shut position must be the more negative of the two.
-  const shut = /shutTip\s*=\s*\{[^}]*Y\(-0\.72\)/.test(mouth);
-  const opened = /openTip\s*=\s*\{[^}]*palAt\(V_TIP\)\s*\+/.test(mouth);
-  if (!shut || !opened) bad.push("the velum's shut and open positions are not up-and-down");
-  if (!/tip\s*=\s*\{[^\}]*shutTip\.x\s*\+\s*\(openTip\.x-shutTip\.x\)\*open/.test(mouth))
+  // scanned against the whole script, not drawMouth's body: the geometry constants moved to
+  // module scope when the duplicated curves were collapsed into one set, and a check that looks
+  // only inside the function reports them missing when they are merely elsewhere.
+  const shut = /shut\s*=\s*\{[^}]*NASAL_FLOOR\(/.test(code);
+  const hang = /hang\s*=\s*\{[^}]*ROOF\(V_TIP\)\s*\+/.test(code);
+  if (!shut || !hang) bad.push("the velum's shut and open positions are not up-and-down");
+  if (!/tip\s*=\s*\{[^\}]*shut\.x\s*\+\s*\(hang\.x - shut\.x\)\*open/.test(code))
     bad.push("the velum does not travel from shut toward open as nOpen rises");
   // and it hinges where the hard palate ends, not off the back of the throat
   // hinged where BONE MEETS SOFT TISSUE — the back edge of the hard palate, which in this roof
@@ -2050,9 +2093,9 @@ check("the 3D view knows about both side branches", () => {
   // soft palate, so the nasal passage began inside the palate and the air tunnelled up through
   // the roof to reach it. Air does not pass through the palate; it passes BEHIND the velum's
   // free edge, which is what the velopharyngeal port is.
-  if (!/V_HINGE = 0\.62/.test(mouth)) bad.push("the velum is not hinged at the hard palate's back edge");
-  if (!/V_TIP = 0\.30/.test(mouth)) bad.push("the velum has no free edge in the pharynx");
-  if (!/const port = V_TIP/.test(mouth)) bad.push("the air does not enter behind the free edge");
+  if (!/V_HINGE = 0\.62/.test(code)) bad.push("the velum is not hinged at the hard palate's back edge");
+  if (!/V_TIP   = 0\.30/.test(code)) bad.push("the velum has no free edge in the pharynx");
+  if (!/const port = V_TIP/.test(code)) bad.push("the air does not enter behind the free edge");
   // and the drawn air must never sit below the hard palate, which would be through it
   {
     const palAt = u => -(u<0.30 ? 0.95-u*0.6 : u<0.62 ? 0.77-(u-0.30)*1.35 : 0.34);

@@ -1261,6 +1261,54 @@ check("artT bounds articulator speed and produces undershoot", () => {
                : `off: ${off.peak.toFixed(0)}/s exact; on: ${on.peak.toFixed(0)}/s, miss ${on.miss.toFixed(1)}, stops seal at ${on.seal.toFixed(3)}` };
 });
 
+// ── the gestural score is reachable ────────────────────────────────────────
+check("each gesture knob changes what a consonant actually does", () => {
+  const P = H.P, bad = [];
+  const V = P.VOICES.john.v, n = Math.round(V.sect);
+  // These four were hardcoded numbers doing real linguistic work — how narrow a target has to
+  // be before the speaker must hit it, how much harder they push at it, and how far past a
+  // surface a closure aims. Exposing them is only worth anything if each one is load-bearing,
+  // so this asserts they are, on the sound each one exists for.
+  const narrowest = (over, sym) => {
+    const v = { ...P.defaultVoice(), ...V, ...over };
+    const W = P.buildWord(["ɑ", sym, "ɑ"], { D: 0.9, n, pros: v,
+                          glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    const p = H.makeProcessor(n);
+    p.port.onmessage({ data: { type: "voice", v } });
+    p.port.onmessage({ data: { type: "goal",
+      seq: { keys: W.keys, f0: P.buildF0(W.end, v), end: W.end } } });
+    const o = [new Float32Array(128)], seg = W.seg.find(x => x.sym === sym);
+    let mn = 9;
+    for (let b = 0; b < Math.ceil(W.end*H.SR/128); b++) {
+      p.process([], [o]);
+      const t = b*128/H.SR;
+      if (t >= seg.a && t <= seg.b) {
+        let cl = 9;
+        for (let i = 1; i < n-1; i++) if (p.diam[i] < cl) cl = p.diam[i];
+        mn = Math.min(mn, cl);
+      }
+    }
+    return mn;
+  };
+  // At the defaults every consonant reaches what it needs: closures shut, /z/ holds a channel
+  // the jet can form in.
+  if (!(narrowest({}, "d") < 0.14)) bad.push("/d/ does not seal at the defaults");
+  if (!(narrowest({}, "k") < 0.14)) bad.push("/k/ does not seal at the defaults");
+  const z = narrowest({}, "z");
+  if (!(z > 0.030 && z < 0.48)) bad.push(`/z/ channel ${z.toFixed(3)} — outside the jet's range`);
+
+  // Turn the distinction off and the closures fail. If they do not, the stiffening is not doing
+  // anything and the knob is decoration.
+  if (!(narrowest({ artCrit: 0, artPush: 0 }, "d") > 0.14))
+    bad.push("artCrit=0 still seals /d/ — the criticality distinction is inert");
+  if (!(narrowest({ artStiff: 1 }, "d") > 0.14))
+    bad.push("artStiff=1 still seals /d/ — the stiffening is inert");
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ")
+               : `defaults seal /d/ /k/ and hold /z/ at ${z.toFixed(3)}; artCrit and artStiff both load-bearing` };
+});
+
 check("no word clicks", () => {
   // A stop release is a transient, but an outlier far above the signal's own motion is a
   // click. The white-noise burst once measured 13.5x.

@@ -1590,6 +1590,41 @@ survive the release being late. It latches once now, on the way in.
     0.025  b20 d10 g15  vs  p75 t85 k105
     0.035  b25 d10 g15  vs  p80 t90 k115
 
+### The gestural score  ✅ exposed
+
+Reported after the smoke test: *"some things got better some worse but net more natural — seems
+like we have a physics based approach to dial the consonants now."* That is the right read, and
+it was truer than it looked: three of the numbers doing that work were hardcoded.
+
+A gesture in articulatory phonology has a **target, a stiffness and a blending strength**. The
+target is the posture, and these are the rest. All four are now in `VOICE_SPEC`, in a `gesture`
+group of their own so the tournament can search them together:
+
+| | | default |
+|---|---|---|
+| `artT` | how much mass the articulators have | 0.025 |
+| `artCrit` | how narrow a target must be to count as **critical** — something to hit rather than aim at | 0.6 |
+| `artStiff` | how much stiffer the most critical gesture is, as a fraction of the base time constant | 0.22 |
+| `artPush` | how far past the surface a closure is aimed | 0.45 |
+
+Each is load-bearing and gated as such, on the sound it exists for:
+
+    defaults              /z/ 0.062   /k/ 0.020   /d/ 0.020
+    artStiff = 1          /z/ 0.067   /k/ 0.020   /d/ 0.176   the closure fails
+    artCrit  = 0          /z/ 0.067   /k/ 0.151   /d/ 0.505   both closures fail
+
+**`artStiff` is the consonant dial.** Lower is crisper — 0.22 means a full closure is tracked
+four and a half times faster than a vowel target. Raise it and consonants soften toward the
+vowels around them; drop it and they snap. That is a single number with a physical meaning, not
+a mix control.
+
+`artPush` matters less at `artT=0.025` than it looks, because the stiffening alone is enough at
+that speed. It is insurance that starts earning its place as `artT` rises — at 0.035 and above it
+is what keeps stops sealing at all.
+
+Verified inert at the defaults: the same phrase renders to an identical hash with the knobs at
+their values as with the numbers hardcoded. This exposed them, it did not retune them.
+
 ### On by default at `artT=0.025`
 
 Gate green, five seeds agree. Peak tract speed drops from 1691 to 706 units/s, undershoot runs

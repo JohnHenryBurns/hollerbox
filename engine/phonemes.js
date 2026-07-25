@@ -418,7 +418,23 @@ const VOICE_SPEC=[
   // Phase 9. The time constant of a critically damped articulator. 0 tracks the keyframes
   // exactly, which is every version of this engine until now; anything above 0 means the tract
   // has inertia and stops being able to arrive everywhere it is asked to.
-  {k:'artT', lo:0,      hi:0.06,    d:0.025, off:0,},
+  // ---- the gestural score, Phase 9 ----
+  // These four are how a consonant is dialled, and they are physical rather than cosmetic.
+  // A gesture in articulatory phonology has a target, a stiffness and a blending strength; the
+  // target is the posture and these are the rest. They were hardcoded numbers doing real
+  // linguistic work, which is exactly the kind of thing this project keeps finding out too late.
+  {k:'artT',    lo:0,     hi:0.06,   d:0.025, off:0,},   // how much mass the articulators have
+  // How narrow a target has to be before it counts as CRITICAL — something the speaker has to
+  // hit rather than aim at. off:0 makes nothing critical, so every gesture is equally lazy.
+  {k:'artCrit', lo:0,     hi:1.2,    d:0.6,   off:0,},
+  // How much stiffer the most critical gesture is, as a fraction of the base time constant.
+  // Lower is crisper: 0.22 means a full closure is tracked four and a half times faster than a
+  // vowel. off:1 removes the distinction entirely and is what silenced /z/ the first time.
+  {k:'artStiff',lo:0.1,   hi:1,      d:0.22,  off:1,},
+  // How far past the surface a closure is aimed. A tongue does not stop at the palate, it
+  // presses into it and the tissue stops it. off:0 aims exactly at the target, which is what
+  // made stops fail to seal above artT=0.02.
+  {k:'artPush', lo:0,     hi:1,      d:0.45,  off:0,},
 ];
 const VOICES = {
   // Measured from a real goal cry: the pitch falls the whole way (158 -> 93 Hz) and the
@@ -490,8 +506,10 @@ const VOICE_GROUPS = {
   source: ['rd','press','jit','brth','folds','damp','lipR'],
   pitch:  ['f0a','f0b','f0c','pert'],
   stress: ['wkdur','wklev','acc'],
-  rhythm: ['per','drawl','glide','stopT','vlen','coda','fnl','poly','stopVc','apw','gcap','onset','wgap','artT'],
+  rhythm: ['per','drawl','glide','stopT','vlen','coda','fnl','poly','stopVc','apw','gcap','onset','wgap'],
   tract:  ['sect','open','burst','hiss'],
+  // The articulators themselves — how a consonant is dialled.
+  gesture:['artT','artCrit','artStiff','artPush'],
 };
 
 // seed = each parameter as two base-36 digits of its position in range

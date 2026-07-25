@@ -2207,42 +2207,56 @@ value it should be.
 **What this does not fix.** A visitor with a stale page still has to reload; nothing here can
 reach into their cache. It converts a silent failure into an instruction, which is the most a
 static site can do without a service worker.
-## John is the worst voice, and the fit is why
+## John rebuilt off `man`, not off the fit
 
-Reported: the woman and child are *"noticeably what you'd expect"*, Barry White is deep and
-slow, and **John is the worst of the bunch**. The one voice measured from a real person being
-the poorest of the set is worth explaining.
+Reported: john, johnplain and johncry all bad; woman and child best; man pretty good. Asked
+whether man, woman and child differ only by tract length.
 
-Two hypotheses ruled out first. **Not undershoot** — John's is 5.79 against `man`'s 6.18, and
-`man` sounds fine. **Not vowel separation** — John's 20.5 sits above the woman's 19.4 and the
-child's 16.1, both of which sound right.
+**Nearly.** They differ in `sect` and `f0` substantially, and in `rd`, `press`, `brth` and `jit`
+by a little — breathier and less pressed as the speaker gets smaller, which is the right
+direction. All three use the shared postures. So a voice is mostly **a tract length and a
+larynx**, and the rest is a small correlated drift.
 
-**The gate only ever measured the shared table at n=44.** `formants()` had no way to take a
-posture override, so the two voices with fitted postures — john and johncry, the only ones
-derived from a recording — had never been checked against a target at all.
+**John broke the correlation.** Fitting a line through the four voices that work:
 
-Given one:
+| voice | tract | pitch | pitch that length implies | off by |
+|---|---|---|---|---|
+| barry | 19.0 cm | 58 Hz | 69 Hz | −16% |
+| man | 18.3 cm | 96 Hz | 82 Hz | +17% |
+| woman | 14.7 cm | 200 Hz | 177 Hz | +13% |
+| child | 12.3 cm | 268 Hz | 295 Hz | −9% |
+| **john** | **15.9 cm** | **88 Hz** | **137 Hz** | **−36%** |
 
-| | within 12% of Peterson & Barney |
-|---|---|
-| shared ART at n=44 — the only thing tested until now | **10/10** |
-| shared ART at n=40, John's own tract length | 4/10 |
-| **John's fitted postures at n=40** | **1/10**, worst /u/ at 49% |
+A 15.9 cm tract with an 88 Hz larynx is a small adult with a large voice box. Two independent
+estimates of what it should be agree: the line puts 88 Hz at 17.9 cm (sect 45), and
+`RECORDING.md` records the fitter coming back ~8% low, which turns 15.9 into 17.2 (sect 43).
 
-**The fit is doing worse than no fit**, at the fitted speaker's own tract length. P&B are
-adult-male means and an individual differs from a mean, so being off is not by itself wrong —
-but the shared table beating a bespoke fit on the speaker it was made for is hard to read
-another way. `RECORDING.md` already warns that tract length came back ~8% low and that "the
-fitted articulations compensate"; that compensation is a good candidate for what went wrong.
+`john` is now the shared postures at **sect 44**, with his measured pitch and voice quality.
+Pitch is unaffected by any of this — F0 is not a resonance — and `rd` came from H1−H2, which
+lives at the first two harmonics and so was not touched by the tract error either. The fitted
+version is kept as `johnfit`.
 
-Two things follow. The shared table itself is **calibrated for n=44 only** — at n=40 it is
-4/10, so any voice with a different `sect` is using postures that miss their targets. That is a
-separate finding and probably a larger one.
+    johnfit  15.9 cm  88 Hz    3/10 within 12% of P&B
+    john     17.5 cm  88 Hz   10/10
+    man      18.3 cm  96 Hz    8/10
 
-And `johnplain` now exists: John's source and timing with the shared postures, derived from his
-entry rather than copied. If it sounds better than `john`, the postures need re-deriving from a
-fresh recording rather than tuning.
+The rebuild scores above `man`, which is the voice reported as good.
 
+### Two measurement errors found doing this, both mine
+
+**`formants()` never sized the tract.** It built a default-length `Tract` and then wrote `n`
+diameters into it, so any `n` below the default left stale values in the tail and any above it
+threw. Every figure it produced at a length other than 44 was of a tract that was not that
+length — including the ones in the previous version of this section.
+
+**And "the shared table is calibrated for n=44 only" was wrong.** It reads 0/10 at the woman's
+and the child's lengths — but Peterson & Barney are *adult-male* means, so a short tract is
+supposed to miss them. That is what being a woman is. The table peaks where P&B's own speakers
+sit and falls off either side, which is correct behaviour, and the earlier reading confused
+"misses an adult-male yardstick" with "is wrong".
+
+It was still the right test for John, because John is an adult male whose tract had been set to
+a woman's length.
 ---
 
 ## Note on method

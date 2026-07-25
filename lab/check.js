@@ -1398,39 +1398,38 @@ check("phonemes.js and the worklet agree on which build they are", () => {
            note: bad.length ? bad.join("  ") + `  — should be ${want}` : `both at ${want}` };
 });
 
-report("fitted postures against the vowel targets", () => {
-  // The vowel check above measures the SHARED ART table at n=44 and nothing else. So the two
-  // voices with FITTED postures — john and johncry, the only ones measured from a real person —
-  // had never been checked against any target at all, and john is the voice reported as the
-  // worst of the set.
+report("male voices against the vowel targets", () => {
+  // Peterson & Barney are ADULT-MALE means, so this scores the male voices and nothing else.
+  // A woman or a child measuring 0/10 against them is a woman and a child, not a fault — an
+  // earlier version of this check read that as the posture table being miscalibrated for any
+  // length but 44. It is not. It peaks where P&B's own speakers sit and falls off either side,
+  // which is what a tract getting longer or shorter is supposed to do.
   //
-  // Peterson & Barney are adult-male means, so they are the right yardstick for john and the
-  // wrong one for woman or child; only the male voices are scored here. Individual speakers
-  // differ from a mean, so being off is not automatically wrong — but the shared table beating
-  // a fit at the fitted speaker's own tract length is hard to read any other way.
+  // It also ran on a `formants()` that built a default-length tract and then wrote n diameters
+  // into it, so every number it produced at a length other than 44 was of a tract that was not
+  // that length. Both are fixed; the figures below are the corrected ones.
   const P = H.P;
   const T = { i:[270,2290], "ɪ":[390,1990], "ɛ":[530,1840], "æ":[660,1720], "ɑ":[730,1090],
               "ɔ":[570,840], "ʊ":[440,1020], u:[300,870], "ʌ":[640,1190], "ɝ":[490,1350] };
   const at = (art, n) => {
-    let good = 0, cnt = 0;
+    let g = 0, c = 0;
     for (const [sym, [t1, t2]] of Object.entries(T)) {
       const f = H.formants(sym, { n, art });
       if (!f || f.length < 2) continue;
-      cnt++;
-      if (Math.sqrt(((f[0]-t1)/t1)**2 + ((f[1]-t2)/t2)**2)*100 < 12) good++;
+      c++;
+      if (Math.sqrt(((f[0]-t1)/t1)**2 + ((f[1]-t2)/t2)**2)*100 < 12) g++;
     }
-    return `${good}/${cnt}`;
+    return g;
   };
-  const jn = Math.round(P.VOICES.john.v.sect);
-  const rows = [
-    `shared@44 ${at(null, 44)}`,
-    `shared@${jn} ${at(null, jn)}`,
-    `john-fitted@${jn} ${at(P.VOICES.john.art, jn)}`,
-  ];
-  const fitted = at(P.VOICES.john.art, jn).split("/").map(Number);
-  const shared = at(null, jn).split("/").map(Number);
-  return { ok: fitted[0] >= shared[0],
-           note: rows.join("   ") + (fitted[0] < shared[0] ? "  — the fit is doing worse than no fit" : "") };
+  const rows = [], bad = [];
+  for (const name of ["john", "johnfit", "man", "barry"]) {
+    const V = P.VOICES[name]; if (!V) continue;
+    const n = Math.round({ ...P.defaultVoice(), ...V.v }.sect);
+    const g = at(V.art || null, n);
+    rows.push(`${name} ${g}/10`);
+    if (name === "john" && g < 8) bad.push(`john only ${g}/10 — the rebuild did not take`);
+  }
+  return { ok: bad.length === 0, note: bad.length ? bad.join("  ") : rows.join("   ") };
 });
 
 check("no word clicks", () => {

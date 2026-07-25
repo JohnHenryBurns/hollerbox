@@ -1185,45 +1185,6 @@ report("how far the articulators are from real anatomy", () => {
            note: `${over}/6 outrun anatomy — ${rows.join("  ")}` };
 });
 
-// ── the page cannot serve a stale engine ───────────────────────────────────
-check("index.html's engine URLs carry the current version token", () => {
-  // The bench fetches the engine with cache:"no-store". This page loads it as plain script
-  // tags, so a browser or GitHub Pages can serve a stale copy — and did: the diphthong fix
-  // landed in phonemes.js, the bench picked it up, the page did not, and the same phrase in
-  // the same voice sounded different in the two. That is not a class of bug you can find by
-  // reading either file, because both were correct.
-  //
-  // So the token is derived from the engine's own bytes and this check recomputes it. Change
-  // the engine without bumping it and the gate says so, with the value to paste in.
-  const fs = require("fs"), crypto = require("crypto");
-  const h = crypto.createHash("sha1");
-  for (const f of ["engine/phonemes.js", "engine/spelling.js", "engine/tract-worklet.js"])
-    h.update(fs.readFileSync(__dirname + "/../" + f));
-  const want = h.digest("hex").slice(0, 10);
-
-  const page = fs.readFileSync(__dirname + "/../index.html", "utf8");
-  const bad = [];
-  // Every engine URL the page references must carry it — one stale tag is enough to load an
-  // old copy of the one file that changed.
-  for (const f of ["phonemes.js", "spelling.js", "tract-worklet.js"]) {
-    const re = new RegExp("engine/" + f.replace(".", "\\.") + "\\?v=([a-f0-9]+)", "g");
-    const found = [...page.matchAll(re)].map(m => m[1]);
-    if (!found.length) bad.push(`${f} has no ?v= token`);
-    else if (found.some(v => v !== want)) bad.push(`${f} is at ${found[0]}, engine is ${want}`);
-  }
-  // And no unversioned reference may survive alongside them — one stale tag is enough.
-  // Comments are stripped first: the first version of this flagged the comment that explains
-  // the token, because that prose names the files without one.
-  const code = page.replace(/<!--[\s\S]*?-->/g, "").replace(/^\s*\/\/.*$/gm, "");
-  for (const f of ["phonemes.js", "spelling.js", "tract-worklet.js"])
-    if (new RegExp("engine/" + f.replace(".", "\\.") + "(?!\\?v=)").test(code))
-      bad.push(`${f} is also referenced without a token`);
-
-  return { ok: bad.length === 0,
-           note: bad.length ? bad.join("  ") + `  — set them all to ?v=${want}`
-                            : `all three at ?v=${want}` };
-});
-
 // ── Phase 9: the articulators can be given mass ────────────────────────────
 check("artT bounds articulator speed and produces undershoot", () => {
   const P = H.P, S = require(__dirname + "/../engine/spelling.js"), bad = [];
@@ -1360,42 +1321,6 @@ check("bad is longer than bat", () => {
            note: bad.length ? bad.join("  ")
                : `bad/bat ${coda.toFixed(2)}, hɔd/hɪd ${intr.toFixed(2)}, ` +
                  `goal stretches ${nat.toFixed(2)}s to ${long.toFixed(2)}s` };
-});
-
-// ── the two engine files must be the same build ────────────────────────────
-check("phonemes.js and the worklet agree on which build they are", () => {
-  // They cache INDEPENDENTLY. A browser holding a stale index.html requests them at
-  // unversioned URLs and can pair a fresh phonemes.js with an old worklet — which made no
-  // sound and no error, because buildWord emitted keyframes the old worklet had no integrator
-  // for and speakWith bails at `if(!node) return`. Deployed, undetected, and only found by
-  // someone noticing the app had stopped working.
-  //
-  // The token is derived from both files with the declaration line REMOVED, so it does not
-  // depend on the value it is producing. Blanking the line instead of removing it was not
-  // stable under itself — checked, and it was not.
-  const fs = require("fs"), crypto = require("crypto"), bad = [];
-  const strip = t => t.replace(/^const BUILD = "[^"]*";.*\n/m, "");
-  const h = crypto.createHash("sha1");
-  const src = {};
-  for (const f of ["engine/phonemes.js", "engine/tract-worklet.js"]) {
-    src[f] = fs.readFileSync(__dirname + "/../" + f, "utf8");
-    h.update(strip(src[f]));
-  }
-  const want = h.digest("hex").slice(0, 10);
-  for (const f of Object.keys(src)) {
-    const got = (src[f].match(/^const BUILD = "([a-f0-9]+)"/m) || [])[1];
-    if (!got) bad.push(`${f} declares no BUILD`);
-    else if (got !== want) bad.push(`${f} says ${got}`);
-  }
-  if (H.P.BUILD !== want) bad.push(`phonemes exports ${H.P.BUILD}`);
-  // and the worklet has to actually announce it, or the page has nothing to compare against
-  if (!/postMessage\(\{type:'build'/.test(src["engine/tract-worklet.js"]))
-    bad.push("the worklet never announces its build");
-  const page = fs.readFileSync(__dirname + "/../index.html", "utf8");
-  if (!/HOLLER\.BUILD/.test(page)) bad.push("the page never checks it");
-
-  return { ok: bad.length === 0,
-           note: bad.length ? bad.join("  ") + `  — should be ${want}` : `both at ${want}` };
 });
 
 report("male voices against the vowel targets", () => {
@@ -1784,6 +1709,45 @@ check("voiceless stops are aspirated", () => {
 // the markers alone gives a file that LOOKS right and does not parse: both sides stop at their
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
+
+// ── the page loads the engine freshly, all of it, together ─────────────────
+check("the engine is fetched rather than linked", () => {
+  // There used to be a content hash in the script URLs and a matching BUILD constant in two
+  // files, so a stale worklet paired with a fresh phonemes.js could be detected. Both were
+  // DERIVED values living in tracked files, so every engine edit changed them and any two
+  // branches touching the engine collided there — three of the four conflicts in a typical
+  // rebase were these and nothing else.
+  //
+  // Fetching all three together with no-store makes the skew impossible rather than
+  // detectable, which is the better of the two and deletes both mechanisms. This check exists
+  // so that stays true: the moment anything goes back to a plain <script src> for the engine,
+  // the skew becomes possible again with nothing left to catch it.
+  const fs = require("fs"), bad = [];
+  const raw = fs.readFileSync(__dirname + "/../index.html", "utf8");
+  // comments stripped first: the note explaining why the tokens went away quotes the old
+  // `<script src="engine/phonemes.js?v=HASH">` verbatim, and the first version of this check
+  // read its own explanation as the thing it forbids. Second time that has happened.
+  const page = raw.replace(/<!--[\s\S]*?-->/g, "")
+                  .replace(/\/\*[\s\S]*?\*\//g, "")
+                  .replace(/^\s*(\/\/|\*).*$/gm, "");
+  const body = (page.match(/<script>[\s\S]*<\/script>/) || [""])[0];
+
+  if (/<script src="engine\//.test(page)) bad.push("an engine file is still linked with a script tag");
+  if (/engine\/[a-z-]+\.js\?v=/.test(page)) bad.push("a version token is back in an engine URL");
+  if (!/async function loadEngine/.test(body)) bad.push("no loadEngine");
+  if ((body.match(/await loadEngine\(/g) || []).length < 2) bad.push("not both engine files are fetched");
+  if (!/createObjectURL\(new Blob/.test(body)) bad.push("the worklet does not go through a Blob");
+  // two in code: the engine files and the worklet. A third occurrence used to be counted and
+  // it was inside the comment above them, which this now strips.
+  if ((body.match(/cache: *['"]no-store['"]/g) || []).length < 2)
+    bad.push("fewer than two no-store fetches — something is free to come from cache");
+  // and nothing may touch the engine before it has been loaded
+  const firstLoad = body.indexOf("await loadEngine"), firstUse = body.indexOf("HOLLER.");
+  if (firstUse !== -1 && firstUse < firstLoad) bad.push("HOLLER is used before the engine is fetched");
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ") : "all three fetched no-store, worklet through a Blob" };
+});
 
 // ── the nasals are told apart by their notch ───────────────────────────────
 check("each nasal has its own antiformant, in the right order", () => {

@@ -356,15 +356,6 @@ const isDiph  = sym => !!DIPH[sym];
 // ratio. Declared HERE rather than in whatever UI happens to offer the button, because it is a
 // fact about the parameter. `p8` marks the Phase 8 prosody layer, so the whole of it can be
 // nulled in one action and the engine heard as it was before any of it existed.
-// Which build of the engine this is. `tract-worklet.js` carries the same string and the page
-// compares them at start-up, because the two files cache INDEPENDENTLY: a browser holding a
-// stale index.html fetches them at unversioned URLs and can pair a fresh phonemes.js with an
-// old worklet. That combination made no sound and no error — buildWord emitted keyframes the
-// old worklet had no integrator for, and speakWith bails at `if(!node) return`. A hard reload
-// fixed it, which is not a thing a visitor knows to do.
-// Derived from both files with this line blanked out, so it is stable under itself.
-const BUILD = "8437389961";
-
 const VOICE_SPEC=[
   {k:'rd',   lo:0.35,   hi:2.40,    d:0.80},    // LF shape: pressed <-> breathy
   {k:'press',lo:0,      hi:1,       d:0.45, off:0,},    // how much effort presses at the peak
@@ -1034,7 +1025,7 @@ const HOLLER = {
   BRANCHED, NASAL, VOICELESS, FRICATIVE, ASPIRATE,
   VOICE_SPEC, VOICES, defaultVoice, VOICE_GROUPS,
   clampVoice, mutateVoice, encodeVoice, decodeVoice,
-  BUILD, restingDiam, hump, articulate, baseFor, shapeFor, openedShape, buildWord, rateFor,
+  restingDiam, hump, articulate, baseFor, shapeFor, openedShape, buildWord, rateFor,
   VDUR, CODA_VOICED, CODA_SONORANT, CODA_OPEN, CODA_VOICELESS,
   UNSTRESSED, FINAL_LENGTH, POLY_SHORT, APPROX_W, codaFactor, polyShorten,
   STOP_CLOSE, closureFor, UNSTRESSED_LEVEL, buildF0, lerpHz,

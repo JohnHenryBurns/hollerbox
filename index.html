@@ -702,17 +702,37 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <!-- The phoneme layer: tract shapes, classes, voices, articulation, buildWord. One copy,
      shared with lab/harness.js and lab/bench.html. Must load before the app script. -->
-<!-- ENGINE_V is a hash of the engine files. The bench fetches them with
-     cache:"no-store"; this page loads them as plain script tags, so without a
-     token in the URL a browser or GitHub Pages can serve a stale copy — which is
-     exactly what happened: a fix landed in phonemes.js, the bench had it and this
-     page did not, and the same phrase in the same voice sounded different in the
-     two. The gate recomputes this hash and fails if it has not been bumped. -->
-<script src="engine/phonemes.js?v=d2f45ba65d"></script>
-<!-- The speller: g2p rules, the built-in dictionary, the personal one on top. Shared with
-     the gate, which runs it with no storage and therefore tests the shipped dictionary. -->
-<script src="engine/spelling.js?v=d2f45ba65d"></script>
 <script>
+/* THE ENGINE IS FETCHED, NOT LINKED, AND ALL OF IT AT ONCE.
+ *
+ * It used to arrive as <script src="engine/phonemes.js?v=HASH"> with a content hash in the URL,
+ * plus a matching BUILD constant in two files so a mismatch could be detected. Both were derived
+ * values living in tracked files, so every engine edit changed them and any two branches touching
+ * the engine collided there. Three of the four conflicts in a typical rebase were these.
+ *
+ * Fetching all three together with cache:'no-store' makes skew impossible rather than detectable,
+ * which is the better of the two. No hash to keep in step, nothing to bump, nothing to conflict
+ * over. The worklet goes through a Blob so it gets the same guarantee — addModule takes a URL and
+ * would otherwise be free to use a cached copy.
+ *
+ * Falls back to a plain script tag if fetch cannot work, which is the file:// case.
+ */
+(async () => {
+async function loadEngine(name){
+  const url = 'engine/' + name;
+  try {
+    const r = await fetch(url, { cache: 'no-store' });
+    if (r.ok) { new Function(await r.text())(); return; }
+  } catch (e) { /* file://, offline — fall through */ }
+  await new Promise((res, rej) => {
+    const t = document.createElement('script');
+    t.src = url; t.onload = res; t.onerror = rej;
+    document.head.appendChild(t);
+  });
+}
+await loadEngine('phonemes.js');
+await loadEngine('spelling.js');
+
 // ─────────────────────────────────────────────────────────────────────────────
 // The tract shapes, solved offline by searching tube geometry until the
 // measured resonances matched Peterson & Barney's vowel formants.
@@ -731,7 +751,7 @@ const articulate = HOLLER.articulate;
 // stop consonants are the same move at three places along the tract
 const STOPS = HOLLER.STOPS;
 const VELAR = HOLLER.VELAR;
-const ENGINE_URL = new URL('engine/tract-worklet.js?v=d2f45ba65d', document.baseURI).href;
+let ENGINE_URL = new URL('engine/tract-worklet.js', document.baseURI).href;
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -756,6 +776,12 @@ async function start(){
   ctx = new (window.AudioContext||window.webkitAudioContext)();
   // keep the tract ~17.5 cm whatever the hardware sample rate is
   N = Math.max(24, Math.round(ctx.sampleRate*2*0.175/350));
+  // through a Blob, so the worklet cannot be served from cache while the rest is fresh —
+  // which is exactly the skew the version tokens existed to police
+  try {
+    const r = await fetch(ENGINE_URL, { cache: 'no-store' });
+    if (r.ok) ENGINE_URL = URL.createObjectURL(new Blob([await r.text()], { type: 'text/javascript' }));
+  } catch (e) { /* fall back to the plain URL */ }
   await ctx.audioWorklet.addModule(ENGINE_URL);
   node = new AudioWorkletNode(ctx,'tract',{processorOptions:{n:N, velar:VELAR}});
   analyser = ctx.createAnalyser();
@@ -781,16 +807,6 @@ async function start(){
   // second on the very first press and nothing after that.
   await new Promise(r => setTimeout(r, 300));
   node.port.onmessage = e => {
-    // The engine announces which build it is, and it has to match the one phonemes.js was
-    // written against. The two files cache INDEPENDENTLY, so a browser holding a stale
-    // index.html requests them at unversioned URLs and can pair a fresh phonemes.js with an
-    // old worklet. That made no sound and no error — buildWord emitted keyframes the old
-    // worklet had no integrator for. A hard reload fixed it, which is not a thing a visitor
-    // knows to do, so it says so now instead.
-    if(e.data && e.data.type==='build'){
-      if(e.data.build !== HOLLER.BUILD) engineSkew(e.data.build);
-      return;
-    }
     energy=e.data.e; liveDiam=e.data.d; voicedNow=e.data.on;
     nOpen=e.data.nOpen||0; nEnergy=e.data.nE||null;
     bOpenLive=e.data.bOpen||0; bEnergy=e.data.bE||null;
@@ -1073,10 +1089,6 @@ function engineNote(msg){
     document.body.appendChild(el);
   }
   el.textContent = msg;
-}
-function engineSkew(got){
-  engineNote('The audio engine is a different build from the page — ' + got + ' against '
-    + HOLLER.BUILD + '. Reload with a hard refresh (Ctrl-F5, or Cmd-Shift-R) to fix it.');
 }
 function engineDown(){
   engineNote('The audio engine did not start. A hard refresh (Ctrl-F5, or Cmd-Shift-R) '
@@ -1830,6 +1842,7 @@ function drawSpectro(){
 }
 let frameCount=0;
 sizeSpec();
+})();
 </script>
 </body>
 </html>

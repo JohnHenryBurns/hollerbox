@@ -1375,6 +1375,84 @@ truth, and the band was rebased with that written down.
 
 ---
 
+## What the teleport invalidated, and what it did not
+
+Asked directly after the diphthong fix, and worth answering item by item rather than in general.
+
+**Stands on its own evidence, unaffected:**
+
+- *Breath-noise tilt* (#13). Justified by a measured +4.4 dB/oct where real speech falls; now
+  −5.7. The fix is right. What was wrong was the **claim** attached to it — that it would fix
+  the pops. It did not, and that was reported back within a session.
+- *Nasal vent* (#18). Eight bursts firing behind nasals is physically wrong however anything
+  else sounds. That was a genuine second click source and it is genuinely gone.
+- *`gcap`* (#9). Three of twelve segments never reaching their target is a fault on its own
+  terms, and the ear confirmed it separately as slur.
+
+**Right change, wrong reason:**
+
+- *`onset`* (#20). The measurement was real — a 9 ms rise from digital silence — but the pop it
+  was built for was not an onset. It is now largely inert, because `wgap` removed the silence
+  it eased out of. Kept: a real pause still needs it.
+- *`wgap`* (#21, 8.5). Shipped on the reasoning that *"both pops existed only because there was
+  nothing in front of them"*. **That was wrong.** The pops were the teleport, and they were
+  there whether or not silence preceded them.
+
+  Independently the change is still right — connected speech does not stop between words — but
+  the interesting part is what it did. **Removing the silence is what exposed the teleport.** The
+  discontinuity had always been there and had been happening *during a silent gap*, where it was
+  largely inaudible. Close the gap and it happens mid-phonation. That is exactly the report at
+  the time: *"noticeably different, and with more variance over repeated plays."* A fix that
+  appears to make a symptom worse can be uncovering the real fault.
+
+**Reverted by me, before shipping:** scaling the burst by the amplitude envelope. Tried, measured,
+did not do what it claimed, removed.
+
+---
+
+## Could a real tract move that way?  ❌ no, and not only for the teleport
+
+The teleport was an infinite velocity — 41 units of tract shape in zero time. But measuring the
+rest of it after the fix is not reassuring either. How long each articulator takes to cross its
+own range at the model's fastest:
+
+| | model | a real one |
+|---|---|---|
+| jaw | **29 ms** | 150–200 ms |
+| tongue body | 37–38 ms | ~150 ms |
+| tongue tip height | **22 ms** | ~100 ms |
+| lips | 26 ms | ~120 ms |
+| tongue tip position | 210 ms | ✓ |
+
+**Five of six move four to six times faster than muscle can.** Nothing enforces otherwise: the
+tract shape is whatever linear interpolation between two keyframes says it is, and a keyframe
+list can ask for anything.
+
+### Constraining it — two levels, one built
+
+**A gate on faults, now.** No articulator above 200 range-lengths per second and no tract
+reshape above 20 000 units/s — a full sweep in 5 ms, which nothing anatomical approaches. It is
+set to catch a *fault* rather than to enforce plausibility, because the model is uniformly too
+fast and that is a limitation rather than a bug. Verified by ablation: reintroduce the diphthong
+teleport and it fails.
+
+**That check taught something on its first run.** Its first version watched only the six
+articulator parameters — and `art` is emitted by `buildWord` and **ignored by the worklet**. So
+reintroducing the bug in the *diameter* line left `art` perfectly well behaved and the check
+green. Watching a representation the engine does not use is not watching. It now watches both.
+
+That the two representations *can* disagree, because nothing makes them agree, is the sharpest
+argument yet for Phase 9.
+
+**A constraint in the engine, later.** That is Phase 9, and this reframes it: not "interpolate
+more smoothly" but **"make implausible motion unrepresentable"**. A critically damped
+second-order articulator with a per-parameter time constant cannot teleport, cannot exceed its
+velocity bound, and gives undershoot and velocity continuity for free — all three of which are
+currently either absent or enforced by hand. The plausibility figures above become a consequence
+of the model rather than an accident of how long a segment happened to be.
+
+---
+
 ## Phase 9 — interpolate in articulatory space  ❌ not started
 
 `buildWord` already emits an `art` array of six-parameter postures alongside the 44-element

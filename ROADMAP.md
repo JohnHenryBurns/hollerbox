@@ -2402,6 +2402,46 @@ anything is fitted to it.
 Reporting, not gating, until the solver exists. Failing the gate on a gap nobody has had a chance
 to close helps nobody.
 
+## Consonant solver, stage A  ◐ written, blocked on which formant measure is right
+
+`lab/solve-consonants.js` exists and fits the unbranched sonorants — /r/, /w/, /j/ — by random
+restarts and a local walk, weighted by each target's own tolerance so that /r/'s F3 dominates its
+own fit, which is correct since F3 is the whole distinction from /l/.
+
+It has not been run, for two reasons found in the writing.
+
+**The objective costs 123 ms.** `H.formants()` sweeps a brute-force DFT over the impulse
+response, so 1400 restarts across three phonemes is around nine minutes before refinement.
+`fit-preset.js` carries a comment saying exactly this — *"a brute-force DFT inside a search loop
+is about a hundred times slower, and this project has fallen for that once already"* — and it has
+now fallen for it twice, by the same author, four hundred lines away from the warning.
+
+**And the fast alternative disagrees with the slow one.** `formantsOf`, the LPC version already
+in `fit-preset.js`, runs in 2.5 ms — fifty times quicker — and gives different answers:
+
+| | LPC | DFT |
+|---|---|---|
+| /r/ | 486 1350 2454 | 480 1340 2410 |
+| /w/ | 150 846 2538 | **260** 846 2540 |
+| /j/ | 270 **2286 3570** | 260 **2060 2320** |
+
+1250 Hz apart on /j/'s F3. It is not a range limit: extending the sweep's ceiling from 3400 to
+5000 Hz changed nothing at all, so the two are genuinely measuring different things and one of
+them is wrong about real postures.
+
+**Both pass the only case with a known answer.** A uniform tube should ring at 500/1500/2500 and
+LPC gives 498/1506/2502 against the DFT's 500/1505/2505. So the test the gate already has does
+not discriminate them, and there is currently nothing that does.
+
+Stage A therefore starts by **adjudicating the two measurements**, not by solving. Fitting
+postures to a number two methods disagree about by a quarter of an octave would produce confident
+values for whichever one happens to be wrong — which is the failure this project has recorded
+more times than any other.
+
+A discriminating test wants a shape whose resonances are known analytically and which is *not*
+uniform: a two-tube approximation, where the formants follow from the two lengths and the
+junction, is the obvious candidate.
+
 <!-- ─────────────────────────────────────────────────────────────────────────
      ADD NEW SECTIONS ABOVE THIS LINE, at the end — not before a heading.
 

@@ -941,6 +941,50 @@ check("no stop burst fires behind an open velum", () => {
            note: bad.length ? bad.join("  ") : `0 behind nasals, ${inStop} at real stops` };
 });
 
+// ── the voice fitter recovers what it is given ─────────────────────────────
+report("the fitter recovers a known vlen and poly", () => {
+  // The roadmap's own rule: every metric should be checked against a case where the answer is
+  // independently known before it is trusted to judge anything. This builds four synthetic
+  // recordings with the truth planted in them and asks the fitter to find it.
+  //
+  // Built the way a SPEAKER works — a constant /h/+/d/ plus a vowel scaled by vlen — and NOT
+  // through buildWord, which preserves total word duration by construction where a person does
+  // not. The first version of this test did use buildWord and reported the fitter 17% low when
+  // the fitter was right and the test was wrong.
+  const P = H.P, fs = require("fs"), cp = require("child_process"), os = require("os"), path = require("path");
+  const WV = { heed:"i", hid:"ɪ", head:"ɛ", had:"æ", hod:"ɑ",
+               hawed:"ɔ", hood:"ʊ", whod:"u", hud:"ʌ", heard:"ɝ" };
+  const PB = { i:[270,2290], "ɪ":[390,1990], "ɛ":[530,1840], "æ":[660,1720], "ɑ":[730,1090],
+               "ɔ":[570,840], "ʊ":[440,1020], u:[300,870], "ʌ":[640,1190], "ɝ":[490,1350] };
+  const out = [], bad = [];
+  for (const truth of [0.4, 1.4]) {   // the extremes: what matters is that it is linear
+    const rows = []; let t = 0;
+    for (const [w, v] of Object.entries(WV)) {
+      const d = 0.22 + 0.20*(1 + (P.VDUR[v]-1)*truth);
+      rows.push({ label:w, a:t, b:t+d, f0:95, h1h2:4, F:[PB[v][0], PB[v][1], 2500, 3500] });
+      t += d + 0.4;
+    }
+    for (const [w,k] of [["cap",1],["captain",2],["captaincy",3]]) {
+      const d = k*0.30/(1 + 0.20*(k-1));
+      rows.push({ label:w, a:t, b:t+d, f0:95, F:[] }); t += d + 0.4;
+    }
+    const f = path.join(os.tmpdir(), "fit-check-" + truth + ".json");
+    fs.writeFileSync(f, JSON.stringify(rows));
+    const txt = cp.execSync(`node ${__dirname}/fit-preset.js ${f} t`, { encoding: "utf8" });
+    const gv = (txt.match(/vlen ([0-9.]+)/) || [])[1];
+    const gp = (txt.match(/poly ([0-9.]+)/) || [])[1];
+    if (gv === undefined) { bad.push(`vlen not reported at truth ${truth}`); continue; }
+    out.push(`${truth}->${gv}`);
+    // Within 15%: the estimate runs consistently high because the /h/+/d/ constant comes from
+    // the model at a nominal rate and the speaker's is their own. A scale bias, not a wrong
+    // shape — the same order as the ~8% low that RECORDING.md already records for tract length.
+    if (Math.abs(+gv - truth)/truth > 0.15) bad.push(`vlen ${gv} from truth ${truth}`);
+    if (Math.abs(+gp - 0.20) > 0.02) bad.push(`poly ${gp} from truth 0.20`);
+  }
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ") : `vlen ${out.join(" ")}, poly 0.20 exact` };
+});
+
 check("no word clicks", () => {
   // A stop release is a transient, but an outlier far above the signal's own motion is a
   // click. The white-noise burst once measured 13.5x.

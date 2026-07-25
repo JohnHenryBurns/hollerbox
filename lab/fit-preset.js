@@ -162,15 +162,97 @@ function main() {
   const rd = h === null ? 1.0 : Math.max(0.35, Math.min(2.4, 0.55 + 0.13 * h));
   const per = durs.length ? Math.max(0.10, Math.min(0.8, med(durs) / 4)) : 0.17;
 
+  // ---- prosody, from durations ----
+  // Everything above describes what the voice IS. These describe how the person TALKS, and
+  // until now every one of them was a published average from 1960 measured on somebody else.
+  //
+  // Both are fitted from WORD durations, which is sound for exactly these two cases and for no
+  // others. In /hVd/ the onset and the coda are constant across the set, so a word-duration
+  // difference IS a vowel-duration difference — that is the experiment Peterson & Lehiste ran
+  // to produce the table `vlen` scales. In cap/captain/captaincy what varies is the syllable
+  // count. Anything needing a vowel measured separately from its own coda is not fittable this
+  // way and is deliberately not attempted here.
+  const durOf = w => { const r = rows.find(x => String(x.label||"").toLowerCase() === w);
+                       return r ? r.b - r.a : null; };
+
+  // vlen — the /hVd/ set is ten vowels between a constant /h/ and a constant /d/, so a
+  // word-duration difference across it IS a vowel-duration difference. That is the experiment
+  // Peterson & Lehiste ran to produce the table `vlen` scales.
+  //
+  //   word_i = C + V0 * (1 + (t_i - 1) * vlen)          t_i = the table's value for that vowel
+  //
+  // Regressing word_i on t_i gives slope = V0*vlen. C is the /h/ plus /d/ plus the transitions,
+  // which the model can supply and a recording cannot; V0 then falls out of the mean. Note the
+  // model is used ONLY for that constant — the scaling comes entirely from the measurement,
+  // which is the point. Do not take C from buildWord's word length: buildWord preserves total
+  // duration by construction and a speaker does not, so that route reports a compressed answer.
+  let vlen = null, vlenN = 0, vlenR = null;
+  {
+    const pairs = [];
+    for (const [w, vow] of Object.entries(WORD_VOWEL)) {
+      if (vow === "ə") continue;                       // the sustained item is not a /hVd/ word
+      const t = H.P.VDUR[vow]; if (t === undefined) continue;
+      const d = durOf(w); if (d === null) continue;
+      pairs.push([t, d]);
+    }
+    vlenN = pairs.length;
+    if (pairs.length >= 5) {
+      const mx = pairs.reduce((a,p)=>a+p[0],0)/pairs.length,
+            my = pairs.reduce((a,p)=>a+p[1],0)/pairs.length;
+      let sxy = 0, sxx = 0, syy = 0;
+      for (const [x, y] of pairs) { sxy += (x-mx)*(y-my); sxx += (x-mx)**2; syy += (y-my)**2; }
+      if (sxx > 1e-12 && syy > 1e-12) {
+        vlenR = sxy/Math.sqrt(sxx*syy);
+        const slope = sxy/sxx;                          // = V0 * vlen
+        // C: everything in the word that is not the vowel, at this speaker's rate.
+        const W = H.P.buildWord(["h","ɑ","d"], { D: 4*per, n: bestN.n, stopHold: 0.075 });
+        const vowSeg = W.seg.find(x => x.sym === "ɑ");
+        const C = (W.end - 0.22) - (vowSeg.b - vowSeg.a);
+        const V0 = my - C;
+        if (V0 > 0.02) vlen = Math.max(0, Math.min(2, slope / V0));
+      }
+    }
+  }
+
+  // poly — three words, one, two and three syllables, same rate. Per-syllable duration should
+  // fall as 1/(1 + poly*(n-1)); solve for poly by least squares over whatever is present.
+  let poly = null;
+  {
+    const set = [["cap",1],["captain",2],["captaincy",3],["stick",1],["sticky",2],["stickiness",3]];
+    const got = set.map(([w,k]) => [k, durOf(w)]).filter(x => x[1] !== null);
+    const base = got.filter(x => x[0] === 1).map(x => x[1]);
+    if (base.length && got.length >= 3) {
+      const b = base.reduce((a,c)=>a+c,0)/base.length;
+      let best = null;
+      for (let p = 0; p <= 0.30001; p += 0.005) {
+        let e = 0;
+        for (const [k, d] of got) { const want = k*b/(1 + p*(k-1)); e += (d-want)**2; }
+        if (best === null || e < best[1]) best = [p, e];
+      }
+      poly = +best[0].toFixed(3);
+    }
+  }
+
   const v = { ...H.P.defaultVoice(),
     sect: bestN.n,
     f0a: Math.round(f0med * 0.92), f0b: Math.round(f0med * 1.08), f0c: Math.round(f0med * 0.82),
     rd: +rd.toFixed(2), per: +per.toFixed(2) };
+  if (vlen !== null) v.vlen = +vlen.toFixed(2);
+  if (poly !== null) v.poly = poly;
 
   console.log("\nsource, from the measures:\n");
   console.log(`  F0 median ${f0med ? f0med.toFixed(0) : "—"} Hz  ->  arc ${v.f0a}/${v.f0b}/${v.f0c}`);
   console.log(`  H1-H2 median ${h === null ? "—" : h.toFixed(1) + " dB"}  ->  Rd ${v.rd}`);
   console.log(`  median word ${durs.length ? med(durs).toFixed(2) + " s" : "—"}  ->  per ${v.per} s/sound`);
+  console.log(vlen === null
+    ? `  vowel length      —  (needs 5+ of the /hVd/ set; found ${vlenN})`
+    : `  /hVd/ durations vs the model, r=${vlenR.toFixed(2)} over ${vlenN} vowels  ->  vlen ${v.vlen}`);
+  console.log(poly === null
+    ? "  polysyllabic      —  (needs cap/captain/captaincy or stick/sticky/stickiness)"
+    : `  cap/captain/captaincy  ->  poly ${v.poly}`);
+  console.log("\n  not fitted from word durations, and not guessed: coda, stopVc, wkdur,");
+  console.log("  wklev, fnl, acc. Each needs a vowel measured separately from its own coda,");
+  console.log("  or one syllable from the next. Record them anyway; the analysis can follow.");
 
   // ---- the seed ----
   const spec = H.P.VOICE_SPEC;

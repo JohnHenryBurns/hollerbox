@@ -2433,6 +2433,40 @@ measure that is wrong everywhere and is useless against one that degrades with s
 precisely the failure mode LPC had.
 
 The solver can now run in about a minute. That is the next piece.
+## /ʒ/ is right when sustained and wrong in a word  ❌ open
+
+Narrowing the channel fixed the sustained sound and did **not** fix the affricate. Reported
+still as *"(static blast)doo-ump"*.
+
+Everything checkable in context is correct:
+
+| | in a word | |
+|---|---|---|
+| constriction | 0.151, target 0.151 | held for the whole segment |
+| in the jet's range? | yes, 0.030 < cl < 0.48 | |
+| `fric` | 0.34 | on throughout |
+| `jet` term evaluates to | **0.861** | healthy |
+| `squeeze` should give | **0.411** | voicing cut to 41% |
+
+And sustained, /ʒ/ measures **96% of its energy above 3 kHz, peaking at 5800 Hz** — a proper
+sibilant.
+
+In a word it measures **16%**, and it is **louder than the vowel after it** — 3.8e-2 against
+/ʌ/'s 2.7e-2. A voiced fricative is quieter than its neighbouring vowel; the constriction raises
+supraglottal pressure and drops the flow across the folds. Ours is louder, which means voicing is
+not being reduced *and* the turbulence is not arriving.
+
+So the posture, the geometry, the frication flag, the jet and the noise shaping are all confirmed
+right — in context — and the output is still wrong. The fault is somewhere in the injection path
+itself (`hgain`, `fh2`, the front-cavity resonance) or in how the voicing level is arrived at
+through the sequence as against the way `sustainRaw` sets it directly. That is the next probe and
+it wants a fresh start rather than the tail of a long session.
+
+**The affricate is a second, separate thing.** /dʒ/ is spelled `d` + `ʒ` and rendered as a full
+stop closure with its own burst, followed by an independent fricative. A real affricate releases
+the stop *into* the friction — there is one gesture, not two. Even with /ʒ/ fixed, "d then ʒ"
+will not be "j".
+
 <!-- ─────────────────────────────────────────────────────────────────────────
      ADD NEW SECTIONS ABOVE THIS LINE, at the end — not before a heading.
 

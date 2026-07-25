@@ -821,10 +821,26 @@ class TractProcessor extends AudioWorkletProcessor {
         // centimetre cavity with its own standing wave and it was invisible: the 3D view showed
         // a sealed tube for every /m/ and no sign that anything was coming out of the nose,
         // which is the single most interesting thing the model does.
-        const nE = new Float32Array(this.nN);
-        for(let j=0;j<this.nN;j++){ const a=this.nR[j]+this.nL[j]; nE[j]=a*a; }
-        const bE = new Float32Array(this.bN);
-        for(let j=0;j<this.bN;j++){ const a=this.bR[j]+this.bL[j]; bE[j]=a*a; }
+        // MAPPED BACK TO POSITION. In a ring the index is WHEN a sample was written, not
+        // WHERE it is in the tube — so sending the raw array made the 3D view colour the nasal
+        // cavity in write order, and the standing wave appeared to crawl along it instead of
+        // standing. A bug the ring introduced and nothing would have caught: it is a picture,
+        // and the gate cannot look at one.
+        //
+        // Position d from the junction is the sample written d steps ago, which is d slots
+        // behind the head, wrapping.
+        const nL1 = this.nN-1, nE = new Float32Array(nL1);
+        for(let d=0;d<nL1;d++){
+          const j = (this.np - d + nL1*2) % nL1;
+          const a = this.nR[j]+this.nL[j];
+          nE[d] = a*a;
+        }
+        const bL1 = this.bN-1, bE = new Float32Array(bL1);
+        for(let d=0;d<bL1;d++){
+          const j = (this.bp - d + bL1*2) % bL1;
+          const a = this.bR[j]+this.bL[j];
+          bE[d] = a*a;
+        }
         this.port.postMessage({e:this.energy, d:Float32Array.from(this.diam),
                                on:this.vAmp>0.02, v:this.voicing, seq:!!this.seq,
                                nOpen:this.nasal, nE, bOpen:this.bOpen, bE});

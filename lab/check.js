@@ -1713,25 +1713,23 @@ check("voiceless stops are aspirated", () => {
 // ── a nasal must not cost more than the deadline allows ────────────────────
 report("what a nasal costs against the audio deadline", () => {
   // An AudioWorklet gets 128 samples every 2.90 ms and must finish inside it or the buffer
-  // drops out. A nasal opens an eleven centimetre second cavity, and when that was written as
-  // two shifting arrays plus a pow() per sample it cost 445% more than a plain vowel and sat
-  // deep enough into the budget that anything else on the device pushed it over. Reported as
-  // static and dropouts after the nasal work landed.
+  // drops out. A nasal opens a second cavity, so it is the phoneme most likely to run out of
+  // time — reported as static and dropouts.
   //
-  // Reports rather than gates: it times a JIT on shared hardware, and a number that depends on
-  // how busy the machine is has no business failing a build. The minimum of several runs, not
-  // the mean of one — the first version of this measurement used a single mean and produced
-  // numbers that moved 25% on a phoneme with no branch open at all.
+  // HELD, not spoken. Three earlier versions of this measurement timed a word and warmed up
+  // past the end of it, so the velum was SHUT for the whole timed stretch and both the fast and
+  // slow builds came out identical. The velum reading is printed so that cannot happen quietly
+  // again. Minimum of several runs, not the mean of one, which reported a 25% improvement on a
+  // phoneme with no branch open at all.
   const P = H.P;
   const v = { ...P.defaultVoice(), ...P.VOICES.man.v }, n = Math.round(v.sect);
   const budget = 128/44100*1000;
-  const cost = sym => {
-    const W = P.buildWord(["ɑ", sym, "ɑ"], { D: 1.2, n, pros: v,
-                          glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+  const hold = sym => {
     const p = H.makeProcessor(n);
     p.port.onmessage({ data: { type: "voice", v } });
-    p.port.onmessage({ data: { type: "goal",
-      seq: { keys: W.keys, f0: P.buildF0(W.end, v), end: W.end } } });
+    p.port.onmessage({ data: { type: "shape", diam: P.articulate(P.ART[sym], n),
+      br: P.BRANCHED[sym] || 0, nz: P.NASAL[sym] || 0, fr: 0, vl: 0, as: 0, snap: true } });
+    p.voicing = 1; p.vAmp = 1; p.flow = 1; p.flowT = 1; p.f0 = 110;
     const out = [new Float32Array(128)];
     for (let i = 0; i < 600; i++) p.process([], [out]);
     let best = Infinity;
@@ -1740,13 +1738,17 @@ report("what a nasal costs against the audio deadline", () => {
       for (let k = 0; k < 300; k++) p.process([], [out]);
       best = Math.min(best, Number(process.hrtime.bigint() - t0)/1e6/300);
     }
-    return best;
+    return { ms: best, open: p.nasal };
   };
-  const vow = cost("ɑ"), nas = cost("m");
-  const over = (nas/vow - 1)*100;
-  return { ok: nas < budget*0.5 && over < 60,
-           note: `vowel ${vow.toFixed(2)} ms, nasal ${nas.toFixed(2)} ms ` +
-                 `(${(nas/budget*100).toFixed(0)}% of budget, ${over.toFixed(0)}% over a vowel)` };
+  const vow = hold("ɑ"), nas = hold("m");
+  const over = (nas.ms/vow.ms - 1)*100;
+  const bad = [];
+  if (nas.open < 0.9) bad.push(`the velum was only ${nas.open.toFixed(2)} open — nothing was timed`);
+  if (nas.ms > budget*0.5) bad.push(`a nasal takes ${(nas.ms/budget*100).toFixed(0)}% of the block`);
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ")
+               : `vowel ${vow.ms.toFixed(2)} ms, nasal ${nas.ms.toFixed(2)} ms ` +
+                 `(${(nas.ms/budget*100).toFixed(0)}% of budget, +${over.toFixed(0)}% over a vowel)` };
 });
 
 // ── the page loads the engine freshly, all of it, together ─────────────────

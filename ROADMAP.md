@@ -964,6 +964,37 @@ Four changes, smallest first:
 
 The goal-cry template stays as a voice preset. It is a good shout; it is just not a sentence.
 
+### The tract teleported after every diphthong  ✅ fixed
+
+The pop, finally, and it was found by an experiment nobody had thought to run: *"I lovemy
+daughter removes the pop in front of the d."*
+
+That is a strange thing for a **spelling** change to do, and the strangeness is the information.
+Closing up the space between *love* and *my* changes what precedes the /d/ from `aɪ` — a
+diphthong — to a plain `i`. Nothing else about the /d/ moves.
+
+`baseFor` returns a diphthong's **first** posture: /ɑ/ for /aɪ/. That is correct everywhere it
+is normally asked. The pause branch asked it for "the previous shape, to hold" — but by then the
+tract has finished travelling to the diphthong's **second** target, so holding the first one
+threw it 41 units back to where the sound *began*, in **zero time**, with two keyframes sharing
+an instant and no interpolation between them.
+
+Measured in "I love my daughter": instantaneous shape jumps of 41.0 at **310 ms and 1283 ms** —
+after *I* and after *my*, both /aɪ/, and exactly the two pops reported. The amplitude spikes 3–4×
+right there: 1.8e-2 → 2.0e-2 → **5.8e-2** → 1.5e-2 into the closure, against a smooth
+1.8 → 2.0 → 2.2 → 2.3 after the fix.
+
+**It explains every symptom.** Why `onset` dulled one pop and not the other — neither was an
+onset, and the two happened to respond differently to the timing shifts it caused. Why removing
+the inter-word silence changed the character without removing it — the teleport stayed. Why it
+varied between plays — whether a glottal pulse lands on the discontinuity is a matter of where
+the jitter has put the period.
+
+Gated as an invariant rather than as a band: **two keyframes may share an instant, but they may
+not disagree**, because the interpolation has no time to get from one to the other. Verified by
+ablation across five phrases — with the old lookup restored it fails on *I love my daughter*
+twice and on *hello world* once.
+
 ### 8.5a Onset after a pause  ✅ built
 
 Reported as *"a physical pop in I Love My Daughter before the L and D"*, with the guess that it

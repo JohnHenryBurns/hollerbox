@@ -1024,6 +1024,41 @@ check("phonation eases back in after a pause", () => {
                : `half amplitude in ${on.join("/")} ms, ${off.join("/")} with onset nulled` };
 });
 
+// ── the tract may not teleport ─────────────────────────────────────────────
+check("no keyframe pair asks the tract to move in zero time", () => {
+  const P = H.P, S = require(__dirname + "/../engine/spelling.js"), bad = [];
+  // Two keyframes can legitimately share an instant — a pause emits one as it ends and the
+  // next sound emits one as it begins. What they may not do is DISAGREE, because the
+  // interpolation has no time to get from one to the other and the tract simply teleports.
+  //
+  // It did, by 41 units, after every diphthong followed by a word boundary. `baseFor` returns
+  // a diphthong's FIRST posture — /ɑ/ for /aɪ/ — which is right everywhere except here, where
+  // the tract has just finished travelling to the SECOND one. "Hold the previous shape" threw
+  // it back to the start. That was the pop: two of them in "I love my daughter", at 310 ms and
+  // 1283 ms, after "I" and after "my", both /aɪ/.
+  //
+  // Found because "I lovemy daughter" removes the second one — that spelling puts a plain /i/
+  // before the boundary instead of a diphthong, so there is nothing to snap back from.
+  const v = { ...P.defaultVoice(), ...P.VOICES.john.v };
+  const n = Math.round(v.sect);
+  for (const t of ["I love my daughter", "hello world", "how now brown cow",
+                   "my wife is great", "the quick brown fox jumps over the lazy dog"]) {
+    const r = S.g2p(t);
+    const W = P.buildWord(r.ph, { D: Math.max(0.8, r.ph.length*v.per), n, stress: r.stress,
+                                  pros: v, glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    for (let i = 1; i < W.keys.length; i++) {
+      if (Math.abs(W.keys[i].t - W.keys[i-1].t) > 1e-9) continue;
+      let jump = 0;
+      for (let k = 0; k < n; k++) jump += Math.abs(W.keys[i].d[k] - W.keys[i-1].d[k]);
+      if (jump > 0.01)
+        bad.push(`"${t}" jumps ${jump.toFixed(1)} at ${(W.keys[i].t*1000).toFixed(0)}ms`);
+    }
+  }
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.slice(0,3).join("  ")
+               : "5 phrases, every co-timed keyframe pair agrees" };
+});
+
 check("no word clicks", () => {
   // A stop release is a transient, but an outlier far above the signal's own motion is a
   // click. The white-noise burst once measured 13.5x.

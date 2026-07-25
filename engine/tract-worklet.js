@@ -5,7 +5,7 @@
 //
 // Everything it needs arrives in processorOptions: { n, velar }.
 
-const BUILD = "bc5c578146";   // must match engine/phonemes.js — see the note there
+const BUILD = "8437389961";   // must match engine/phonemes.js — see the note there
 
 class TractProcessor extends AudioWorkletProcessor {
   constructor(opt){
@@ -46,7 +46,7 @@ class TractProcessor extends AudioWorkletProcessor {
     // /l/ cue and installs the /r/ one, because that pole-zero pair IS an /r/. Keep it small
     // and short so F3 stays high and the zero sits well above it.
     this.bArea = 0.85; this.bEnd = 0.97;
-    this.bOpen = 0; this.bTarget = 0;
+    this.bOpen = 0; this.bTarget = 0; this.bTgt = 0; this.bv = 0;
     this.bR=new Float64Array(this.bN); this.bL=new Float64Array(this.bN);
     this.bRin=new Float64Array(this.bN); this.bLin=new Float64Array(this.bN);
     // ---- the nasal tract: a long branch at the velum, open at the nostrils ----
@@ -55,7 +55,7 @@ class TractProcessor extends AudioWorkletProcessor {
     // nose off from the glottis and makes no sound at all.
     this.nPos = Math.round(n*0.44);
     this.nArea= 2.4; this.nEnd = -0.82;               // radiating, like the lips
-    this.nasal=0; this.nasalT=0;
+    this.nasal=0; this.nasalT=0; this.nTgt=0; this.nv=0;
     this.nR=new Float64Array(this.nN); this.nL=new Float64Array(this.nN);
     this.nRin=new Float64Array(this.nN); this.nLin=new Float64Array(this.nN);
     this.dcX=0; this.dcY=0; this.tick=0;
@@ -129,6 +129,7 @@ class TractProcessor extends AudioWorkletProcessor {
         if(v.artCrit !==undefined) this.artCrit=v.artCrit;
         if(v.artStiff!==undefined) this.artStiff=v.artStiff;
         if(v.artPush !==undefined) this.artPush=v.artPush;
+        if(v.velT !==undefined) this.velT=v.velT;
       }
     };
     this.calcRefl();
@@ -290,7 +291,8 @@ class TractProcessor extends AudioWorkletProcessor {
           let u=this.seqT/this.blend; u=u*u*(3-2*u);
           const k0=K[0];
           for(let i=0;i<n;i++) this.tgt[i]=this.seqFrom[i]+(k0.d[i]-this.seqFrom[i])*u;
-          this.bOpen=this.seqFromB+((k0.b||0)-this.seqFromB)*u;
+          this.bTgt=this.seqFromB+((k0.b||0)-this.seqFromB)*u;
+          this.nTgt=(k0.nz||0);
           done=false;
         } else
         for(let k=1;k<K.length;k++){
@@ -298,8 +300,8 @@ class TractProcessor extends AudioWorkletProcessor {
             const a=K[k-1], b=K[k];
             let u=(this.seqT-a.t)/(b.t-a.t); u=u*u*(3-2*u);
             for(let i=0;i<n;i++) this.tgt[i]=a.d[i]+(b.d[i]-a.d[i])*u;
-            this.bOpen=(a.b||0)+((b.b||0)-(a.b||0))*u;
-            this.nasal=(a.nz||0)+((b.nz||0)-(a.nz||0))*u;
+            this.bTgt=(a.b||0)+((b.b||0)-(a.b||0))*u;
+            this.nTgt=(a.nz||0)+((b.nz||0)-(a.nz||0))*u;
             this.voiceless=(u<0.5?(a.vl||0):(b.vl||0));
             this.fric=((a.fr||0)+((b.fr||0)-(a.fr||0))*u)*(this.hiss===undefined?1:this.hiss);
             this.asp=(a.as||0)+((b.as||0)-(a.as||0))*u;
@@ -343,8 +345,28 @@ class TractProcessor extends AudioWorkletProcessor {
         }
       } else {
         for(let i=0;i<n;i++) this.tgt[i]=this.diam[i]+(this.target[i]-this.diam[i])*0.0006;
-        this.bOpen += (this.bTarget-this.bOpen)*0.0006;
-        this.nasal += (this.nasalT-this.nasal)*0.0006;
+        this.bTgt += (this.bTarget-this.bTgt)*0.0006;
+        this.nTgt += (this.nasalT-this.nTgt)*0.0006;
+      }
+      // ---- the velum has mass too, and more of it than anything else ----
+      // Phase 9 gave every part of the tract weight and left these two tracking their keyframes
+      // exactly, so the velum could swing fully open in 26 ms. A real one takes about a hundred
+      // and is the SLOWEST articulator there is — a flap of soft tissue with no bone in it and
+      // nothing to brace against. It was the only thing in here that could still teleport.
+      //
+      // The lateral pocket is the sides of the tongue parting, so it moves at tongue speed
+      // rather than velum speed. Both are critically damped, like the tract, so neither can
+      // overshoot into a flutter.
+      {
+        const vt = this.velT===undefined ? 0.020 : this.velT;
+        if(vt>0){
+          const dt=1/sr;
+          for(const [tg,cur,k,tau] of [['nTgt','nasal','nv',vt],['bTgt','bOpen','bv',vt*0.5]]){
+            const w=1/tau, kk=w*w, cc=2*w;
+            this[k] = (this[k]||0) + (kk*(this[tg]-this[cur]) - cc*(this[k]||0))*dt;
+            this[cur] = Math.max(0, Math.min(1, this[cur] + this[k]*dt));
+          }
+        } else { this.nasal=this.nTgt; this.bOpen=this.bTgt; }
       }
       // ---- the articulators have mass ----
       // A critically damped second-order follower: it cannot overshoot, cannot teleport, and

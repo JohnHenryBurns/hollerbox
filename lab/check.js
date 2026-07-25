@@ -1821,6 +1821,45 @@ check("each nasal has its own antiformant, in the right order", () => {
            note: bad.length ? bad.join("  ") : `m ${z.m}  n ${z.n}  ŋ ${z["ŋ"]} Hz, all in front of the velum` };
 });
 
+// ── the velum has mass, and more of it than anything else ──────────────────
+check("the velum cannot move faster than a velum", () => {
+  // Phase 9 gave every part of the tract weight and left this tracking its keyframes exactly,
+  // so it swung fully open in 26 ms. A real velum takes about a hundred and is the SLOWEST
+  // articulator there is — a flap of soft tissue with no bone in it and nothing to brace
+  // against. It was the last thing in the engine that could still teleport.
+  const P = H.P, bad = [];
+  const v = { ...P.defaultVoice(), ...P.VOICES.man.v }, n = Math.round(v.sect);
+  const fastest = (velT) => {
+    const vv = { ...v, velT };
+    const W = P.buildWord(["ɑ","m","ɑ"], { D: 0.9, n, pros: vv,
+                          glide: vv.glide, stopHold: vv.stopT, drawl: vv.drawl });
+    const p = H.makeProcessor(n);
+    p.port.onmessage({ data: { type: "voice", v: vv } });
+    p.port.onmessage({ data: { type: "goal",
+      seq: { keys: W.keys, f0: P.buildF0(W.end, vv), end: W.end } } });
+    const out = [new Float32Array(128)];
+    let prev = 0, fast = 0, peak = 0;
+    for (let b = 0; b < Math.ceil(W.end*H.SR/128); b++) {
+      p.process([], [out]);
+      fast = Math.max(fast, Math.abs(p.nasal - prev)*(H.SR/128));
+      prev = p.nasal;
+      peak = Math.max(peak, p.nasal);
+    }
+    return { fast, peak };
+  };
+  const on = fastest(0.020), off = fastest(0);
+  // at its default it must be slow, and it must still get all the way open — a velum that
+  // cannot open is not a rate limit, it is a broken nasal
+  if (on.fast > 25) bad.push(`velum moves at ${on.fast.toFixed(0)}/s, too quick for soft tissue`);
+  if (on.peak < 0.9) bad.push(`velum only reaches ${on.peak.toFixed(2)} open`);
+  // and nulling it has to restore the old instant tracking, or the knob does nothing
+  if (!(off.fast > on.fast*1.5)) bad.push(`velT=0 does not restore instant tracking`);
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ")
+               : `${on.fast.toFixed(1)}/s and reaches ${on.peak.toFixed(2)}; ${off.fast.toFixed(1)}/s with velT nulled` };
+});
+
 // ── the page draws the branches the engine has ─────────────────────────────
 check("the 3D view knows about both side branches", () => {
   // The nasal tract is an 11 cm cavity with its own standing wave and the view drew none of it:

@@ -964,6 +964,41 @@ Four changes, smallest first:
 
 The goal-cry template stays as a voice preset. It is a good shout; it is just not a sentence.
 
+### 8.5a Onset after a pause  ✅ built
+
+Reported as *"a physical pop in I Love My Daughter before the L and D"*, with the guess that it
+was trapped air released as the tongue rose to the palate. **Right place, wrong mechanism** —
+and the place is what gave it away.
+
+Neither trapped-air path fires there. `charge` needs `cl<0.14` and /l/'s narrowest point is
+0.477; and the lateral pocket's three-port junction reduces *exactly* to the two-port one as its
+area goes to zero, so connecting it is smooth (checked algebraically, not assumed).
+
+What /l/ and /d/ actually have in common in that phrase is that they are **what "love" and
+"daughter" start with**. Every word onset after a pause did this, /m/ in "my" included:
+
+| | silence before | 30 ms later |
+|---|---|---|
+| pause → /l/ | 3.0e-12 | 1.3e-2 |
+| pause → /m/ | 2.8e-14 | 1.4e-2 |
+| /l/ → /ʌ/ mid-word | 1.5e-2 | 1.5e-2 |
+
+The engine eases `flow` in at the start of an utterance — but that ramp is keyed on `seqT`, time
+since the whole sequence began, so it happens **once** and never after an internal pause. Word
+onsets rose from digital silence to full amplitude in about nine milliseconds.
+
+**It is not a sample-level glitch.** The biggest single-sample jump at those onsets is *smaller*
+than at a mid-word transition in the same phrase, which nobody hears. The ear is flagging an
+abrupt onset after silence, so the thing to fix — and to assert — is a **rise time**.
+
+`onset` in `VOICE_SPEC`, default 35 ms, `off:0` for the old instant behaviour. Gated in both
+directions and on the negative case: mid-word transitions must *not* be ramped, since there is
+no silence there to ease out of and softening them would smear every consonant in the phrase.
+
+**This does not close 8.5.** A ramp is right whenever a pause is real. The larger point below —
+that most word boundaries should carry no silence at all — still stands, and would mean far
+fewer onsets needing to be eased in the first place.
+
 ### 8.5 Pause policy
 
 `isPause` emits `sil:1, vl:1` and a 90–300 ms gap at **every** space. Most word boundaries

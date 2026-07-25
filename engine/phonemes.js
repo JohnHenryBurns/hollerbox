@@ -404,6 +404,12 @@ const VOICE_SPEC=[
   // absolute time and never scaled with what it connects; 8.1 made unstressed segments short
   // and walked straight into it. off:3 is effectively no cap — the behaviour before it existed.
   {k:'gcap', lo:0.2,    hi:3,       d:0.5, off:3, p8:1,},
+  // How long phonation takes to come back after a pause. It used to be instant — flow went
+  // from 0 to 1 with only a 5.7 ms one-pole to soften it, so every word onset after a pause
+  // rose from DIGITAL SILENCE to full amplitude in about nine milliseconds. The ear hears that
+  // as a click, and it is what "a pop before the L and D" turned out to be: /l/ and /d/ are
+  // simply what those words start with. off:0 restores the instant onset.
+  {k:'onset',lo:0,      hi:0.12,    d:0.035, off:0,},
 ];
 const VOICES = {
   // Measured from a real goal cry: the pitch falls the whole way (158 -> 93 Hz) and the
@@ -475,7 +481,7 @@ const VOICE_GROUPS = {
   source: ['rd','press','jit','brth','folds','damp','lipR'],
   pitch:  ['f0a','f0b','f0c','pert'],
   stress: ['wkdur','wklev','acc'],
-  rhythm: ['per','drawl','glide','stopT','vlen','coda','fnl','poly','stopVc','apw','gcap'],
+  rhythm: ['per','drawl','glide','stopT','vlen','coda','fnl','poly','stopVc','apw','gcap','onset'],
   tract:  ['sect','open','burst','hiss'],
 };
 

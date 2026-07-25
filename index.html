@@ -312,7 +312,7 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
     </div>
     <div class="badge">
       <b id="secCount">—</b> cylinders · <b id="lenCm">—</b> cm<br>
-      colour = wave energy<br>
+      <span id="tubeKey">colour = wave energy</span><span id="mouthKey" hidden><b style="color:#c0554e">red</b> fixed · <b style="color:#e8a33c">yellow</b> flaps · <b style="color:#3f7fd6">blue</b> air</span><br>
       drag · pinch to zoom
     </div>
   </div>
@@ -1648,6 +1648,20 @@ function bounceWord(){
     });
   }
 }
+// Three colours, three meanings. The view used to be a greyscale hierarchy — roof and jaw one
+// grey, tongue another, lips a third — which distinguished the parts without saying anything
+// about them.
+//
+//   RED     things that never move: the pharynx wall, the hard palate, the roof of the nose
+//   YELLOW  the two flaps that open and close a passage: the lips and the velum
+//   BLUE    where the air is actually going, right now
+//
+// The tongue keeps its own treatment. It moves, but it shapes the air rather than gating it,
+// and it is the largest thing on screen — painting it yellow would drown the two flaps that
+// yellow exists to pick out.
+const MOUTH_FIXED = '#c0554e', MOUTH_FLAP = '#e8a33c', MOUTH_AIR = '#3f7fd6',
+      MOUTH_TONGUE = '#93a1a8';   // its own, deliberately: it shapes the air rather than gating it
+
 function drawMouth(){
   if(!mw) return;
   const A=artNow();
@@ -1690,7 +1704,7 @@ function drawMouth(){
     g.fill();
     g.beginPath();
     for(let u=HINGE;u<=0.99;u+=0.02){ const x=X(u), y=Y(roofAt(u)); u===HINGE? g.moveTo(x,y):g.lineTo(x,y); }
-    g.strokeStyle = '#6d787e';
+    g.strokeStyle = MOUTH_FIXED;
     g.stroke();
 
     // the velum. Up and back against the pharynx wall seals the nose; hanging down opens it.
@@ -1702,7 +1716,7 @@ function drawMouth(){
     g.beginPath();
     g.moveTo(hx, hy);
     g.quadraticCurveTo(hx - len*0.34, (hy + tip.y)/2, tip.x, tip.y);
-    g.strokeStyle = open>0.05 ? 'rgba(240,150,70,0.95)' : '#6d787e';
+    g.strokeStyle = MOUTH_FLAP;
     g.stroke();
   }
 
@@ -1715,7 +1729,7 @@ function drawMouth(){
     const x=X(u), y=Y(-roof);
     u===0? g.moveTo(x,y) : g.lineTo(x,y);
   }
-  g.strokeStyle='#6d787e'; g.stroke();
+  g.strokeStyle=MOUTH_FIXED; g.stroke();
 
   // ---- the jaw line: opens downward ----
   const jawDrop=0.30+A.jaw*0.95;
@@ -1726,7 +1740,7 @@ function drawMouth(){
     const x=X(u);
     u===0.42? g.moveTo(x,y) : g.lineTo(x,y);
   }
-  g.strokeStyle='#6d787e'; g.stroke();
+  g.strokeStyle=MOUTH_FIXED; g.stroke();
 
   // ---- the tongue: a body that humps, and a tip that can rise ----
   g.beginPath();
@@ -1745,14 +1759,62 @@ function drawMouth(){
   const grad=g.createLinearGradient(0,Y(-0.3),0,Y(1.2));
   grad.addColorStop(0,'#4a565d'); grad.addColorStop(1,'#2a3238');
   g.fillStyle=grad; g.fill();
-  g.strokeStyle='#93a1a8'; g.stroke();
+  g.strokeStyle=MOUTH_TONGUE; g.stroke();
 
   // ---- lips ----
   const lipGap=0.05+A.lip*0.52, lx=X(1.0);
   g.lineWidth=Math.max(2.5,S*0.10); g.lineCap='round';
-  g.strokeStyle='#b9c6cc';
+  g.strokeStyle=MOUTH_FLAP;
   g.beginPath(); g.moveTo(lx-S*0.18,Y(-0.34)); g.lineTo(lx+S*0.10,Y(-lipGap*0.5-0.02)); g.stroke();
   g.beginPath(); g.moveTo(lx-S*0.18,Y(0.42+jawDrop*0.16)); g.lineTo(lx+S*0.10,Y(lipGap*0.5+0.02)); g.stroke();
+
+  // ---- where the air is actually going ----
+  //
+  // Not a fixed pair of channels: air goes ONE way at a time. Out through the mouth, or through
+  // the nose when the velum drops, or nowhere at all while a stop is closed. Following the live
+  // state is the thing this diagram can do that a textbook figure cannot — the path visibly
+  // switches to the nose on an /m/ and dead-ends at the closure of a /d/.
+  {
+    const dd = articulate(A, N);
+    let seal = -1;                                  // first section tight enough to stop the air
+    for(let i=1;i<N-1;i++) if(dd[i] < 0.06){ seal = i/(N-1); break; }
+    const roofOf = u => u<0.30 ? 0.95-u*0.6 : u<0.62 ? 0.77-(u-0.30)*1.35 : 0.34;
+    const tongueOf = u => {
+      let v = 0.46+0.20*A.jaw;
+      const xb=(u-A.bodyPos)/0.30;
+      if(Math.abs(xb)<1) v -= A.bodyHi*0.78*0.5*(1+Math.cos(Math.PI*xb));
+      const xt=(u-A.tipPos)/0.085;
+      if(Math.abs(xt)<1) v -= A.tipHi*0.86*0.5*(1+Math.cos(Math.PI*xt));
+      return v;
+    };
+    g.lineWidth = Math.max(2.5, S*0.085);
+    g.lineCap = 'round';
+    g.strokeStyle = MOUTH_AIR;
+
+    // up the pharynx and along the mouth, mid-channel, stopping at a seal
+    const stopAt = seal < 0 ? 1.0 : seal;
+    g.beginPath();
+    let started = false;
+    for(let u=0.04; u<=stopAt+1e-9; u+=0.02){
+      const mid = ( -roofOf(u) + tongueOf(u) ) / 2;
+      const x=X(u), y=Y(mid);
+      started ? g.lineTo(x,y) : (g.moveTo(x,y), started=true);
+    }
+    g.globalAlpha = 0.85;
+    g.stroke();
+
+    // and out through the nose, when the velum has let it
+    if(nOpen > 0.02){
+      const HINGE = 0.46;
+      const roofAtN = u => -(1.06 - Math.pow(Math.max(0,u-HINGE)/(0.99-HINGE), 1.6)*0.14);
+      g.globalAlpha = 0.85*Math.min(1, nOpen*1.6);
+      g.beginPath();
+      g.moveTo(X(HINGE-0.06), Y((-roofOf(HINGE-0.06)+tongueOf(HINGE-0.06))/2));
+      for(let u=HINGE; u<=0.99; u+=0.02) g.lineTo(X(u), Y((roofAtN(u) - roofOf(u))/2));
+      g.stroke();
+    }
+    g.globalAlpha = 1;
+  }
 
   // ---- where the tract is narrowest, which is what makes the sound ----
   const d=articulate(A,N);
@@ -1776,6 +1838,10 @@ document.querySelector('.viewtabs').addEventListener('click',e=>{
   view=b.dataset.view;
   document.querySelectorAll('.vt').forEach(t=>t.classList.toggle('on',t===b));
   mouthCv.hidden = view!=='mouth';
+  // the two views mean different things by colour, so only one key is shown at a time
+  { const mk=document.getElementById('mouthKey'), tk=document.getElementById('tubeKey');
+    if(mk) mk.hidden = view!=='mouth';
+    if(tk) tk.hidden = view==='mouth'; }
   renderer.domElement.style.visibility = view==='mouth' ? 'hidden' : 'visible';
   // Size it on the way in. Sizing happened only at startup and on resize, so if the stage had
   // no height when the page loaded, mw stayed 0, drawMouth returned early on every frame, and

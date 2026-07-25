@@ -1141,15 +1141,37 @@ report("how far the articulators are from real anatomy", () => {
   // This is the quantitative case for Phase 9. Interpolating in articulatory space with
   // per-articulator time constants would make these numbers a consequence of the model rather
   // than an accident of how long a segment happened to be.
+  // Reported as ACTUAL distance and time, not as a speed extrapolated to a full range. A small
+  // quick movement extrapolates to the same figure as a large one and is not the same problem —
+  // a stop release really is fast, it is just short. Checked: the worst offenders here are
+  // genuinely large, 94% of the tongue tip's range in 20 ms.
+  const P = H.P, S = require(__dirname + "/../engine/spelling.js");
   const WANT = { jaw: 0.170, bodyPos: 0.170, bodyHi: 0.170, tipPos: 0.100, tipHi: 0.100, lip: 0.120 };
-  const { worst } = articSpeeds();
-  const rows = ARTIC.map(k => {
-    const ms = 1000/Math.max(1e-9, worst[k]);
-    return `${k} ${ms.toFixed(0)}ms(${(WANT[k]*1000/Math.max(1,ms)).toFixed(1)}x)`;
+  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  const worstMove = {};
+  for (const t of ["I love my daughter", "hello world", "how now brown cow",
+                   "the quick brown fox jumps over the lazy dog", "banana and a tomato"]) {
+    const r = S.g2p(t);
+    const W = P.buildWord(r.ph, { D: Math.max(0.8, r.ph.length*v.per), n, stress: r.stress,
+                                  pros: v, glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    for (let i = 1; i < W.art.length; i++) {
+      const dt = W.art[i].t - W.art[i-1].t; if (dt < 1e-6) continue;
+      for (const k of ARTIC) {
+        const d = Math.abs(W.art[i].A[k] - W.art[i-1].A[k]);
+        if (d < 0.05) continue;
+        const need = d * WANT[k];                 // how long an anatomy would take for THAT far
+        const ratio = need/dt;
+        if (!worstMove[k] || ratio > worstMove[k].ratio) worstMove[k] = { d, dt, ratio };
+      }
+    }
+  }
+  const rows = ARTIC.filter(k => worstMove[k]).map(k => {
+    const m = worstMove[k];
+    return `${k} ${(m.d*100).toFixed(0)}% in ${(m.dt*1000).toFixed(0)}ms (${m.ratio.toFixed(1)}x)`;
   });
-  const over = ARTIC.filter(k => 1000/Math.max(1e-9, worst[k]) < WANT[k]*1000).length;
+  const over = ARTIC.filter(k => worstMove[k] && worstMove[k].ratio > 1).length;
   return { ok: over === 0,
-           note: `${over}/6 faster than anatomy — ${rows.join("  ")}` };
+           note: `${over}/6 outrun anatomy — ${rows.join("  ")}` };
 });
 
 // ── the page cannot serve a stale engine ───────────────────────────────────

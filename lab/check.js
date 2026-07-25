@@ -1000,7 +1000,18 @@ check("phonation eases back in after a pause", () => {
     // word boundary there is now no silence to ease out of, which is the better fix.
     const v = { ...P.defaultVoice(), ...V, onset: on, wgap: 0.14 };
     const { buf } = H.say(r.ph, { D: Math.max(0.8, r.ph.length*v.per), voice: v, n, stress: r.stress });
-    return [0.416, 1.026].map(t0 => {
+    // Locate the onsets rather than hardcoding them. They were 0.416 and 1.026 under a fixed
+    // D; under 8.1b a word's length depends on what is in it, so an absolute offset lands
+    // somewhere else entirely. A check that assumes a timing is a check that fails the moment
+    // the timing becomes a result.
+    const r2 = S.g2p("I love my daughter");
+    const W = P.buildWord(r2.ph, { D: Math.max(0.8, r2.ph.length*v.per), rate: (v.per||0.17)*0.90,
+                                   n, stress: r2.stress, pros: v, glide: v.glide,
+                                   stopHold: v.stopT, drawl: v.drawl });
+    const onsets = [];
+    for (let i = 1; i < W.seg.length; i++)
+      if (W.seg[i-1].sym === " " && W.seg[i].sym !== " ") onsets.push(W.seg[i].a);
+    return onsets.slice(0, 2).map(t0 => {
       const full = H.rms(buf, t0 + 0.06, t0 + 0.10);
       for (let k = 0; k < 60; k++)
         if (H.rms(buf, t0 + k*0.001, t0 + k*0.001 + 0.004) > full*0.5) return k;
@@ -1307,6 +1318,48 @@ check("each gesture knob changes what a consonant actually does", () => {
   return { ok: bad.length === 0,
            note: bad.length ? bad.join("  ")
                : `defaults seal /d/ /k/ and hold /z/ at ${z.toFixed(3)}; artCrit and artStiff both load-bearing` };
+});
+
+// ── a word's length comes from what is in it ───────────────────────────────
+check("bad is longer than bat", () => {
+  const P = H.P, bad = [];
+  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  // 8.1b, and the single sentence it exists for. With D fixed, a word's total is handed in from
+  // outside and the weights only redistribute it — so one weight over itself is 1, an isolated
+  // monosyllable cannot lengthen, and *bad* and *bat* came out the same length to the sample.
+  // Every effect that acts on a vowel was invisible in exactly the place the literature measures
+  // it. Measured before: coda voicing arriving at 1.17 against 1.45, intrinsic length 1.28
+  // against 1.55.
+  const firstVowel = chain => {
+    const W = P.buildWord(chain, { rate: P.rateFor(chain, null, v), n, pros: v,
+                                   glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    const s = W.seg.find(x => P.VOWEL_KEYS.includes(x.sym));
+    return { vowel: s ? s.b - s.a : null, word: W.end };
+  };
+  const bd = firstVowel(["b", "æ", "d"]), bt = firstVowel(["b", "æ", "t"]);
+  const coda = bd.vowel/bt.vowel;
+  if (!(coda > 1.25 && coda < 1.70))
+    bad.push(`bad/bat vowel ratio ${coda.toFixed(2)} — House & Fairbanks put it near 1.45`);
+  if (!(bd.word > bt.word))
+    bad.push("bad is not a longer WORD than bat, only a differently proportioned one");
+
+  const hd = firstVowel(["h", "ɔ", "d"]), hi = firstVowel(["h", "ɪ", "d"]);
+  const intr = hd.vowel/hi.vowel;
+  if (!(intr > 1.25 && intr < 1.85))
+    bad.push(`hɔd/hɪd ratio ${intr.toFixed(2)} — Peterson & Lehiste put it near 1.55`);
+
+  // And the stretch has to still work, or the goal cry and the duration slider are gone.
+  const chain = ["g", "oʊ", "l"];
+  const nat = P.buildWord(chain, { rate: P.rateFor(chain, null, v), n, pros: v,
+                                   glide: v.glide, stopHold: v.stopT, drawl: v.drawl }).end;
+  const long = P.buildWord(chain, { rate: P.rateFor(chain, 3.0, v), n, pros: v,
+                                    glide: v.glide, stopHold: v.stopT, drawl: v.drawl }).end;
+  if (!(long > nat*2)) bad.push(`asking for a long word gave ${long.toFixed(2)}s against ${nat.toFixed(2)}s natural`);
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ")
+               : `bad/bat ${coda.toFixed(2)}, hɔd/hɪd ${intr.toFixed(2)}, ` +
+                 `goal stretches ${nat.toFixed(2)}s to ${long.toFixed(2)}s` };
 });
 
 check("no word clicks", () => {

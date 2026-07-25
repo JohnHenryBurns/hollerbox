@@ -832,7 +832,50 @@ See the entry under Open faults; the short version is that its voice-bar probe u
 pitch period long, so its reference was a coin flip. Fixed separately and first, with the bands
 unmoved.
 
-### 8.1b Make `D` a rate rather than an absolute length
+### 8.1b Make `D` a rate rather than an absolute length  ✅ built
+
+`rateFor(chain, D, v)` — one copy, used by the harness, the page and the bench. The pool is now
+`wsum × rate` instead of `D − stopTime − glideTime`, so the weights **set** a word's length
+instead of dividing a fixed one. Same arithmetic, causality reversed.
+
+    effect                    want    D fixed    8.1b
+    coda voicing  bad/bat     1.45     1.17      1.50
+    intrinsic     hɔd/hɪd     1.55     1.28      1.56
+    polysyllabic  cap/captain 1.20     1.27      1.40
+
+Two of three land on the literature from a model that an hour earlier could not express them at
+all. `bad` and `bat` were previously the same length **to the sample** — 610 ms each — because a
+single weight over itself is 1 whatever the weight is.
+
+**`per` is unchanged**, so every existing seed still means what it meant. The rate is `per × 0.90`,
+and the 0.90 is calibrated rather than chosen: it is the multiplier that best preserves the
+current tempo across a seven-phrase corpus. Tempo holds within ±15% on connected speech; the
+outliers are correct — *"banana and a tomato"* shortens because it is mostly weak syllables and
+*"how now brown cow"* lengthens because it is four heavy diphthongs.
+
+**D still works**, as a stretch on the rate rather than a hard total. So the duration slider and
+the goal cry survive, and a word asked to be twice as long is twice as long throughout instead of
+having its proportions squeezed to fit. Gated: *goal* stretches 0.64 s to 2.34 s.
+
+### It was much narrower than expected
+
+This was filed as *wide* — "every gate band that measures a whole word moves. Its own branch."
+Switching the harness over broke **one** check, and it was not a band: the onset check hardcoded
+the times 0.416 s and 1.026 s for two word onsets in *"I love my daughter"*. Under 8.1b a word's
+length depends on what is in it, so an absolute offset lands somewhere else. It now finds the
+onsets from the segment map.
+
+That is worth recording as a general point: **a check that assumes a timing is a check that
+fails the moment the timing becomes a result.** The bands themselves were all fine, because they
+measure ratios and shapes rather than absolute durations — which is the discipline this file has
+been asking for since Phase 1, paying off in a place nobody was aiming it.
+
+### What it unblocks
+
+The automated fitter, whose literature targets were unreachable by construction; fitting a real
+recording's prosody, which is measured across words; and `poly`, `coda`, `vlen`, `fnl` and
+`wkdur` becoming tunable against evidence rather than by ear. The polysyllabic ratio overshooting
+at 1.40 against 1.20 is the first thing that is now *worth* fitting.
 
 The weights in 8.1 are normalised against their own sum and spent out of `pool`, so they
 redistribute a word's duration without changing it. That means an isolated monosyllable cannot

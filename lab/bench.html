@@ -323,7 +323,7 @@ async function boot(src){
     VOICE_GROUPS: P.VOICE_GROUPS, mutateVoice: P.mutateVoice, VOICE_SPEC: P.VOICE_SPEC,
     encodeVoice: P.encodeVoice, decodeVoice: P.decodeVoice, defaultVoice: P.defaultVoice,
     buildWord: (chain, D, stress) => P.buildWord(chain, {
-      D, drawl: VOICE.drawl, glide: VOICE.glide, stopHold: VOICE.stopT,
+      D, rate: P.rateFor(chain, D, VOICE), drawl: VOICE.drawl, glide: VOICE.glide, stopHold: VOICE.stopT,
       open: VOICE.open || 0, n: N, art: VOICE.art || null, stress, pros: VOICE })
   };
 

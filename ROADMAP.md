@@ -1074,7 +1074,36 @@ derivative at both ends. That is 8.4 and Phase 9, in that order, which is where 
 **The lateral is an approximant, and it should be a contact.**  See below; this turned out to be
 the most interesting thing in the notes.
 
-**Pops at word boundaries.**  ✅ found, and it was none of the things it looked like.
+**Pops at word boundaries.**  ❌ STILL OPEN. Five metrics, five wrong answers, and the breath
+noise was the fourth of them.
+
+Fixing the breath tilt was right on its own terms — the voice was climbing at +4.4 dB/oct and now
+falls at −5.7 — but it is **not what the pops are**. Reported directly: *"brth does nothing for
+pops on the John or woman voice."* Turning the knob across its whole range changes nothing
+audible, which falsifies the prediction made when that fix shipped.
+
+What each metric actually measured, so none of them is tried a sixth time:
+
+| metric | what it turned out to measure |
+|---|---|
+| loudest transient (`outlier`) | nothing — it does not move with the complaint at all |
+| count of high-derivative runs | high-frequency **energy**, which is the breath tilt |
+| Nyquist-band ratio | the same thing again |
+| second-difference outliers | **glottal pulses**, verified: their spacing tracks 1/f0 exactly at 70, 90, 110, 140 and 180 Hz |
+| `vl`/`sil`/`vAmp`/branch ablations | nothing — all five moved the count by ≤ 7 out of 154 |
+
+The common failure is that every one of them was invented to be *plausible* rather than
+validated against a case where the answer was independently known — which is the rule this file
+has had since Phase 1 and which none of these followed.
+
+**So stop measuring.** The thing that has worked every time in this project is localisation by
+ear followed by ablation, and it has not been tried on this. The questions that would partition
+the space are in `lab/TESTING.md`; the four that matter most are whether a *sustained* vowel pops
+with no word at all, whether a single word pops or only a phrase, whether it pops in the same
+place every time, and whether `Phase 8 off` changes it. Those four answers rule out more than any
+metric here has.
+
+*Superseded note, kept:* the earlier claim that this was found and was the breath noise.
 
 The lead recorded here — that `vl` and `sil` are step functions and `vAmp` smooths too fast —
 was **wrong**, and so were the three that followed it. Ablated in turn, transient count out of
@@ -1146,6 +1175,19 @@ while both make the same tip contact, which is not expressible while the tip is 
 
 Not small. It is the first branch topology change since the nasal tract, and the gate band for
 the lateral will move because the thing being measured will have changed. Its own branch.
+
+---
+
+## Phase 8 IS a net improvement, after `gcap`  ✅
+
+Reported after the glide cap landed: *"Phase 8 is a HUGE improvement for reducing robot effect."*
+That is the verdict flipping. Before `gcap` the same listener called the phase a net loss, and
+the difference is one change — a transition may not outlast the segment it joins.
+
+Worth keeping the shape of that: the phase itself was right and its defaults were right. What
+made it a regression was a parameter it never touched, `glide`, which had always been an
+absolute 85 ms and only became wrong when something else made segments short. A phase can be
+judged bad because of a bug in code it did not write.
 
 ---
 

@@ -124,6 +124,24 @@ that is a finding about the model rather than about a voice.
 
 ---
 
+## Localising a pop
+
+Five metrics have been built for this and every one measured something else — high-frequency
+energy, glottal pulses, nothing at all. Measurement has not worked. These four questions have
+not been asked, and between them they rule out more than any of the metrics did.
+
+1. **Does a sustained vowel pop?** Hold a single sound, no word. If yes it is the source or the
+   tube and sequencing is innocent. If no, it is something about assembling a word.
+2. **Does one word pop, or only a phrase?** If only a phrase, it is at the boundaries, which is
+   the pause handling. If a single word pops, boundaries are innocent.
+3. **Is it in the same place every time?** Play the same phrase five times. Same spot each time
+   means something structural; wandering means it is in a noise path.
+4. **Does `Phase 8 off` change it?** One button. If the pops are identical either way, the whole
+   prosody layer is innocent and this predates all of it.
+
+Then, if you can: **which sound**. "Right at the /m/ of mother", "between the two words",
+"on the release of the /t/". One of those is worth more than another week of metrics.
+
 ## Two things worth doing right now
 
 **Did the breath fix go far enough?** The pops were the breath noise climbing toward Nyquist,

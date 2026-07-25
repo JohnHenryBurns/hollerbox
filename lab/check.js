@@ -1785,6 +1785,42 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── the nasals are told apart by their notch ───────────────────────────────
+check("each nasal has its own antiformant, in the right order", () => {
+  // A nasal's formants come from the nasal cavity, which is the same cavity whatever the place
+  // of articulation — so /m/, /n/ and /ŋ/ have broadly similar formants and are told apart by a
+  // ZERO. The oral cavity in front of the seal is closed at the lips and open at the junction:
+  // a side branch whose quarter-wave resonance cancels. Seal at the lips and that branch is the
+  // whole mouth, so the notch is low. Seal at the soft palate and there is barely any branch.
+  //
+  // Fitting these on F2 was the wrong objective and it showed — the solver made /ŋ/ worse and
+  // could not do better, because the number it was being asked for is not one the physics sets.
+  const P = H.P, bad = [];
+  const z = {};
+  for (const s of ["m", "n", "ŋ"]) {
+    z[s] = H.antiformant(s, { n: 44 });
+    if (z[s] === null) bad.push(`/${s}/ has no notch at all`);
+  }
+  if (bad.length) return { ok: false, note: bad.join("  ") };
+  // the order is the physics: longer sealed front cavity, lower notch
+  if (!(z.m < z.n && z.n < z["ŋ"]))
+    bad.push(`out of order: m ${z.m}, n ${z.n}, ŋ ${z["ŋ"]}`);
+  // and they have to be far enough apart to hear. /m/ and /n/ were 160 Hz apart, which is why
+  // a listening sweep confused them with each other and with /l/.
+  if (z.n - z.m < 400) bad.push(`m and n only ${z.n - z.m} Hz apart`);
+  // the seal must sit in FRONT of the nasal junction, or the air never reaches the nose — the
+  // solver shut /ŋ/ at 39% against a junction at 44% and produced an rms of 0.0005. Silence,
+  // fitted perfectly.
+  for (const s of ["m", "n", "ŋ"]) {
+    const d = P.articulate(P.ART[s], 44);
+    let mn = 9, mi = 0;
+    for (let i = 1; i < 43; i++) if (d[i] < mn) { mn = d[i]; mi = i; }
+    if (mi/44 < 0.44) bad.push(`/${s}/ seals at ${(mi/44*100).toFixed(0)}%, behind the velum`);
+  }
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ") : `m ${z.m}  n ${z.n}  ŋ ${z["ŋ"]} Hz, all in front of the velum` };
+});
+
 // ── the page draws the branches the engine has ─────────────────────────────
 check("the 3D view knows about both side branches", () => {
   // The nasal tract is an 11 cm cavity with its own standing wave and the view drew none of it:

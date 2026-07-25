@@ -34,6 +34,9 @@ const P = H.P;
 
 const T = JSON.parse(fs.readFileSync(path.join(__dirname, "consonant-targets.json"), "utf8"));
 const STAGE_A = ["r", "w", "j"];                       // no branch, no velum
+const STAGE_B = ["m", "n", "ŋ"];                       // the velum is open; the mouth is shut
+const STAGE = (process.argv.find(a => a.startsWith("--stage=")) || "--stage=A").slice(8) === "B"
+            ? STAGE_B : STAGE_A;
 const N = 44;                                          // the reference male length
 
 /** Deterministic, so two runs of this produce the same postures. */
@@ -79,8 +82,29 @@ function clampTo(A, tgt) {
  *  tight band matters more than one with a loose one — which is how /r/'s F3 comes to dominate
  *  its own fit, as it should, since F3 is the entire distinction from /l/. */
 function score(A, tgt) {
+  // A nasal has to SHUT, and shut in the right place — that is what tells /m/, /n/ and /ŋ/
+  // apart, and three formants do not say it. A shape can hit all three numbers without closing
+  // at all, and then it is not a nasal. Same lesson as /w/, which the solver first built with a
+  // flat tongue and a raised tip: targets say what a sound must sound like, never what it is.
+  if (tgt.bounds && tgt.bounds.seal) {
+    const d = H.P.articulate(A, N);
+    let mn = 9, mi = 0;
+    for (let i = 1; i < N-1; i++) if (d[i] < mn) { mn = d[i]; mi = i; }
+    const [lo, hi] = tgt.bounds.seal;
+    if (mn > 0.05) return { e: 1e9, f: null };            // does not shut
+    if (mi/N < lo || mi/N > hi) return { e: 1e9, f: null }; // shuts in the wrong place
+  }
   const f = H.formants(tgt.sym, { n: N, art: { [tgt.sym]: A } });
   if (!f || f.length < 3) return { e: 1e9, f: null };
+  // A nasal is scored on its ZERO. Its formants come from the nasal cavity, which is the same
+  // whatever the place — so fitting them asks for a number the physics does not set, and the
+  // solver duly made /ŋ/ worse while trying. The notch comes from the sealed oral cavity acting
+  // as a side branch, and where it lands is a direct consequence of where the seal is.
+  if (tgt.antiformant) {
+    const z = H.antiformant(tgt.sym, { n: N, art: { [tgt.sym]: A } });
+    if (z === null) return { e: 1e9, f: null };
+    return { e: Math.pow((z - tgt.antiformant)/tgt.antiTol, 2), f, z };
+  }
   let e = 0;
   for (let k = 0; k < 3; k++) e += Math.pow((f[k] - tgt.f[k]) / tgt.tol[k], 2);
   return { e, f };
@@ -117,17 +141,27 @@ const round3 = A => Object.fromEntries(Object.entries(A).map(([k, v]) => [k, +v.
 
 function main() {
   const write = process.argv.includes("--write");
-  console.log("\n  stage A — the unbranched sonorants, at n=" + N + "\n");
+  console.log("\n  stage " + (STAGE === STAGE_B ? "B — the nasals" : "A — the unbranched sonorants") + ", at n=" + N + "\n");
   console.log("  sym   F1    F2    F3        target            err   posture");
   const out = {};
-  for (const sym of STAGE_A) {
+  for (const sym of STAGE) {
     const tgt = T.sonorants.find(x => x.sym === sym);
     if (!tgt) continue;
     const before = H.formants(sym, { n: N });
     const got = solve(tgt);
+    // A solve can fail outright when the bounds contradict each other — /ŋ/ was given a seal
+    // range in front of the velum and a tongue-body range that could not reach it, so nothing
+    // valid existed and it wrote silently nothing. Say so instead.
+    if (!got || !got.f) { console.log("  /" + sym + "/  NO VALID POSTURE — check the bounds"); continue; }
     const inTol = got.f.every((v, k) => Math.abs(v - tgt.f[k]) <= tgt.tol[k]);
     out[sym] = round3(got.A);
     console.log("  /" + sym + "/  was " + before.slice(0,3).map(x => String(x).padStart(5)).join(" "));
+    if (tgt.antiformant) {
+      const ok = Math.abs(got.z - tgt.antiformant) <= tgt.antiTol;
+      console.log("       notch " + String(Math.round(got.z)).padStart(5) + " Hz" +
+                  "   want " + tgt.antiformant + " \u00b1" + tgt.antiTol +
+                  "   " + (ok ? "ok " : "OFF") + "  " + Math.sqrt(got.e).toFixed(2));
+    } else
     console.log("       now " + got.f.slice(0,3).map(x => String(Math.round(x)).padStart(5)).join(" ") +
                 "   want " + tgt.f.map(x => String(x).padStart(5)).join(" ") +
                 "   " + (inTol ? "ok " : "OFF") + "  " + Math.sqrt(got.e).toFixed(2));

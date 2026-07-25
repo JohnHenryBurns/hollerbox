@@ -151,7 +151,32 @@
     350
    ],
    "source": "fujimura",
-   "note": "the murmur. Place is carried mostly by F2 and by the antiresonance from the sealed oral branch."
+   "note": "the murmur. Place is carried mostly by F2 and by the antiresonance from the sealed oral branch.",
+   "bounds": {
+    "lip": [
+     0.0,
+     0.05
+    ],
+    "tipHi": [
+     0.0,
+     0.25
+    ],
+    "bodyHi": [
+     0.0,
+     0.45
+    ],
+    "bodyPos": [
+     0.2,
+     0.6
+    ],
+    "seal": [
+     0.85,
+     1.0
+    ],
+    "why": "sealed at the LIPS. the tongue is free, which is why /m/ carries so little place information of its own"
+   },
+   "antiformant": 1000,
+   "antiTol": 250
   },
   {
    "sym": "n",
@@ -166,7 +191,32 @@
     350
    ],
    "source": "fujimura",
-   "note": "measured with the nose open it sits at F2 1250, still 450 low. Before the offline tract had a nasal cavity at all it read 1210, which happened to be /l/'s to within ten hertz — the right conclusion from the wrong measurement."
+   "note": "measured with the nose open it sits at F2 1250, still 450 low. Before the offline tract had a nasal cavity at all it read 1210, which happened to be /l/'s to within ten hertz — the right conclusion from the wrong measurement.",
+   "bounds": {
+    "lip": [
+     0.5,
+     1.0
+    ],
+    "tipHi": [
+     0.85,
+     1.0
+    ],
+    "tipPos": [
+     0.78,
+     0.92
+    ],
+    "bodyHi": [
+     0.05,
+     0.5
+    ],
+    "seal": [
+     0.72,
+     0.88
+    ],
+    "why": "sealed at the alveolar RIDGE by the tongue tip, lips open"
+   },
+   "antiformant": 1800,
+   "antiTol": 350
   },
   {
    "sym": "ŋ",
@@ -181,7 +231,32 @@
     400
    ],
    "source": "fujimura",
-   "note": "F2 1090 with the nose open, against 1950 without one. The earlier reading put it 80 Hz from /j/ and explained a reported 'nya' that way; that was an artifact of measuring a sealed tube. The 'nya' is real and now unexplained."
+   "note": "F2 1090 with the nose open, against 1950 without one. The earlier reading put it 80 Hz from /j/ and explained a reported 'nya' that way; that was an artifact of measuring a sealed tube. The 'nya' is real and now unexplained.",
+   "bounds": {
+    "lip": [
+     0.5,
+     1.0
+    ],
+    "tipHi": [
+     0.0,
+     0.2
+    ],
+    "bodyHi": [
+     0.8,
+     1.0
+    ],
+    "bodyPos": [
+     0.42,
+     0.64
+    ],
+    "seal": [
+     0.46,
+     0.6
+    ],
+    "why": "sealed at the SOFT PALATE by the tongue body, at or in FRONT of the nasal junction at 0.44 — behind it the mouth shuts before the air can reach the nose, which is silence, and the solver found exactly that at 0.39. An earlier note here called 0.56 'too front for a velar'; that came from measuring a nasal with no nose and was wrong. The soft palate is just in front of the junction, because the junction IS the velum."
+   },
+   "antiformant": 3200,
+   "antiTol": 600
   }
  ],
  "_bounds": [
@@ -197,5 +272,33 @@
   "So each sound carries the range its own articulators are allowed to be in. These are not",
   "fitted; they are what the sound IS, and a solver that has to be told them is a solver being",
   "asked a well-posed question instead of an ambiguous one."
+ ],
+ "_seal": [
+  "A nasal seals the mouth completely and the PLACE of that seal is what tells /m/, /n/ and /ŋ/",
+  "apart. Formant targets do not say that — a shape can hit three numbers without closing at",
+  "all, and then it is not a nasal. So each carries a `seal` range: where along the tract the",
+  "narrowest point has to be, as a fraction. The solver rejects anything that does not shut, and",
+  "does not shut THERE.",
+  "",
+  "Same lesson as /w/, which the solver first built with a flat tongue and a raised tip because",
+  "three formants underdetermine a mouth. Targets say what a sound must SOUND like; they never",
+  "say what it must BE.",
+  "",
+  "And the seal must be DOWNSTREAM of the velum. Shut the tract behind the junction and",
+  "the air never reaches the nose at all — the solver did that to /ŋ/ at 0.39, against a",
+  "junction at 0.44, and produced a sound with an rms of 0.0005. Silence, fitted perfectly."
+ ],
+ "_nasals": [
+  "NASALS ARE FITTED ON THEIR ANTIFORMANT, not their formants. The murmur's formants come mostly",
+  "from the nasal cavity, which is the same cavity whatever the place of articulation — so /m/,",
+  "/n/ and /ŋ/ have broadly similar formants and are told apart by a ZERO instead.",
+  "",
+  "The zero comes from the oral cavity in front of the seal, which is closed at the lips and open",
+  "at the junction: a side branch, and its quarter-wave resonance cancels. Seal at the lips and",
+  "that branch is the whole mouth, so the notch is low. Seal at the soft palate and there is",
+  "almost no branch left, so it is high or absent.",
+  "",
+  "Fitting F2 for these was the wrong objective and it showed: the solver made /ŋ/ worse and",
+  "could not do better, because the number being asked for was not one the physics sets."
  ]
 }

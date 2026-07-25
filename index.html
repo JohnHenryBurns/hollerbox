@@ -755,6 +755,24 @@ async function start(){
   analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.55;
   gainNode = ctx.createGain(); gainNode.gain.value = +sVol.value;
   node.connect(analyser); analyser.connect(gainNode); gainNode.connect(ctx.destination);
+  // LET IT WARM UP BEFORE THE FIRST WORD.
+  //
+  // `process()` runs the whole tract loop every block whether or not a word is playing, so the
+  // engine compiles itself as soon as it is connected — but the node is not created until the
+  // first press, so the first word has always been rendered by a cold one. Measured, per
+  // 128-sample block against a 2.90 ms deadline:
+  //
+  //     blocks    0-20     6.17 ms   212% of budget
+  //     blocks   20-100    2.12 ms    73%
+  //     blocks  100+       0.5-0.9 ms  19-33%
+  //
+  // Over budget means the audio callback misses and the buffer drops out, which sounds exactly
+  // like a click. Reported as the first few sounds of a sweep popping and the same sounds being
+  // clean when you come back to them later — not the phonemes, their position in the session.
+  //
+  // 300 ms of silence gets it past the slow stretch with room to spare. It costs a third of a
+  // second on the very first press and nothing after that.
+  await new Promise(r => setTimeout(r, 300));
   node.port.onmessage = e => {
     // The engine announces which build it is, and it has to match the one phonemes.js was
     // written against. The two files cache INDEPENDENTLY, so a browser holding a stale

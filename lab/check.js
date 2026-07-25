@@ -1398,6 +1398,41 @@ check("phonemes.js and the worklet agree on which build they are", () => {
            note: bad.length ? bad.join("  ") + `  — should be ${want}` : `both at ${want}` };
 });
 
+report("fitted postures against the vowel targets", () => {
+  // The vowel check above measures the SHARED ART table at n=44 and nothing else. So the two
+  // voices with FITTED postures — john and johncry, the only ones measured from a real person —
+  // had never been checked against any target at all, and john is the voice reported as the
+  // worst of the set.
+  //
+  // Peterson & Barney are adult-male means, so they are the right yardstick for john and the
+  // wrong one for woman or child; only the male voices are scored here. Individual speakers
+  // differ from a mean, so being off is not automatically wrong — but the shared table beating
+  // a fit at the fitted speaker's own tract length is hard to read any other way.
+  const P = H.P;
+  const T = { i:[270,2290], "ɪ":[390,1990], "ɛ":[530,1840], "æ":[660,1720], "ɑ":[730,1090],
+              "ɔ":[570,840], "ʊ":[440,1020], u:[300,870], "ʌ":[640,1190], "ɝ":[490,1350] };
+  const at = (art, n) => {
+    let good = 0, cnt = 0;
+    for (const [sym, [t1, t2]] of Object.entries(T)) {
+      const f = H.formants(sym, { n, art });
+      if (!f || f.length < 2) continue;
+      cnt++;
+      if (Math.sqrt(((f[0]-t1)/t1)**2 + ((f[1]-t2)/t2)**2)*100 < 12) good++;
+    }
+    return `${good}/${cnt}`;
+  };
+  const jn = Math.round(P.VOICES.john.v.sect);
+  const rows = [
+    `shared@44 ${at(null, 44)}`,
+    `shared@${jn} ${at(null, jn)}`,
+    `john-fitted@${jn} ${at(P.VOICES.john.art, jn)}`,
+  ];
+  const fitted = at(P.VOICES.john.art, jn).split("/").map(Number);
+  const shared = at(null, jn).split("/").map(Number);
+  return { ok: fitted[0] >= shared[0],
+           note: rows.join("   ") + (fitted[0] < shared[0] ? "  — the fit is doing worse than no fit" : "") };
+});
+
 check("no word clicks", () => {
   // A stop release is a transient, but an outlier far above the signal's own motion is a
   // click. The white-noise burst once measured 13.5x.
@@ -1741,6 +1776,20 @@ check("voiceless stops are aspirated", () => {
            note: bad.length ? bad.join("  ")
                : `b${vot.b.toFixed(0)} d${vot.d.toFixed(0)} g${vot.g.toFixed(0)} vs p${vot.p.toFixed(0)} t${vot.t.toFixed(0)} k${vot.k.toFixed(0)} ms` };
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADD NEW CHECKS BELOW THIS LINE.
+//
+// Not in the middle. Every check added during this project went in just above
+// `check("no word clicks")`, because that was a convenient landmark — which meant any two
+// open branches touching this file conflicted at the same three lines, every time. Four
+// rebases in one session were all the same conflict, and all of it self-inflicted.
+//
+// The resolution is also always the same and worth writing down, because stripping the
+// markers alone produces a file that LOOKS right and does not parse: both sides stop at their
+// own `return {...};` and share the single `});` that follows the last marker, so keeping both
+// means closing the first one explicitly.
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ── the runner ─────────────────────────────────────────────────────────────
 // The gate gates correctness. It should not gate iteration. Three things follow:

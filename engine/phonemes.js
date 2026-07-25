@@ -363,7 +363,7 @@ const isDiph  = sym => !!DIPH[sym];
 // old worklet had no integrator for, and speakWith bails at `if(!node) return`. A hard reload
 // fixed it, which is not a thing a visitor knows to do.
 // Derived from both files with this line blanked out, so it is stable under itself.
-const BUILD = "e911bcc720";
+const BUILD = "02ab38272a";
 
 const VOICE_SPEC=[
   {k:'rd',   lo:0.35,   hi:2.40,    d:0.80},    // LF shape: pressed <-> breathy
@@ -477,6 +477,20 @@ const VOICES = {
     v:{ rd:0.78, press:0.22, jit:1.1, brth:0.18, drawl:0.14, open:0.10, per:0.20,
         damp:0.99972, sect:48, f0a:58, f0b:88, f0c:48 } },
   custom:{ label:'Custom', note:'Yours. Tune it in the Lab, then copy the seed — a seed is the whole voice, tract length and timing included.', v:null },
+};
+
+// John's source and timing with the SHARED postures instead of his fitted ones — derived from
+// the entry above rather than copied, so it cannot drift out of step with it.
+//
+// Here to be A/B'd. His fitted set measures 1/10 within 12% of Peterson & Barney at his own
+// tract length, where the shared table manages 4/10: the fit is doing worse than no fit. `john`
+// is also the voice reported as the worst of the set, which is a poor place for the one
+// measured from a real person to be.
+VOICES.johnplain = {
+  label: 'John (shared postures)',
+  v: { ...VOICES.john.v },
+  note: 'John\u2019s source with the shared postures. A/B against John — his fitted set scores '
+      + 'worse against Peterson & Barney than the table it replaced.'
 };
 const defaultVoice = () => Object.fromEntries(VOICE_SPEC.map(p => [p.k, p.d]));
 

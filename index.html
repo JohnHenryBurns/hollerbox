@@ -702,10 +702,10 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
      exactly what happened: a fix landed in phonemes.js, the bench had it and this
      page did not, and the same phrase in the same voice sounded different in the
      two. The gate recomputes this hash and fails if it has not been bumped. -->
-<script src="engine/phonemes.js?v=edd01d7bab"></script>
+<script src="engine/phonemes.js?v=4d80265b31"></script>
 <!-- The speller: g2p rules, the built-in dictionary, the personal one on top. Shared with
      the gate, which runs it with no storage and therefore tests the shipped dictionary. -->
-<script src="engine/spelling.js?v=edd01d7bab"></script>
+<script src="engine/spelling.js?v=4d80265b31"></script>
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
 // The tract shapes, solved offline by searching tube geometry until the
@@ -725,7 +725,7 @@ const articulate = HOLLER.articulate;
 // stop consonants are the same move at three places along the tract
 const STOPS = HOLLER.STOPS;
 const VELAR = HOLLER.VELAR;
-const ENGINE_URL = new URL('engine/tract-worklet.js?v=edd01d7bab', document.baseURI).href;
+const ENGINE_URL = new URL('engine/tract-worklet.js?v=4d80265b31', document.baseURI).href;
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1305,8 +1305,10 @@ const isDiph=sym=>!!DIPH[sym];
 // Delegates to the shared layer. The app's call sites are unchanged; what used to be
 // closed-over state (N, and the voice's own postures) is passed explicitly.
 function buildWord(chain, D, drawl, glide, stopHold, open, pros){
-  return HOLLER.buildWord(chain, {D, drawl, glide, stopHold, open, n:N, art:voiceArt(),
-                                  stress: chainStress, pros});
+  // 8.1b: the weights set the length and D stretches the rate. The slider still means
+  // "make this longer", it just no longer squeezes a word's internal proportions to hit a total.
+  return HOLLER.buildWord(chain, {D, rate:HOLLER.rateFor(chain, D, pros), drawl, glide, stopHold,
+                                  open, n:N, art:voiceArt(), stress: chainStress, pros});
 }
 async function playWord(){
   if(!chain.length) return;

@@ -102,7 +102,11 @@ function plan(chain, D, voice, n, stress) {
   // was deleted: 64 word x voice combinations, keyframes and segments identical to 1e-12.
   // open is 0 because plan never modelled the shouted vowel opening; that is unchanged here
   // deliberately, so no gate band moves. The app still passes its own open.
-  const W = P.buildWord(chain, { D, drawl: v.drawl, glide: v.glide, stopHold: v.stopT,
+  // 8.1b. `rate` sizes the word from its own weights; D is still passed so a caller that wants
+  // an explicit length — the duration slider, the goal cry — can still ask for one, and so the
+  // stretch factor below has something to be relative to.
+  const W = P.buildWord(chain, { D, rate: P.rateFor(chain, D, v),
+                                 drawl: v.drawl, glide: v.glide, stopHold: v.stopT,
                                  open: 0, n, art: null, stress, pros: v });
   return { keys: W.keys, seg: W.seg, end: W.end, v };
 }

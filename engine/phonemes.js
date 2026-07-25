@@ -692,6 +692,26 @@ function closureFor(sym, stopHold, ratio){
 }
 
 // ---- a word, as keyframes ----
+/**
+ * The rate a word should be spoken at — 8.1b's tempo control, in ONE place.
+ *
+ * `per` stays what it always was, seconds per sound, so every existing seed still means what it
+ * meant. The 0.90 is calibrated rather than chosen: it is the multiplier that best preserves
+ * the current tempo across a seven-phrase corpus once the weights start SETTING length instead
+ * of dividing a fixed one.
+ *
+ * `D` is optional and means "make this word about this long" — the duration slider, the goal
+ * cry. It becomes a stretch on the rate rather than a hard total, so a word asked to be twice
+ * as long is twice as long throughout instead of having its proportions squeezed to fit.
+ */
+function rateFor(chain, D, v){
+  const per = (v && v.per) || 0.17;
+  const base = per*0.90;
+  if(!D) return base;
+  const natural = Math.max(0.45, chain.length*per);
+  return base*(D/natural);
+}
+
 function buildWord(chain, opts){
   // Everything this used to reach out of scope for is now an argument. It closed over N (the
   // section count) and voiceName (through baseFor/shapeFor/openedShape), which is why it could
@@ -754,9 +774,24 @@ function buildWord(chain, opts){
   });
   const wsum=vw.reduce((a,b)=>a+b,0)||1;
   const held=chain.filter(c=>!isStop(c)&&!isPause(c)).length;
+  // 8.1b. `rate` makes the weights SET the word's length instead of redistributing a fixed one.
+  //
+  // With a fixed D the weights are normalised against their own sum, so one weight over itself
+  // is 1 whatever the weight is: an isolated monosyllable cannot lengthen, and *bad* and *bat*
+  // come out identical. Measured before this: coda voicing arriving at 1.17 where the
+  // literature says 1.45, and "bædɪd" — both vowels before /d/ — rendering byte-identical with
+  // the coda effect on and off, because an effect applied equally to every vowel of a word
+  // cancels exactly against the normalisation.
+  //
+  // With `rate` the pool is wsum*rate and the word's length falls out of it. Nothing else in
+  // the sizing changes: stops and glides still cost what they cost, and the held segments still
+  // divide the pool in proportion. It is the same arithmetic with the causality reversed.
+  const rate = o.rate;
   const sizeUp=()=>{
     let g=0; for(let i=1;i<chain.length;i++) g+=glideFor(i);
-    const p=Math.max(0.12*Math.max(held,1), D-stopTime-g);
+    const p = rate !== undefined
+      ? wsum*rate                                             // the weights set the length
+      : Math.max(0.12*Math.max(held,1), D-stopTime-g);        // D sets it, weights divide it
     const out=[]; let k2=0;
     chain.forEach((sym,i)=>{ out[i]= isPause(sym) ? 0
       : isStop(sym) ? closureFor(sym,stopHold,stopVc) : p*vw[k2++]/wsum; });
@@ -945,7 +980,7 @@ const HOLLER = {
   BRANCHED, NASAL, VOICELESS, FRICATIVE, ASPIRATE,
   VOICE_SPEC, VOICES, defaultVoice, VOICE_GROUPS,
   clampVoice, mutateVoice, encodeVoice, decodeVoice,
-  restingDiam, hump, articulate, baseFor, shapeFor, openedShape, buildWord,
+  restingDiam, hump, articulate, baseFor, shapeFor, openedShape, buildWord, rateFor,
   VDUR, CODA_VOICED, CODA_SONORANT, CODA_OPEN, CODA_VOICELESS,
   UNSTRESSED, FINAL_LENGTH, POLY_SHORT, APPROX_W, codaFactor, polyShorten,
   STOP_CLOSE, closureFor, UNSTRESSED_LEVEL, buildF0, lerpHz,

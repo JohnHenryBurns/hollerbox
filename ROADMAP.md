@@ -1,4 +1,20 @@
-# Roadmap — chasing the GOOOOAAALLL
+# Roadmap
+
+**Status and open items only.** What is built, what is not, what is known to be broken.
+
+Findings, measurements and the reasoning behind a change go in the **commit message** — which is
+permanent, attached to the change it describes, and cannot conflict with another branch. They are
+already written there. This file used to carry a third copy of every one of them, and fourteen of
+the last fifteen commits added twenty to fifty lines to it. That is where the merge conflicts came
+from: not from anything structural, but from every branch writing a narrative into one shared file.
+
+So: a change updates this file when a **status** changes — a phase completes, a fault opens or
+closes — and that is one or two lines. If a change wants a paragraph here, the paragraph belongs
+in the commit message instead.
+
+`git log --grep` searches all of it.
+
+---
 
 **The goal:** a synthesized stadium goal cry, produced entirely by physical modelling, that a
 room full of people would accept as a human being shouting.

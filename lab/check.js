@@ -1801,6 +1801,14 @@ check("the 3D view knows about both side branches", () => {
 
   for (const bit of ["nasalTubes", "pocketTubes", "buildBranch", "paintBranch"])
     if (!new RegExp("\\b" + bit + "\\b").test(page)) bad.push(`the page has no ${bit}`);
+  // the Mouth view is the ANATOMICAL one and had no nose in it at all, which is a strange thing
+  // for a diagram of a vocal tract to leave out — a nasal is two cavities coupled through a
+  // flap and only one cavity was drawn.
+  const mouth = (page.match(/function drawMouth\(\)[\s\S]*?\n\}/) || [""])[0];
+  if (!/nasal cavity/.test(mouth)) bad.push("the Mouth view draws no nasal cavity");
+  if (!/velum/.test(mouth)) bad.push("the Mouth view draws no velum");
+  // and a branch may not blink in and out — a nose is there whether or not it is in use
+  if (/t\.mesh\.visible\s*=\s*open/.test(page)) bad.push("the nasal cavity vanishes when closed");
   // the engine must send what the page needs to draw them
   // matched inside the postMessage call rather than anywhere in the file, and allowing
   // shorthand — `bE}` is a property just as much as `bE:` is, which the first version of this

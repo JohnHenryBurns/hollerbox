@@ -127,6 +127,7 @@ class TractProcessor extends AudioWorkletProcessor {
         if(v.artStiff!==undefined) this.artStiff=v.artStiff;
         if(v.artPush !==undefined) this.artPush=v.artPush;
         if(v.velT !==undefined) this.velT=v.velT;
+        if(v.fricDuck!==undefined) this.fricDuck=v.fricDuck;
       }
     };
     this.calcRefl();
@@ -475,8 +476,27 @@ class TractProcessor extends AudioWorkletProcessor {
       // A narrow constriction raises oral pressure and cuts the flow across the folds. That
       // is why a voiced fricative is quieter than a vowel — /z/ and /ð/ were louder, which
       // is backwards. Not a full stop's voice bar, but the same physics in miniature.
-      const squeeze = (this.prevClose < 0.55 && this.nasal < 0.15)
-        ? 1 - 0.62 * Math.min(1, (0.55 - this.prevClose) / 0.42) : 1;
+      // `squeeze` cuts voicing as the tract narrows, and for a voiced FRICATIVE it does not cut
+      // nearly enough. Measured in a word, /ð/ had 99% of its energy below 800 Hz and /ʒ/ 83% —
+      // almost entirely voice with a trace of noise on top, which is why one was heard as "a
+      // loo a" and the other as /z/. Forcing them voiceless drops them to 1% and 0%: the noise
+      // was always right.
+      //
+      // A real voiced fricative is much quieter than a vowel. The constriction raises the
+      // pressure above the folds and the flow across them nearly stops — the folds keep
+      // vibrating, but weakly. `fricDuck` is how much of the voicing that costs, at full
+      // frication.
+      const fd = this.fricDuck===undefined ? 0.62 : this.fricDuck;
+      const squeeze = ((this.prevClose < 0.55 && this.nasal < 0.15)
+        ? 1 - 0.62 * Math.min(1, (0.55 - this.prevClose) / 0.42) : 1)
+        * (this.fric > 0.01 ? 1 - fd : 1);
+      // NOT scaled by `fric`. The first version wrote the cut as fd*fric, and the sounds that
+      // need the largest cut have the SMALLEST fric — /ð/ at 0.20 got a 27% duck when asked for
+      // 85%, so the voicing kept winning in exactly the cases that were broken. The same
+      // mistake, twice in two days, once in a test and once in the engine: a synthesis gain
+      // used as though it were a physical quantity. What raises the pressure above the folds is
+      // the CONSTRICTION, and `squeeze` already accounts for that; `fric` here only answers
+      // whether this is a fricative at all.
       const voiceBar = 1 - 0.88*sealedFor;
       if(this.seq){
         // The glottis does not pause for a stop. It buzzes the whole way through; the SEAL is

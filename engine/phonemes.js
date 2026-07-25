@@ -363,7 +363,7 @@ const isDiph  = sym => !!DIPH[sym];
 // old worklet had no integrator for, and speakWith bails at `if(!node) return`. A hard reload
 // fixed it, which is not a thing a visitor knows to do.
 // Derived from both files with this line blanked out, so it is stable under itself.
-const BUILD = "bc5c578146";
+const BUILD = "8437389961";
 
 const VOICE_SPEC=[
   {k:'rd',   lo:0.35,   hi:2.40,    d:0.80},    // LF shape: pressed <-> breathy
@@ -444,6 +444,12 @@ const VOICE_SPEC=[
   // presses into it and the tissue stops it. off:0 aims exactly at the target, which is what
   // made stops fail to seal above artT=0.02.
   {k:'artPush', lo:0,     hi:1,      d:0.45,  off:0,},
+  // The velum's own time constant. It was the last thing in the engine that could still
+  // teleport — Phase 9 gave every part of the tract mass and left this tracking its keyframes
+  // exactly, so it swung fully open in 26 ms. A real one takes about a hundred and is the
+  // SLOWEST articulator there is: a flap of soft tissue with no bone in it and nothing to brace
+  // against. The lateral pocket is the sides of the tongue parting, so it runs at half this.
+  {k:'velT',    lo:0,     hi:0.06,   d:0.020, off:0,},
 ];
 // John, rebuilt off `man` rather than off the fit.
 //
@@ -544,7 +550,7 @@ const VOICE_GROUPS = {
   rhythm: ['per','drawl','glide','stopT','vlen','coda','fnl','poly','stopVc','apw','gcap','onset','wgap'],
   tract:  ['sect','open','burst','hiss'],
   // The articulators themselves — how a consonant is dialled.
-  gesture:['artT','artCrit','artStiff','artPush'],
+  gesture:['artT','artCrit','artStiff','artPush','velT'],
 };
 
 // seed = each parameter as two base-36 digits of its position in range

@@ -1526,6 +1526,24 @@ nothing on screen to explain why. It matters more now than it did: a seed carrie
 entirely on the preset to supply them. `custom` now inherits `art` from whatever it was derived
 from.
 
+**"Default" meant two different things, in two panels, and both were wrong the same way.**
+✅ both fixed. The tournament's Reset jumped to `defaultVoice()` when the search had *started*
+from the selected preset. Knobs' "All defaults" did the same: on John it replaced nine
+parameters, moving pitch from 88/99/78 Hz to 208/250/190 — over an octave — and the tract from 40
+sections to 44. Neither was a reset; both were loading a different voice.
+
+The rule, now applied in both: **"default" means the voice you picked**, not the middle of every
+range. The Knobs button names the preset it will restore, so it cannot be misread. Custom has no
+preset to go back to and is the one case that legitimately gets the spec defaults.
+
+Found because the second one was reported by ear as *"seems to break all parameters"* — which is
+exactly what it looked like from outside, and exactly what it was.
+
+Also fixed alongside: changing the voice in the dropdown while the Knobs tab was open left every
+slider showing the previous voice's numbers while the engine played the new one, with nothing on
+screen saying they disagreed. The panels share one voice, so a voice change now repaints whatever
+is open and resets the tournament's champion to it.
+
 **Consonant postures are fitted from one speaker.** The fricatives were refitted at the default
 tract length with the targets scaled, but everything else — stops, nasals, approximants —
 carries hand-placed generic postures, with only the measured voice getting fitted ones.

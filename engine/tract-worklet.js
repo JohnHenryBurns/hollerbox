@@ -461,7 +461,17 @@ class TractProcessor extends AudioWorkletProcessor {
       // Pressure only builds if the air has nowhere to go. With the velum open it escapes
       // through the nose, which is exactly why /m/ can be held forever and /b/ cannot —
       // and why applying the stop's voice-bar decay to a nasal silenced it.
-      const sealedFor = (this.prevClose<0.14 && this.nasal<0.15) ? (this.charge||0) : 0;
+      // A FRICATIVE IS NOT A CLOSURE, however narrow it is. This asks only how tight the
+      // tract is, and /z/ holds a channel of 0.073 — narrower than the 0.14 that means "shut".
+      // So the engine charged pressure behind it, cut its voice bar by 88%, and fired a stop
+      // burst when it opened. Measured in a word: /z/ had 1% of its energy below 800 Hz, the
+      // same as the voiceless /s/, and one burst. A voiced sibilant with no voice in it.
+      //
+      // The same fault the nasals had, one line up from where it was fixed for them: `cl` alone
+      // cannot tell a seal from a very narrow gap, and the thing that knows the difference is
+      // already sitting in `fric`.
+      const sealedFor = (this.prevClose<0.14 && this.nasal<0.15 && this.fric<0.01)
+                        ? (this.charge||0) : 0;
       // A narrow constriction raises oral pressure and cuts the flow across the folds. That
       // is why a voiced fricative is quieter than a vowel — /z/ and /ð/ were louder, which
       // is backwards. Not a full stop's voice bar, but the same physics in miniature.
@@ -612,7 +622,8 @@ class TractProcessor extends AudioWorkletProcessor {
       this.dampNow = cl<0.14 ? this.damp*0.9975 : this.damp;
       // A stop is silence, then a bang. Charge while the tube is sealed — a stand-in for the
       // pressure a real speaker builds — then spend it the moment the seal breaks.
-      if(cl<0.14){
+      // and it must not charge behind one either — same reason, same test
+      if(cl<0.14 && this.fric<0.01){
         // THE VELUM VENTS. A nasal seals the mouth exactly as a stop does — /m/ at the lips,
         // /n/ at the ridge, /ŋ/ at the velum — so `cl` alone cannot tell them apart, and this
         // charged behind every one of them and fired a stop burst on release. That is a

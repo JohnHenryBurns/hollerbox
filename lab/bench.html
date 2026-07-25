@@ -342,7 +342,14 @@ async function boot(src){
   });
   sel.value = VOICES.john ? 'john' : Object.keys(VOICES)[0];
   setVoice(sel.value);
-  sel.onchange = ()=>setVoice(sel.value);
+  sel.onchange = ()=>{
+    setVoice(sel.value);
+    // The panels share one voice, so a voice change has to repaint whatever is open —
+    // otherwise the Knobs sliders keep showing the previous voice's numbers while the engine
+    // plays the new one, and the two disagree with nothing on screen saying so.
+    if(typeof mode !== 'undefined' && mode === 'knobs') drawKnobs();
+    tChamp = null;                 // the tournament restarts from the voice you just chose
+  };
   document.getElementById('boot').textContent =
     'engine from ' + (ENGSRC.length>52 ? '…'+ENGSRC.slice(-49) : ENGSRC) +
     ' · ' + Object.keys(VOICES).length + ' voices · ' + CONS.length + ' consonants';
@@ -652,6 +659,7 @@ function kNote(){
 let kPhraseIdx = 1;
 function kSay(){ return sayPhrase((PHRASES[kPhraseIdx]||PHRASES[0])[0], 'kChain'); }
 function drawKnobs(){
+  kDefLabel();
   const ps = document.getElementById('kPhrase');
   if(!ps.options.length){
     PHRASES.forEach(([t], i) => { const o=document.createElement('option');
@@ -703,8 +711,23 @@ document.getElementById('kPlay').addEventListener('click', kSay);
 document.getElementById('kP8').addEventListener('click', () => {
   ENG.VOICE_SPEC.filter(p => p.p8).forEach(p => kApply(p.k, p.off));
 });
+// Restore the SELECTED VOICE, not the spec defaults. This applied `p.d` to everything, so on
+// John it replaced nine parameters including pitch — 88/99/78 Hz became 208/250/190, over an
+// octave up — and the tract 40 sections became 44. That is not a reset, it is loading a
+// different voice, and it is the same mistake the tournament's Reset had: "default" means the
+// voice you picked, not the middle of every range.
+// A preset with no `v` (Custom) has nothing else to go back to, so it gets the spec defaults.
+function kDefLabel(){
+  const V = ENG.VOICES[VOICE.name];
+  document.getElementById('kDef').textContent =
+    (V && V.v) ? 'Reset to ' + (V.label || VOICE.name) : 'Reset to defaults';
+}
 document.getElementById('kDef').addEventListener('click', () => {
-  ENG.VOICE_SPEC.forEach(p => kApply(p.k, p.d));
+  const name = VOICE.name;
+  if(ENG.VOICES[name] && ENG.VOICES[name].v) setVoice(name);
+  else ENG.VOICE_SPEC.forEach(p => VOICE[p.k] = p.d);
+  ENG.VOICE_SPEC.forEach(p => kApply(p.k, VOICE[p.k]));
+  kDefLabel();
 });
 document.getElementById('kCopy').addEventListener('click', () => {
   try{ navigator.clipboard.writeText(ENG.encodeVoice(kVoiceOnly())); }catch(e){}

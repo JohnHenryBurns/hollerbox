@@ -18,7 +18,9 @@ beats a verdict.
 ## Before a session
 
 1. Pick the voice in the dropdown — **john** unless you are hunting monsters.
-2. **Knobs → All defaults.** Otherwise you are testing yesterday's tuning without knowing it.
+2. **Knobs → Reset to ‹voice›.** The button names the preset it will restore, and it restores
+   *that*, not the middle of every range. Otherwise you are testing yesterday's tuning without
+   knowing it.
 3. Pick one phrase and stay on it for the whole comparison. Changing phrase and knob together
    tells you nothing about either.
 4. Play it once before touching anything. That is your reference, and you will need it, because

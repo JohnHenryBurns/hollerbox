@@ -1074,8 +1074,36 @@ derivative at both ends. That is 8.4 and Phase 9, in that order, which is where 
 **The lateral is an approximant, and it should be a contact.**  See below; this turned out to be
 the most interesting thing in the notes.
 
-**Pops at word boundaries.**  ❌ STILL OPEN. Five metrics, five wrong answers, and the breath
-noise was the fourth of them.
+**Pops at word boundaries.**  ✅ FOUND, by ear — every nasal was firing a stop burst.
+
+The description is what found it: *"the pops remind me of a Kalahari bushman more than an
+artifact, so maybe they are physical?"* They were. A click is a sealed cavity released under
+pressure, and that is exactly what was happening.
+
+/m/ seals the lips, /n/ the ridge, /ŋ/ the velum — **exactly as /b/, /d/ and /g/ do**. The burst
+fires on `cl`, the narrowest diameter anywhere in the tract, which cannot tell a nasal from a
+stop. Counted at the processor: **eight bursts behind nasals** against eleven at real stops,
+across three phrases.
+
+**The file already knew.** A hundred lines above, `sealedFor` checks `nasal<0.15` with the
+comment *"pressure only builds if the air has nowhere to go — with the velum open it escapes
+through the nose, which is exactly why /m/ can be held forever and /b/ cannot."* The fact was
+applied to the voice bar and never to the charge that feeds the burst. Not a missing insight — a
+missing second application of one already written down.
+
+A threshold was not enough: the mouth closes before the velum finishes opening, so a hard
+`nasal<0.15` still let three of eight through on the approach. Pressure does not vent at a
+threshold. The charge now builds at a rate set by how sealed the system is and leaks through an
+open nose with a ~20 ms time constant. **0 behind nasals, 11 at real stops**, and the click
+check's loudest release falls from 177% of a vowel to 119%.
+
+**Why five metrics missed it.** They were all looking for a *defect*. The burst was not
+defective — it was correct synthesis of an event that should not have been occurring, and
+nothing that searches for anomalies finds that. The record of what each one actually measured
+stays below, because the lesson is about the method and not about this bug:
+
+*Superseded, kept for the method:* five metrics, five wrong answers, and the breath noise was the
+fourth of them.
 
 Fixing the breath tilt was right on its own terms — the voice was climbing at +4.4 dB/oct and now
 falls at −5.7 — but it is **not what the pops are**. Reported directly: *"brth does nothing for

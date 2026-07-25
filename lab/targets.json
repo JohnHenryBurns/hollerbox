@@ -1,0 +1,86 @@
+{
+ "_": "Timing targets. Ratios, not absolute times, so they are speaking-rate independent.",
+ "_source": "Each carries where the number comes from. A target with no source is a guess and should say so.",
+ "timing": [
+  {
+   "id": "coda_voicing",
+   "what": "a vowel is longer before a voiced consonant than a voiceless one",
+   "probe": [
+    "b|æ|d|ɪ|t"
+   ],
+   "measure": "within_coda",
+   "target": 1.45,
+   "tol": 0.2,
+   "source": "House & Fairbanks 1953; Peterson & Lehiste 1960 put it near 1.5 for English",
+   "knob": "coda",
+   "note": "one word, two vowels, different codas — across two words it is unreachable"
+  },
+  {
+   "id": "vowel_intrinsic",
+   "what": "an open vowel is longer than a close one, all else equal",
+   "probe": [
+    "h|ɔ|d|ɪ|d"
+   ],
+   "measure": "within_vowels",
+   "target": 1.55,
+   "tol": 0.3,
+   "source": "Peterson & Lehiste 1960, the /hVd/ set",
+   "knob": "vlen",
+   "note": "open vowel then close vowel, same word"
+  },
+  {
+   "id": "stress_duration",
+   "what": "a stressed syllable is longer than an unstressed one",
+   "probe": [
+    "b|ə|n|æ|n|ə"
+   ],
+   "measure": "within_stress",
+   "target": 1.7,
+   "tol": 0.35,
+   "source": "Klatt 1976; the unstressed-to-stressed range is wide across studies",
+   "knob": "wkdur",
+   "note": "stress on the SECOND syllable, which is where banana has it"
+  },
+  {
+   "id": "final_lengthening",
+   "what": "the last syllable of an utterance is longer",
+   "probe": [
+    "k|æ|t|ə|k|æ|t"
+   ],
+   "measure": "within_final",
+   "target": 1.25,
+   "tol": 0.2,
+   "source": "Klatt 1975; Oller 1973",
+   "knob": "fnl",
+   "note": "the last held vowel against the first, inside one word"
+  },
+  {
+   "id": "poly_shortening",
+   "what": "syllables get shorter as a word gets longer",
+   "probe": [
+    "k|æ|p",
+    "k|æ|p|t|ə|n"
+   ],
+   "measure": "syllable_ratio",
+   "target": 1.2,
+   "tol": 0.2,
+   "source": "Lehiste 1972, cap/captain/captaincy",
+   "knob": "poly",
+   "reachable": false,
+   "note": "across two words of different length — unreachable until 8.1b makes D a rate"
+  },
+  {
+   "id": "stop_closure_voicing",
+   "what": "a voiceless stop is held longer than a voiced one",
+   "probe": [
+    "ɑ|t|ɑ",
+    "ɑ|d|ɑ"
+   ],
+   "measure": "closure_ratio",
+   "target": 1.5,
+   "tol": 0.25,
+   "source": "Lisker 1957",
+   "knob": "stopVc"
+  }
+ ]
+}

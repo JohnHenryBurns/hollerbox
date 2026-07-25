@@ -2074,6 +2074,61 @@ deciding what the slider is *for*.
 
 ---
 
+## Automated fitting: what it can reach, and what it cannot
+
+Asked directly: *can the new parameters, and old ones that may warrant adjustment under the new
+model, be dialled against either a voice recording or literature targets through an automated
+harness?* Yes — with one architectural constraint and one structural obstacle, both measured.
+
+**The constraint is cost.** A rendered word takes **4.3 seconds**; `buildWord` alone takes
+**0.24 ms**. Four orders of magnitude, so anything measurable from the *plan* can be optimised
+thousands of times and anything needing audio can be evaluated a few dozen times. Those are two
+different tools. `lab/fit-auto.js` is the cheap half; the acoustic half wants a much smaller
+budget and a coarser search, and pretending otherwise is how an automated fitter becomes a thing
+that never finishes.
+
+**The obstacle is normalisation, and it is bigger than expected.** `buildWord` fixes a word's
+total from D and distributes it by weight, so the weights only ever **redistribute inside one
+word**. An effect applied equally to every vowel of a word cancels exactly:
+
+    bædɪd   both vowels before /d/     coda=1 -> 193/157 ms     coda=0 -> 193/157 ms
+    bædɪt   different codas            coda=1 -> 202/109 ms     coda=0 -> 172/139 ms
+
+So *"the vowel in bad against the vowel in bat"* — how the literature states it, and what a
+recording measures — is **structurally unreachable**. Those are two words, each normalised on its
+own, and no setting of any knob produces the ratio. This is the concrete case for **8.1b, making
+D a rate**, which has been filed abstractly for a long time without one.
+
+Measured against the literature as it stands: coda voicing arrives at 1.17 where 1.45 is wanted,
+intrinsic vowel length 1.20 against 1.55, stress 1.29 against 1.70, final lengthening **1.03
+against 1.25** — barely happening at all. Stop closure voicing is exact at 1.50, and it is the
+one effect that does not go through the vowel weights.
+
+### The fitter worked, and its first answer was garbage
+
+Total error 5.91 → 1.76, every target inside tolerance. It got there by driving **`coda` to 0
+and `wkdur` to 1** — turning off the two knobs whose effects it was tuning. The measures were
+picking up other parameters, so the search reached the numbers by the cheapest route available.
+Goodhart's law with a coordinate descent attached.
+
+`--isolation` is the check that should have existed first, and now does:
+
+    coda_voicing        should be coda     MIXED  wkdur 40%  coda 33%  fnl 25%  vlen 22%
+    vowel_intrinsic     should be vlen     MIXED  wkdur 40%  vlen 36%  fnl 25%
+    stress_duration     should be wkdur    MIXED  vlen 43%  wkdur 40%  fnl 12%
+    final_lengthening   should be fnl      MIXED  wkdur 67%  drawl 21%  fnl 20%
+    stop_closure_voicing should be stopVc  ok     stopVc 33%
+
+Five of six measures respond more strongly to some *other* knob than to their own. The fitter
+now refuses to run without `--force` and says so.
+
+**What has to happen before this is useful**, in order: 8.1b, so cross-word ratios exist at all;
+then probes that isolate one effect, most likely paired — the same probe with only the knob under
+test changed — since a linguistic ratio in this model is always a compound of several. The
+harness, the targets with their sources, and the isolation check are in place for when they do.
+
+---
+
 ## Note on method
 
 Four times during the earlier synthesis work, a confident diagnosis turned out to be a

@@ -1453,6 +1453,60 @@ of the model rather than an accident of how long a segment happened to be.
 
 ---
 
+## Why does the model move faster than a tract can?
+
+Asked directly, and the answer is that **it does not need to. It is forced to, by a design
+choice that has the constraint the wrong way round.**
+
+**The time is fixed by the phonology; the distance is whatever the postures happen to be.**
+
+| transition into | time allowed |
+|---|---|
+| a vowel | 85 ms — the `glide` constant |
+| a stop or approximant | 38 ms — `glide × 0.45` |
+| either | further capped by `gcap` to half the shorter segment |
+
+None of that consults how far the articulators have to travel. /i/ → /u/ is 1.58 units of
+movement and /ɑ/ → /ɔ/ is 0.65 — **both get the same 85 ms**. A real speaker takes longer for the
+longer move; that is what having mass means.
+
+**And every keyframe must be reached exactly.** The interpolation goes from posture A to posture
+B and arrives at B, always. So velocity is simply distance ÷ whatever time the segment structure
+allowed, and nothing anywhere checks the result. Measured: 94% of the tongue tip's range in 20 ms,
+89% of the lips' in 23, 71% of the jaw's in 20.
+
+### The inversion
+
+    the model:   attainment is guaranteed, velocity is whatever falls out
+    reality:     velocity is bounded,      attainment is whatever falls out
+
+In real speech the velocity limit is primary and **undershoot is the consequence** — when there
+is not time, the articulator does not arrive. That is not a defect of human speech. It is most of
+what makes connected speech sound connected, and it is why a /d/ in fast speech is not the tongue
+shape a /d/ has in isolation.
+
+This explains several things that have been treated as separate:
+
+- **`gcap` exists to paper over it.** A hand-added rule stopping transitions outlasting the
+  segments they join — which a velocity limit would have made unnecessary, because a bounded
+  articulator cannot be mid-flight when its time is up; it simply has not arrived.
+- **Phase 9's "undershoot for free" is not a bonus.** It is the same fact stated forwards. A
+  critically damped second-order articulator with a time constant *cannot* arrive when there is
+  no time, so undershoot emerges instead of being coded.
+- **The teleport was the limiting case.** Infinite velocity is what you get when the time is zero
+  and attainment is still mandatory. It was not a different kind of bug; it was this one at the
+  boundary.
+
+### One thing that is genuinely fast
+
+A stop release. The tongue tip leaves the ridge in perhaps 10–20 ms — but that is a movement of a
+couple of millimetres, not a traverse. The report now prints **actual distance and time** rather
+than a speed extrapolated to a full range, because a small quick movement extrapolates to the
+same figure as a large one and is not the same problem. Checked before relying on it: the worst
+offenders here are genuinely large.
+
+---
+
 ## Phase 9 — interpolate in articulatory space  ❌ not started
 
 `buildWord` already emits an `art` array of six-parameter postures alongside the 44-element

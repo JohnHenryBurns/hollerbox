@@ -1,5 +1,7 @@
 # Hollerbox
 
+*How it got here, in plain language: [STORY.md](STORY.md).*
+
 **[Open the lab →](https://johnhenryburns.github.io/hollerbox/)**
 
 An interactive Kelly–Lochbaum digital waveguide vocal tract, running in the browser.

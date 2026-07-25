@@ -1710,6 +1710,37 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── the Mouth view's colours mean something ────────────────────────────────
+check("the Mouth view colours by role, and the airway follows the state", () => {
+  // It used to be a greyscale hierarchy — roof and jaw one grey, tongue another, lips a third —
+  // which distinguished the parts without saying anything about them. Now: red is what never
+  // moves, yellow is the two flaps that open and close a passage, blue is where the air is
+  // actually going.
+  //
+  // The airway is the part that has to be live. Air goes ONE way at a time — out through the
+  // mouth, through the nose when the velum drops, or nowhere while a stop is closed — and a
+  // fixed pair of channels would say none of that.
+  const fs = require("fs"), bad = [];
+  const page = fs.readFileSync(__dirname + "/../index.html", "utf8");
+  const code = page.replace(/<!--[\s\S]*?-->/g, "").replace(/^\s*\/\/.*$/gm, "");
+  const mouth = (code.match(/function drawMouth\(\)[\s\S]*?\n\}/) || [""])[0];
+
+  for (const k of ["MOUTH_FIXED", "MOUTH_FLAP", "MOUTH_AIR"])
+    if (!new RegExp(k).test(code)) bad.push(`no ${k}`);
+  // nothing in that view may still be painted by a bare grey literal
+  const greys = (mouth.match(/(?:stroke|fill)Style\s*=\s*['"]#(?:6d787e|93a1a8|b9c6cc)['"]/g) || []);
+  if (greys.length) bad.push(`${greys.length} part(s) still coloured by a bare grey`);
+  // the airway must depend on the live articulation and on the velum, not be a fixed drawing
+  if (!/seal\s*=\s*i\/\(N-1\)/.test(mouth)) bad.push("the airway does not stop at a closure");
+  if (!/if\s*\(\s*nOpen\s*>/.test(mouth)) bad.push("the airway does not follow the velum");
+  // and the two views cannot share one colour key, because they mean different things by colour
+  if (!/id="mouthKey"/.test(page) || !/id="tubeKey"/.test(page))
+    bad.push("the two views share a colour key");
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ") : "red fixed, yellow flaps, blue air, and the air moves" };
+});
+
 // ── a fricative is not a closure, however narrow ───────────────────────────
 check("no fricative is treated as a stop", () => {
   // The engine decides "shut" from the narrowest point alone, and /z/ holds a channel of 0.073

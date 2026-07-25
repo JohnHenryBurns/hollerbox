@@ -1074,7 +1074,64 @@ derivative at both ends. That is 8.4 and Phase 9, in that order, which is where 
 **The lateral is an approximant, and it should be a contact.**  See below; this turned out to be
 the most interesting thing in the notes.
 
-**Pops at word boundaries.**  ✅ found, and it was none of the things it looked like.
+**Pops at word boundaries.**  ✅ FOUND, by ear — every nasal was firing a stop burst.
+
+The description is what found it: *"the pops remind me of a Kalahari bushman more than an
+artifact, so maybe they are physical?"* They were. A click is a sealed cavity released under
+pressure, and that is exactly what was happening.
+
+/m/ seals the lips, /n/ the ridge, /ŋ/ the velum — **exactly as /b/, /d/ and /g/ do**. The burst
+fires on `cl`, the narrowest diameter anywhere in the tract, which cannot tell a nasal from a
+stop. Counted at the processor: **eight bursts behind nasals** against eleven at real stops,
+across three phrases.
+
+**The file already knew.** A hundred lines above, `sealedFor` checks `nasal<0.15` with the
+comment *"pressure only builds if the air has nowhere to go — with the velum open it escapes
+through the nose, which is exactly why /m/ can be held forever and /b/ cannot."* The fact was
+applied to the voice bar and never to the charge that feeds the burst. Not a missing insight — a
+missing second application of one already written down.
+
+A threshold was not enough: the mouth closes before the velum finishes opening, so a hard
+`nasal<0.15` still let three of eight through on the approach. Pressure does not vent at a
+threshold. The charge now builds at a rate set by how sealed the system is and leaks through an
+open nose with a ~20 ms time constant. **0 behind nasals, 11 at real stops**, and the click
+check's loudest release falls from 177% of a vowel to 119%.
+
+**Why five metrics missed it.** They were all looking for a *defect*. The burst was not
+defective — it was correct synthesis of an event that should not have been occurring, and
+nothing that searches for anomalies finds that. The record of what each one actually measured
+stays below, because the lesson is about the method and not about this bug:
+
+*Superseded, kept for the method:* five metrics, five wrong answers, and the breath noise was the
+fourth of them.
+
+Fixing the breath tilt was right on its own terms — the voice was climbing at +4.4 dB/oct and now
+falls at −5.7 — but it is **not what the pops are**. Reported directly: *"brth does nothing for
+pops on the John or woman voice."* Turning the knob across its whole range changes nothing
+audible, which falsifies the prediction made when that fix shipped.
+
+What each metric actually measured, so none of them is tried a sixth time:
+
+| metric | what it turned out to measure |
+|---|---|
+| loudest transient (`outlier`) | nothing — it does not move with the complaint at all |
+| count of high-derivative runs | high-frequency **energy**, which is the breath tilt |
+| Nyquist-band ratio | the same thing again |
+| second-difference outliers | **glottal pulses**, verified: their spacing tracks 1/f0 exactly at 70, 90, 110, 140 and 180 Hz |
+| `vl`/`sil`/`vAmp`/branch ablations | nothing — all five moved the count by ≤ 7 out of 154 |
+
+The common failure is that every one of them was invented to be *plausible* rather than
+validated against a case where the answer was independently known — which is the rule this file
+has had since Phase 1 and which none of these followed.
+
+**So stop measuring.** The thing that has worked every time in this project is localisation by
+ear followed by ablation, and it has not been tried on this. The questions that would partition
+the space are in `lab/TESTING.md`; the four that matter most are whether a *sustained* vowel pops
+with no word at all, whether a single word pops or only a phrase, whether it pops in the same
+place every time, and whether `Phase 8 off` changes it. Those four answers rule out more than any
+metric here has.
+
+*Superseded note, kept:* the earlier claim that this was found and was the breath noise.
 
 The lead recorded here — that `vl` and `sil` are step functions and `vAmp` smooths too fast —
 was **wrong**, and so were the three that followed it. Ablated in turn, transient count out of
@@ -1146,6 +1203,19 @@ while both make the same tip contact, which is not expressible while the tip is 
 
 Not small. It is the first branch topology change since the nasal tract, and the gate band for
 the lateral will move because the thing being measured will have changed. Its own branch.
+
+---
+
+## Phase 8 IS a net improvement, after `gcap`  ✅
+
+Reported after the glide cap landed: *"Phase 8 is a HUGE improvement for reducing robot effect."*
+That is the verdict flipping. Before `gcap` the same listener called the phase a net loss, and
+the difference is one change — a transition may not outlast the segment it joins.
+
+Worth keeping the shape of that: the phase itself was right and its defaults were right. What
+made it a regression was a parameter it never touched, `glide`, which had always been an
+absolute 85 ms and only became wrong when something else made segments short. A phase can be
+judged bad because of a bug in code it did not write.
 
 ---
 

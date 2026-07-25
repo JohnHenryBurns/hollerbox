@@ -900,6 +900,47 @@ check("breath noise rolls off instead of climbing", () => {
                  `${hot.toFixed(1)} at full breath (real aspiration: -6 to -12)` };
 });
 
+// ── a nasal is not a stop, however sealed the mouth is ─────────────────────
+check("no stop burst fires behind an open velum", () => {
+  const P = H.P, S = require(__dirname + "/../engine/spelling.js"), bad = [];
+  const V = P.VOICES.john.v, n = Math.round(V.sect);
+  const v = { ...P.defaultVoice(), ...V };
+  // /m/ seals the lips, /n/ the ridge, /ŋ/ the velum — exactly as /b/, /d/ and /g/ do — so the
+  // narrowest-diameter test that drives the burst cannot tell them apart. It charged behind
+  // every nasal and fired a release on the way out: a sealed cavity let go under pressure,
+  // which is a CLICK, and was heard as one. Counted at the processor rather than in the audio,
+  // because the 20 ms after a nasal is mostly the next vowel and measuring peaks there was
+  // confounded by it.
+  let inNasal = 0, inStop = 0;
+  for (const t of ["my mother and my brother", "banana and a tomato", "hello Jupiter and Maximus"]) {
+    const r = S.g2p(t);
+    const W = P.buildWord(r.ph, { D: Math.max(0.8, r.ph.length*v.per), n, stress: r.stress,
+                                  pros: v, glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    const p = H.makeProcessor(n);
+    p.port.onmessage({ data: { type: "voice", v } });
+    p.port.onmessage({ data: { type: "goal",
+      seq: { keys: W.keys, f0: P.buildF0(W.end, v, { stress: r.stress, seg: W.seg }), end: W.end } } });
+    const out = [new Float32Array(128)];
+    let prev = 0;
+    for (let b = 0; b < Math.ceil((W.end + 0.5)*H.SR/128); b++) {
+      p.process([], [out]);
+      if (p.burstN > prev) {
+        const tt = b*128/H.SR;
+        const sg = W.seg.find(x => tt >= x.a - 0.03 && tt <= x.b + 0.03);
+        if (sg && P.NASAL[sg.sym]) inNasal++; else inStop++;
+      }
+      prev = p.burstN;
+    }
+  }
+  if (inNasal) bad.push(`${inNasal} bursts fired behind a nasal`);
+  // And the vent must not have silenced the stops it has no business touching. Eleven is what
+  // these three phrases contain; a fix that suppressed those too would pass the first half.
+  if (inStop < 8) bad.push(`only ${inStop} stop bursts survived — the vent is over-reaching`);
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ") : `0 behind nasals, ${inStop} at real stops` };
+});
+
 check("no word clicks", () => {
   // A stop release is a transient, but an outlier far above the signal's own motion is a
   // click. The white-noise burst once measured 13.5x.

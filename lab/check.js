@@ -1887,6 +1887,18 @@ check("the 3D view knows about both side branches", () => {
   const mouth = (page.match(/function drawMouth\(\)[\s\S]*?\n\}/) || [""])[0];
   if (!/nasal cavity/.test(mouth)) bad.push("the Mouth view draws no nasal cavity");
   if (!/velum/.test(mouth)) bad.push("the Mouth view draws no velum");
+  // RAISING the soft palate CLOSES the nasal port — that is what velopharyngeal closure is,
+  // and it is why every non-nasal sound has the velum up. The first version lifted it to open,
+  // which is backwards, and a diagram that teaches a child the opposite of the truth is worse
+  // than no diagram. The check reads the two endpoints: the sealed one must be ABOVE the open
+  // one on screen, and y grows downward here.
+  const up = /const up\s*=\s*\{[^}]*Y\(roofAt/.test(mouth);
+  const down = /const down\s*=\s*\{[^}]*hy \+ len/.test(mouth);
+  if (!up || !down) bad.push("the velum's open and shut positions are not up-and-down");
+  if (!/tip\s*=\s*\{[^}]*up\.x \+ \(down\.x-up\.x\)\*open/.test(mouth))
+    bad.push("the velum does not travel from shut toward open as nOpen rises");
+  // and it hinges where the hard palate ends, not off the back of the throat
+  if (!/HINGE = 0\.4[0-9]/.test(mouth)) bad.push("the velum is not hinged at the hard palate");
   // and a branch may not blink in and out — a nose is there whether or not it is in use
   if (/t\.mesh\.visible\s*=\s*open/.test(page)) bad.push("the nasal cavity vanishes when closed");
   // the engine must send what the page needs to draw them

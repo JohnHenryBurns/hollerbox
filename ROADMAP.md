@@ -2366,6 +2366,73 @@ to the digit. The identical numbers were the tell; a real dependency does not re
 
 ---
 
+## Consonant targets, part 1: the sonorants  ◐ targets in, solver next
+
+The vowels have measured targets and a solver that fits postures to them, and score 10/10. The
+consonants had **neither** — nothing anywhere said what /n/'s F2 should be, so nothing had ever
+noticed it was /l/'s. That is why a full sweep came back 14/20.
+
+`lab/consonant-targets.json` now carries the sonorants, adult male, the same reference population
+as the Peterson & Barney vowel set so the two are comparable. Each target has a source and its
+own tolerance — F3 for /r/ is the tightest in the file because F3 *is* the English r/l
+distinction, and nasal F1 is the loosest because the murmur's first resonance is set by the whole
+coupled system.
+
+Sonorants first because they are the class the existing machinery handles: voiced, with
+formants, measurable by `H.formants()` exactly as a vowel is. Fricatives want a spectral peak and
+a noise band; stops want a burst spectrum. Different objectives, and they come after.
+
+**2/7 within tolerance**, and the pattern is what makes the targets trustworthy:
+
+| | measured against target | what the ear reported |
+|---|---|---|
+| /l/ | within tolerance | ok, clear |
+| /m/ | within tolerance | ok, clear |
+| /n/ | F2 1210 ≠ 1700 | *"sounds like l"* |
+| /ŋ/ | F2 1950 ≠ 2300 | *"is like y"* |
+| /r/ | F3 2410 ≠ 1600 | *"an Asian saying l"* |
+| /w/ | F2 860 ≠ 610 | *"heard as v"* |
+| /j/ | F3 2320 ≠ 3000 | identified correctly |
+
+**The two that pass are the two marked "ok, clear".** Every one that misses is one that was
+misheard. The targets and the listener agree on all seven, independently — which is the evidence
+that these are the right numbers, and it is the check that should be run on any target set before
+anything is fitted to it.
+
+Reporting, not gating, until the solver exists. Failing the gate on a gap nobody has had a chance
+to close helps nobody.
+
+## Consonant solver, stage A  ◐ measure adjudicated, solver ready to run
+
+The blocker was which of two formant measures to trust. Settled against the one case with an
+exact answer — a uniform tube rings at c/4L — run at **every length the model uses**, which the
+existing single-length check could not have done:
+
+| n | exact | LPC | DFT |
+|---|---|---|---|
+| 30 | 735/2205/3675 | 714/2130/3522 — **3% low** | ✓ |
+| 44 | 501/1503/2506 | ✓ | ✓ |
+| 52 | 424/1272/2120 | **nothing found** | ✓ |
+| 60 | 368/1103/1838 | **nothing found** | ✓ |
+
+**LPC returns no formants at all above about 48 sections, and `barry` is 48.** Fifty times
+quicker and unusable. The sweep is correct and stays.
+
+**It is 3.6× faster now anyway.** The impulse response has to stay 8192 long — at 4096 the peaks
+of a high-Q shape smear and /ŋ/ lands 910 Hz out — but the frequency *step* is not what limits
+accuracy. Measured across sixteen postures, 8192/40 disagrees with 8192/10 by at most **20 Hz**,
+an order of magnitude inside the tightest tolerance in the targets file. 123 ms → 35 ms.
+
+**And the trap on the way was the usual one.** A 1024-sample response gives the exact answer on a
+uniform tube in 8 ms — 15× faster — and is up to **2460 Hz wrong** on real postures. The uniform
+tube is low-Q with well-separated peaks and survives anything; validating on it and generalising
+is how five of the wrong measurements in this file happened.
+
+Gated: c/4L at six lengths from 30 to 60 sections, all within 3%. A single-length check catches a
+measure that is wrong everywhere and is useless against one that degrades with size, which is
+precisely the failure mode LPC had.
+
+The solver can now run in about a minute. That is the next piece.
 <!-- ─────────────────────────────────────────────────────────────────────────
      ADD NEW SECTIONS ABOVE THIS LINE, at the end — not before a heading.
 

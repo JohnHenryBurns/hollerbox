@@ -228,7 +228,16 @@ function formants(sym, { n = 44, order = 12, art = null } = {}) {
   const L = 8192, ir = new Float64Array(L);
   ir[0] = t.sample(1); for (let i = 1; i < L; i++) ir[i] = t.sample(0);
   const pk = []; let a = 0, b = 0;
-  for (let f = 180; f <= 3400; f += 10) {
+  // STEP 40, not 10. The impulse response has to stay 8192 long — at 4096 the peaks of a
+  // high-Q shape smear and /ŋ/ lands 910 Hz out — but the frequency STEP is not what limits
+  // accuracy, and coarsening it is close to free: measured across sixteen postures, 8192/40
+  // disagrees with 8192/10 by at most 20 Hz, which is an order of magnitude inside the
+  // tightest tolerance in consonant-targets.json. 123 ms becomes 34.
+  //
+  // Worth having because this is a search objective now, and 123 ms makes a solver take nine
+  // minutes. The obvious alternative — the LPC in fit-preset.js, fifty times quicker — was
+  // tried and is not usable: it returns NOTHING at n=52 and n=60, and `barry` is 48.
+  for (let f = 180; f <= 3400; f += 40) {
     let re = 0, im = 0;
     for (let i = 0; i < L; i++) {
       const w = 0.5 - 0.5*Math.cos(2*Math.PI*i/L);

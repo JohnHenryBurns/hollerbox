@@ -1790,6 +1790,68 @@ check("voiceless stops are aspirated", () => {
 // means closing the first one explicitly.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── the formant measure is right at every length, not just one ─────────────
+check("a uniform tube reads c/4L at every tract length in use", () => {
+  // There was a uniform-tube check already and it ran at ONE length. That is enough to catch a
+  // measure that is wrong everywhere and useless against one that degrades with size — which
+  // is exactly what the LPC alternative does: correct at 44, three per cent low at 30, and
+  // returning nothing at all at 52 and 60. `barry` is 48. A single-length check would have
+  // waved it through.
+  const { Tract } = require(__dirname + "/tract.js");
+  const CM = 35000/(2*44100), bad = [];
+  for (const n of [30, 36, 44, 48, 52, 60]) {
+    const L = n*CM;
+    const want = [1, 3, 5].map(k => k*35000/(4*L));
+    const t = new Tract(n);
+    t.diam.set(new Float64Array(n).fill(1.5));
+    t.bOpen = 0;
+    t.calcReflections();
+    const N = 8192, ir = new Float64Array(N);
+    ir[0] = t.sample(1);
+    for (let i = 1; i < N; i++) ir[i] = t.sample(0);
+    const pk = [];
+    let p1 = -1e9, p2 = -1e9, pf = 0;
+    for (let f = 180; f <= 5000; f += 20) {
+      let re = 0, im = 0;
+      const w = 2*Math.PI*f/44100;
+      for (let i = 0; i < N; i++) { re += ir[i]*Math.cos(w*i); im -= ir[i]*Math.sin(w*i); }
+      const mag = 10*Math.log10(re*re + im*im + 1e-30);
+      if (p1 > p2 && p1 > mag) pk.push(pf);
+      p2 = p1; p1 = mag; pf = f;
+    }
+    if (pk.length < 3) { bad.push(`n=${n} found ${pk.length} formants`); continue; }
+    for (let k = 0; k < 3; k++)
+      if (Math.abs(pk[k] - want[k])/want[k] > 0.03)
+        bad.push(`n=${n} F${k+1} ${pk[k]} vs ${Math.round(want[k])}`);
+  }
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.slice(0,3).join("  ") : "6 lengths, 30 to 60 sections, all within 3%" };
+});
+
+// ── the sonorants against their targets ────────────────────────────────────
+report("sonorants against the literature", () => {
+  // The vowels have targets and a solver and score 10/10. The consonants had neither, which is
+  // why a sweep came back 14/20 and why nothing had ever noticed that /n/ and /l/ share an F2
+  // to within ten hertz. This is the first half of fixing that: the targets. The solver that
+  // fits postures to them comes next, and until it does this reports rather than blocks —
+  // failing the gate on a gap nobody has had a chance to close yet helps nobody.
+  const fs = require("fs");
+  const T = JSON.parse(fs.readFileSync(__dirname + "/consonant-targets.json", "utf8"));
+  const rows = [], off = [];
+  for (const t of T.sonorants) {
+    const f = H.formants(t.sym, { n: 44 });
+    if (!f || f.length < 3) { off.push(`${t.sym} unmeasurable`); continue; }
+    const bad = [];
+    for (let k = 0; k < 3; k++)
+      if (Math.abs(f[k] - t.f[k]) > t.tol[k]) bad.push("F" + (k+1) + " " + f[k] + "≠" + t.f[k]);
+    if (bad.length) off.push(`${t.sym}(${bad.join(",")})`);
+    else rows.push(t.sym);
+  }
+  return { ok: off.length === 0,
+           note: `${rows.length}/${T.sonorants.length} within tolerance` +
+                 (off.length ? "   off: " + off.join("  ") : "") };
+});
+
 // ── clearing the champion has to be followed by re-seeding it ──────────────
 check("the bench never leaves the tournament without a champion", () => {
   const fs = require("fs"), bad = [];

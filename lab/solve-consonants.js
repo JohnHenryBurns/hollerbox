@@ -47,6 +47,34 @@ function rng(seed) {
   };
 }
 
+/** Draw a posture inside the sound's own anatomical bounds.
+ *
+ *  Three formants underdetermine a tongue. Unbounded, the solver hit every target and got there
+ *  wrongly — /w/ with a flat body and a raised tip, which is the opposite of a labio-velar, and
+ *  /j/ with the tip almost touching instead of a high front body. Both scored inside tolerance,
+ *  and both would have dragged the wrong articulator through every transition they take part
+ *  in, which since Phase 9 is audible.
+ *
+ *  The bounds are not fitted. They are what the sound is. */
+const DEFAULT_RANGE = { jaw:[0,1], bodyPos:[0.10,0.95], bodyHi:[0,1],
+                        tipPos:[0.55,1], tipHi:[0,1], lip:[0.05,1] };
+function pick(tgt, rnd) {
+  const A = {};
+  for (const k of Object.keys(DEFAULT_RANGE)) {
+    const b = (tgt.bounds && tgt.bounds[k]) || DEFAULT_RANGE[k];
+    A[k] = b[0] + rnd()*(b[1] - b[0]);
+  }
+  return A;
+}
+function clampTo(A, tgt) {
+  const out = {};
+  for (const k of Object.keys(DEFAULT_RANGE)) {
+    const b = (tgt.bounds && tgt.bounds[k]) || DEFAULT_RANGE[k];
+    out[k] = Math.max(b[0], Math.min(b[1], A[k]));
+  }
+  return out;
+}
+
 /** Score a posture against a target, weighted by that target's own tolerance. A formant with a
  *  tight band matters more than one with a loose one — which is how /r/'s F3 comes to dominate
  *  its own fit, as it should, since F3 is the entire distinction from /l/. */
@@ -64,8 +92,7 @@ function solve(tgt, iters = 1400, seed = 20260725) {
   const rnd = rng(seed);
   let best = null;
   for (let k = 0; k < iters; k++) {
-    const A = { jaw: rnd(), bodyPos: 0.10 + rnd()*0.85, bodyHi: rnd(),
-                tipPos: 0.55 + rnd()*0.45, tipHi: rnd(), lip: 0.05 + rnd()*0.95 };
+    const A = pick(tgt, rnd);
     const s = score(A, tgt);
     if (!best || s.e < best.e) best = { A, ...s };
   }
@@ -75,7 +102,7 @@ function solve(tgt, iters = 1400, seed = 20260725) {
     let moved = false;
     for (const key of ["jaw", "bodyPos", "bodyHi", "tipPos", "tipHi", "lip"]) {
       for (const d of [step, -step]) {
-        const A = { ...best.A, [key]: Math.max(0, Math.min(1, best.A[key] + d)) };
+        const A = clampTo({ ...best.A, [key]: best.A[key] + d }, tgt);
         if (A[key] === best.A[key]) continue;
         const s = score(A, tgt);
         if (s.e < best.e) { best = { A, ...s }; moved = true; }

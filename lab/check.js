@@ -1776,19 +1776,14 @@ check("voiceless stops are aspirated", () => {
                : `b${vot.b.toFixed(0)} d${vot.d.toFixed(0)} g${vot.g.toFixed(0)} vs p${vot.p.toFixed(0)} t${vot.t.toFixed(0)} k${vot.k.toFixed(0)} ms` };
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ADD NEW CHECKS BELOW THIS LINE.
+// New checks go at the end of this file. That does not stop two branches colliding here — an
+// earlier version of this comment claimed it did, which was wrong, since two branches appending
+// to one file conflict wherever they append. What stops it is not having two branches open.
 //
-// Not in the middle. Every check added during this project went in just above
-// `check("no word clicks")`, because that was a convenient landmark — which meant any two
-// open branches touching this file conflicted at the same three lines, every time. Four
-// rebases in one session were all the same conflict, and all of it self-inflicted.
-//
-// The resolution is also always the same and worth writing down, because stripping the
-// markers alone produces a file that LOOKS right and does not parse: both sides stop at their
-// own `return {...};` and share the single `});` that follows the last marker, so keeping both
-// means closing the first one explicitly.
-// ─────────────────────────────────────────────────────────────────────────────
+// When it does happen, the resolution is always the same and worth knowing, because stripping
+// the markers alone gives a file that LOOKS right and does not parse: both sides stop at their
+// own `return {...};` and share the single `});` after the last marker, so keeping both means
+// closing the first one explicitly.
 
 // ── the formant measure is right at every length, not just one ─────────────
 check("a uniform tube reads c/4L at every tract length in use", () => {

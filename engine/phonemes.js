@@ -418,7 +418,7 @@ const VOICE_SPEC=[
   // Phase 9. The time constant of a critically damped articulator. 0 tracks the keyframes
   // exactly, which is every version of this engine until now; anything above 0 means the tract
   // has inertia and stops being able to arrive everywhere it is asked to.
-  {k:'artT', lo:0,      hi:0.06,    d:0, off:0,},
+  {k:'artT', lo:0,      hi:0.06,    d:0.025, off:0,},
 ];
 const VOICES = {
   // Measured from a real goal cry: the pitch falls the whole way (158 -> 93 Hz) and the

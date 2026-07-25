@@ -1507,7 +1507,7 @@ offenders here are genuinely large.
 
 ---
 
-## Phase 9 — the articulators have mass  ◐ built, shipped OFF
+## Phase 9 — the articulators have mass  ✅ built and ON
 
 `artT`, a critically damped second-order follower on the tract shape. The keyframes now set a
 **target** and the tract moves toward it; `artT=0` tracks exactly, which is the behaviour of
@@ -1564,14 +1564,39 @@ sibilants are acquired late. `fric` already says which is which.
 | stops sealing at `artT=0.035` | 0.101 | 0.020 |
 | stops sealing at `artT=0.05` | 0.407 — open | **0.020** |
 
-### Still off by default: voice onset time
+### Two things had assumed the tract arrives on time  ✅ both fixed
 
-One failure remains at `artT=0.025`: VOT on /p t k/ falls to 20–30 ms against a floor of 50. The
-stops seal and the bursts fire, so it is not the closure — it is the *timing* of the release
-under inertia, and it wants its own look rather than a guess at the end of a long session.
+VOT was the last thing failing, and it turned out to be two separate assumptions that only held
+because the tract used to arrive exactly when the keyframes said it would.
 
-Everything else that was broken at 0.025 is fixed: /z/ sounds, word-final stops no longer drift
-open, and the gate is down from four failures to one.
+**Voicing resumed before the seal broke.** `voiceless` steps back to 0 at the keyframe midpoint.
+Under inertia the release is late and the flag is not, so voicing leaked out for the ten
+milliseconds between them — the engine had already computed the right VOT, the voice simply
+started before the burst. A voiceless stop that has charged and not released is still shut and no
+air is crossing the folds, so voicing now waits for it. `charge` is zeroed at the burst, which
+hands over to `vot` exactly there.
+
+**`sealVl` was latched every sample instead of once.** It records whether the folds were apart
+*behind* the closure, and it was being rewritten on every sample the tract was shut — so the
+last sample won, and under inertia the release comes after the *next* segment's midpoint has
+already handed voicing back. `sealVl` was overwritten with 0 a few milliseconds before the burst
+read it, /k/ got **no VOT at all**, and voicing resumed immediately.
+
+That is the very failure the latch was added to prevent — its comment says so — and it did not
+survive the release being late. It latches once now, on the way in.
+
+    artT   VOT, voiced / voiceless
+    0      b0  d0  g0   vs  p55 t65 k85     unchanged: inert when the tract is exact
+    0.025  b20 d10 g15  vs  p75 t85 k105
+    0.035  b25 d10 g15  vs  p80 t90 k115
+
+### On by default at `artT=0.025`
+
+Gate green, five seeds agree. Peak tract speed drops from 1691 to 706 units/s, undershoot runs
+6.5 units, stops seal at 0.020, and every fricative still sounds.
+
+`off:0` restores exact keyframe tracking, which is every version of this engine before now — so
+the whole of Phase 9 is one button in the Knobs panel, in both directions.
 
 At `artT=0.025` the gate fails three ways, and they are regressions rather than band drift:
 

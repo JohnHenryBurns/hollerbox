@@ -1507,7 +1507,59 @@ offenders here are genuinely large.
 
 ---
 
-## Phase 9 — interpolate in articulatory space  ❌ not started
+## Phase 9 — the articulators have mass  ◐ built, shipped OFF
+
+`artT`, a critically damped second-order follower on the tract shape. The keyframes now set a
+**target** and the tract moves toward it; `artT=0` tracks exactly, which is the behaviour of
+every version before this. Measured on "I love my daughter":
+
+| `artT` | stops seal | peak tract speed | undershoot |
+|---|---|---|---|
+| 0 | 0.020 ✓ | 1691 /s | 0.00 |
+| 0.015 | 0.020 ✓ | 757 /s | 4.31 |
+| 0.025 | 0.020 ✓ | 494 /s | 6.67 |
+| 0.035 | 0.101 ✓ | 368 /s | 8.55 |
+| 0.045 | **0.407 ✗** | 286 /s | 9.94 |
+
+Both properties come out of the one parameter, which is the argument for doing it this way:
+**undershoot is not added, it is what remains when a bounded thing is asked to move further than
+it can.**
+
+### A tongue aims past the palate
+
+The first version broke every stop. A uniform time constant above ~20 ms left /d/ and /t/
+reaching **0.308** where 0.14 is needed, and a closure that is not reached is not a *reduced*
+stop — it is a different sound.
+
+Real anatomy does not have this problem because a tongue does not *aim at* the palate. It aims
+**past** it and contact stops it. So a closure target is now aimed 0.45 beyond the surface and
+the existing clamp does the rest, which pushes the usable range from about 0.02 out to 0.035.
+Nothing linguistic is special-cased; the geometry does it.
+
+### Why it ships off: fricatives are critical too
+
+At `artT=0.025` the gate fails three ways, and they are regressions rather than band drift:
+
+- **/z/ falls silent** — 0% of a vowel. Undershoot widens the constriction past the point where
+  the jet forms, and a fricative with no turbulence is not a quieter fricative.
+- **a word-final /d/ releases** — the closure drifts open under inertia and trips the burst.
+- **VOT collapses to 20–25 ms** on /p t k/, against a floor of 50.
+
+All three are the same finding at one level up: **a fricative's constriction is as constitutive
+as a stop's closure.** The "aim past the surface" rule covers targets below 0.14 and a sibilant
+sits around 0.3–0.5, so it gets no protection and undershoots into an approximant.
+
+The fix is to know which gestures are *critical* — which is articulatory phonology's own
+distinction, and the keyframes already carry `fr` and could carry the rest. That is the next
+step and it is not a small one, which is why the machinery is in and the default is 0.
+
+Gated anyway, so it cannot rot while it is off: off must track exactly, on must **both** slow the
+tract and produce undershoot — a filter that only slowed it would not be doing the job, and
+undershoot without a speed bound would just be a wrong target — and stops must still seal.
+
+---
+
+## Phase 9 — the original note
 
 `buildWord` already emits an `art` array of six-parameter postures alongside the 44-element
 diameter arrays. The worklet interpolates the **diameter arrays**: 44 correlated numbers, when

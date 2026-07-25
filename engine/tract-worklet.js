@@ -13,6 +13,13 @@ class TractProcessor extends AudioWorkletProcessor {
     this.n=n; this.nMax=CAP; this.steps=2;
     this.diam=new Float64Array(CAP).fill(1.5);
     this.target=new Float64Array(CAP).fill(1.5);
+    // PHASE 9. `tgt` is where the keyframes say the tract should be; `diam` is where it has
+    // actually got to, and `dv` is how fast it is going. Interpolation used to write straight
+    // into diam, which is why the tract could cross 94% of the tongue tip's range in 20 ms and,
+    // at a degenerate keyframe pair, cross it in none at all.
+    this.tgt=new Float64Array(CAP).fill(1.5);
+    this.dv=new Float64Array(CAP);
+    this.artTau=0;
     this.A=new Float64Array(CAP);
     this.R=new Float64Array(CAP); this.L=new Float64Array(CAP);
     this.Rin=new Float64Array(CAP); this.Lin=new Float64Array(CAP);
@@ -115,6 +122,7 @@ class TractProcessor extends AudioWorkletProcessor {
         if(v.burst!==undefined) this.burstK=v.burst;
         if(v.hiss !==undefined) this.hiss=v.hiss;
         if(v.onset!==undefined) this.onset=v.onset;
+        if(v.artT !==undefined) this.artTau=v.artT;
       }
     };
     this.calcRefl();
@@ -275,7 +283,7 @@ class TractProcessor extends AudioWorkletProcessor {
         if(this.seqT < this.blend){          // glide into the first keyframe
           let u=this.seqT/this.blend; u=u*u*(3-2*u);
           const k0=K[0];
-          for(let i=0;i<n;i++) this.diam[i]=this.seqFrom[i]+(k0.d[i]-this.seqFrom[i])*u;
+          for(let i=0;i<n;i++) this.tgt[i]=this.seqFrom[i]+(k0.d[i]-this.seqFrom[i])*u;
           this.bOpen=this.seqFromB+((k0.b||0)-this.seqFromB)*u;
           done=false;
         } else
@@ -283,7 +291,7 @@ class TractProcessor extends AudioWorkletProcessor {
           if(this.seqT<=K[k].t){
             const a=K[k-1], b=K[k];
             let u=(this.seqT-a.t)/(b.t-a.t); u=u*u*(3-2*u);
-            for(let i=0;i<n;i++) this.diam[i]=a.d[i]+(b.d[i]-a.d[i])*u;
+            for(let i=0;i<n;i++) this.tgt[i]=a.d[i]+(b.d[i]-a.d[i])*u;
             this.bOpen=(a.b||0)+((b.b||0)-(a.b||0))*u;
             this.nasal=(a.nz||0)+((b.nz||0)-(a.nz||0))*u;
             this.voiceless=(u<0.5?(a.vl||0):(b.vl||0));
@@ -305,7 +313,7 @@ class TractProcessor extends AudioWorkletProcessor {
             this.target.set(this.diam);      // hand the tract back where it stands
           }
           else { const last=K[K.length-1];
-                 for(let i=0;i<n;i++) this.diam[i]=last.d[i];
+                 for(let i=0;i<n;i++) this.tgt[i]=last.d[i];
                  this.bOpen=last.b||0; this.nasal=last.nz||0; this.voiceless=last.vl||0;
                  this.fric=(last.fr||0)*(this.hiss===undefined?1:this.hiss);
                  this.asp=last.as||0; this.silNow=last.sil||0;
@@ -328,9 +336,33 @@ class TractProcessor extends AudioWorkletProcessor {
           this.f0=f;
         }
       } else {
-        for(let i=0;i<n;i++) this.diam[i]+=(this.target[i]-this.diam[i])*0.0006;
+        for(let i=0;i<n;i++) this.tgt[i]=this.diam[i]+(this.target[i]-this.diam[i])*0.0006;
         this.bOpen += (this.bTarget-this.bOpen)*0.0006;
         this.nasal += (this.nasalT-this.nasal)*0.0006;
+      }
+      // ---- the articulators have mass ----
+      // A critically damped second-order follower: it cannot overshoot, cannot teleport, and
+      // when there is not enough time it simply does not arrive. That last property is the
+      // point. Undershoot is not added here — it is what remains when a bounded thing is asked
+      // to move further than it can, which is what a real tongue does in fast speech.
+      //
+      // artTau = 0 tracks the target exactly, which is the behaviour before this existed.
+      if(this.artTau>0){
+        const w=1/this.artTau, kk=w*w, cc=2*w, dt=1/sr;
+        for(let i=0;i<n;i++){
+          // A tongue does not AIM at the palate, it aims past it and the palate stops it. That
+          // is why a stop closes even in fast speech while a vowel is free to fall short: the
+          // target is beyond the surface and contact clamps it. Without this, a uniform time
+          // constant above about 20 ms stops the tract sealing at all — measured, /d/ and /t/
+          // reaching 0.308 where 0.14 is needed — and a stop that does not close is not a
+          // reduced stop, it is a different sound.
+          const goal = this.tgt[i] < 0.14 ? this.tgt[i]-0.45 : this.tgt[i];
+          this.dv[i]+=(kk*(goal-this.diam[i]) - cc*this.dv[i])*dt;
+          this.diam[i]+=this.dv[i]*dt;
+          if(this.diam[i]<0.02) { this.diam[i]=0.02; if(this.dv[i]<0) this.dv[i]=0; }
+        }
+      } else {
+        for(let i=0;i<n;i++){ this.diam[i]=this.tgt[i]; this.dv[i]=0; }
       }
       this.calcRefl();
 

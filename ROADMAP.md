@@ -2282,6 +2282,45 @@ the habit that avoids it.
 
 ---
 
+## What the ear said about the consonants
+
+A full sweep on `man`, 14/20 identified. The confusions are not vague — every one of them is a
+formant that lands on top of another sound's.
+
+| reported | measured | should be |
+|---|---|---|
+| *"n sounds like l"* | /n/ F2 **1160**, /l/ F2 **1150** | /n/ near 1700 |
+| *"the ŋ is like y"* | /ŋ/ F2 **1860**, /j/ F2 **1970** | /ŋ/ near 2300 |
+| *"r sounds like an Asian saying l"* | /r/ F3 **2300**, /l/ F3 2590 | /r/ **1600–1800** |
+| *"ʒ heard as l"* | /ʒ/ 21% of its energy above 3 kHz; /z/ has 84% | a sibilant, so high |
+| *"ð is a lispy w or oo"* | frication 0.20, the weakest of any fricative | audible turbulence |
+| *"w heard as v"* | one constriction, at the lips | labio-**velar**: two |
+
+/n/ and /l/ agree on F2 to within **ten hertz**. /ŋ/ sits 110 Hz from /j/. Those pairs are not
+being approximated, they are the same sound.
+
+**The reason is structural.** The vowels have measured targets and a solver that fits postures to
+them, and they score 10/10. The consonants have hand-placed postures and **no targets at all** —
+nothing anywhere says what /n/'s F2 or /r/'s F3 should be, so nothing has ever noticed that they
+are wrong. 14/20 is what a hand-placed table gets.
+
+The next piece of work is the obvious one: give the consonants targets from the literature and
+solve their postures against them, the way the vowels already are.
+
+### The answer sheet could not report what was heard
+
+Two failures of the sweep itself, both of which hid information.
+
+**/j/ was marked "not identified — clearly y", and /j/ IS y.** It is the sound at the front of
+*yes*. The engine was right and the sheet had no way to say so, because the buttons were bare
+IPA. Every button now carries an English word: `j — yes`, `ð — this`, `ʒ — vision`.
+
+**/ð/ came back as "a lispy w or oo" with nowhere to put it.** A consonant that has become a
+vowel is a specific failure — the constriction is not narrow enough to make turbulence — and
+there was no option for it short of "buzz", which means something else. Added.
+
+---
+
 ## Note on method
 
 Four times during the earlier synthesis work, a confident diagnosis turned out to be a

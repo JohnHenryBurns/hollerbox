@@ -774,9 +774,20 @@ function buildWord(chain, opts){
       const gap=Math.max(0.015, Math.min(0.30, wgap*(1+drawl)));
       const quiet=wgap>=0.09 ? 1 : 0;        // long enough to be a pause rather than a boundary
       const prev=chain[i-1];
-      const pd=prev?Array.from(shape(prev)):Array.from(shape('ə'));
+      // WHERE THE PREVIOUS SOUND ENDED, not where it began. `shape()` goes through baseFor,
+      // and baseFor for a diphthong returns the posture of its FIRST target — /ɑ/ for /aɪ/ —
+      // because that is the right answer everywhere else. Here it is not: the tract has just
+      // finished travelling to the diphthong's SECOND target, so "hold the previous shape"
+      // snapped it 41 units back to the start in zero time.
+      //
+      // That is the pop. Two of them in "I love my daughter", at 310 ms and 1283 ms, which are
+      // exactly the two reported — after "I" and after "my", both /aɪ/. It is also why
+      // "I lovemy daughter" removes the one before the /d/: that spelling puts a plain /i/
+      // before the boundary instead of a diphthong, so there is nothing to snap back from.
+      const endOf = sym => isDiph(sym) ? base(DIPH[sym][1]) : base(sym);
+      const pd=prev?Array.from(articulate(endOf(prev),n)):Array.from(shape('ə'));
       const nd=nextSym?Array.from(shape(nextSym)):pd;
-      const pA=prev?base(prev):base('ə');
+      const pA=prev?endOf(prev):base('ə');
       const nA=nextSym?base(nextSym):pA;
       keys.push({t,d:pd,b:0,nz:0,vl:quiet,fr:0,as:0,sil:quiet,lv:1}); art.push({t,A:pA});
       seg.push({sym:' ', a:t, b:t+gap});

@@ -2318,8 +2318,62 @@ IPA. Every button now carries an English word: `j — yes`, `ð — this`, `ʒ �
 **/ð/ came back as "a lispy w or oo" with nowhere to put it.** A consonant that has become a
 vowel is a specific failure — the constriction is not narrow enough to make turbulence — and
 there was no option for it short of "buzz", which means something else. Added.
+## "The letter j is pronounced doo"
+
+Reported precisely: */dʒ/ starts with static, then sounds like a guitar string being plucked;
+the /d/ alone is just a static blast.* Traced at 15 ms resolution, that is exactly what the
+signal does.
+
+    601ms  HF 78%   the /d/ burst — correct, broadband. the "static blast"
+    616ms  HF 36%   ringing down
+    631ms  HF  4%   and then 280 ms of this
+
+The burst is right. The fricative half is **not there** — nearly three hundred milliseconds of
+voiced sound with no turbulence in it, which is a vowel. "Doo" is a literal description of the
+output.
+
+**The channel was too wide to make turbulence.** /ʒ/ sat at 0.302 where /z/ sits at 0.073, and
+turbulence falls off a cliff between them:
+
+| /ʒ/ tipHi | channel | energy above 3 kHz |
+|---|---|---|
+| 0.80 — as shipped | 0.302 | **21%** |
+| 0.84 | 0.211 | 86% |
+| **0.86** | **0.165** | **91%** |
+
+Now at 0.86. Sustained /ʒ/ measures 91% against /z/'s 84%.
+
+**It is better in the affricate and not fixed.** At the same point in *dʒ* the turbulence is 30%
+where it was 4%, then still decays over the following 40 ms. Why it decays is not yet explained
+and is not the channel width, since a sustained /ʒ/ holds 91% indefinitely.
+
+**/ʃ/ is a different fault.** Narrowing does nothing for it — 32% at 0.292, 25% at 0.062. Its
+problem is the *shape* of the noise rather than its level, which is consistent with it being
+reported as identified-but-rough with a hiss tag while /ʒ/ was misheard entirely.
+
+### Three measurement errors reaching this, all mine
+
+`spectrum`'s `from` is a **fraction of the buffer**, not a time, and it has no `to` — so the
+first pass measured from 35% of the way in for an arbitrary length and reported 0% high-frequency
+energy for /z/, which is impossible.
+
+Sampling `tipHi` at 0.80 then 0.95 skipped the entire usable range and produced the conclusion
+that a sibilant channel was **unreachable**. It is reachable across 0.84–0.90.
+
+And `sustain` is **memoised on `[sym, n, seconds, f0, voice]`**, so mutating `ART` between calls
+returned the same cached buffer five times — which read as "narrowing the channel does nothing"
+to the digit. The identical numbers were the tell; a real dependency does not repeat exactly.
 
 ---
+
+<!-- ─────────────────────────────────────────────────────────────────────────
+     ADD NEW SECTIONS ABOVE THIS LINE, at the end — not before a heading.
+
+     Every section written during this project went in just before "Note on method", because
+     it was a convenient landmark. That guaranteed a conflict with any other open branch, at
+     the same three lines, every time. `lab/check.js` had the identical problem and the
+     identical fix; this is the second file to grow an append point for the same reason.
+     ───────────────────────────────────────────────────────────────────────── -->
 
 ## Note on method
 

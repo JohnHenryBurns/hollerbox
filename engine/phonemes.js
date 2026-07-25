@@ -277,7 +277,7 @@ const ART = {
   "bodyPos": 0.55,
   "bodyHi": 0.28,
   "tipPos": 0.862,
-  "tipHi": 0.8,
+  "tipHi": 0.86,
   "lip": 0.677
  },
  "θ": {
@@ -363,7 +363,7 @@ const isDiph  = sym => !!DIPH[sym];
 // old worklet had no integrator for, and speakWith bails at `if(!node) return`. A hard reload
 // fixed it, which is not a thing a visitor knows to do.
 // Derived from both files with this line blanked out, so it is stable under itself.
-const BUILD = "ec4bcde116";
+const BUILD = "a97188987c";
 
 const VOICE_SPEC=[
   {k:'rd',   lo:0.35,   hi:2.40,    d:0.80},    // LF shape: pressed <-> breathy

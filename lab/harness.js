@@ -210,10 +210,14 @@ const bandShare = (sp, lo, hi) => {
 
 /** Formants via LPC on the tract's impulse response — the transfer function, not the output.
  *  (Voiced-signal LPC has misled this project five times. Do not use it for formants.) */
-function formants(sym, { n = 44, order = 12 } = {}) {
+function formants(sym, { n = 44, order = 12, art = null } = {}) {
   const { Tract } = require("./tract.js");
   const t = new Tract();
-  t.diam.set(P.articulate(P.ART[sym], n));
+  // `art` overrides a posture. Without it this could only ever measure the shared ART table,
+  // so a voice with FITTED postures — john and johncry, the only two — had never been checked
+  // against any target at all. Which is a poor place for the one voice measured from a real
+  // person to be, and it is the one reported as the worst of the set.
+  t.diam.set(P.articulate((art && art[sym]) || P.ART[sym], n));
   // Measure a branched phoneme the way it is HEARD — with its pocket open. Measuring /l/
   // with the branch shut hid the fact that the branch was turning it into an /r/.
   t.bOpen = P.BRANCHED[sym] || 0;

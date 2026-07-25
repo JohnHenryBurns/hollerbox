@@ -2207,6 +2207,41 @@ value it should be.
 **What this does not fix.** A visitor with a stale page still has to reload; nothing here can
 reach into their cache. It converts a silent failure into an instruction, which is the most a
 static site can do without a service worker.
+## John is the worst voice, and the fit is why
+
+Reported: the woman and child are *"noticeably what you'd expect"*, Barry White is deep and
+slow, and **John is the worst of the bunch**. The one voice measured from a real person being
+the poorest of the set is worth explaining.
+
+Two hypotheses ruled out first. **Not undershoot** — John's is 5.79 against `man`'s 6.18, and
+`man` sounds fine. **Not vowel separation** — John's 20.5 sits above the woman's 19.4 and the
+child's 16.1, both of which sound right.
+
+**The gate only ever measured the shared table at n=44.** `formants()` had no way to take a
+posture override, so the two voices with fitted postures — john and johncry, the only ones
+derived from a recording — had never been checked against a target at all.
+
+Given one:
+
+| | within 12% of Peterson & Barney |
+|---|---|
+| shared ART at n=44 — the only thing tested until now | **10/10** |
+| shared ART at n=40, John's own tract length | 4/10 |
+| **John's fitted postures at n=40** | **1/10**, worst /u/ at 49% |
+
+**The fit is doing worse than no fit**, at the fitted speaker's own tract length. P&B are
+adult-male means and an individual differs from a mean, so being off is not by itself wrong —
+but the shared table beating a bespoke fit on the speaker it was made for is hard to read
+another way. `RECORDING.md` already warns that tract length came back ~8% low and that "the
+fitted articulations compensate"; that compensation is a good candidate for what went wrong.
+
+Two things follow. The shared table itself is **calibrated for n=44 only** — at n=40 it is
+4/10, so any voice with a different `sect` is using postures that miss their targets. That is a
+separate finding and probably a larger one.
+
+And `johnplain` now exists: John's source and timing with the shared postures, derived from his
+entry rather than copied. If it sounds better than `john`, the postures need re-deriving from a
+fresh recording rather than tuning.
 
 ---
 

@@ -45,8 +45,8 @@ Every one of those was correct, and specific, and pointed straight at what was b
   going read as an accent — because that is genuinely one of the things an accent *is*.
 
 Five descriptions from someone with no background in acoustics, and each one landed on a real
-fault. That pattern held for the entire project. I stopped being surprised by it around the
-fourth month.
+fault. That pattern held for everything that came after, and it is the single most reliable
+thing in the whole project.
 
 Then we stopped faking it.
 
@@ -156,7 +156,7 @@ did the same, the consonants closed properly and the vowels kept their softness.
 
 ## What it keeps coming back to
 
-Every real fix in nine months has been the same fix, wearing different clothes:
+Every real fix has been the same fix, wearing different clothes:
 
 **make it do what a throat can actually do.**
 
@@ -183,6 +183,36 @@ voices. A saved result that made five different experiments give the same answer
 clue was that the numbers were *identical*, which real measurements never are.
 
 The bugs were the easy part. Knowing whether I'd actually fixed one was the hard part.
+
+---
+
+## Six days
+
+The football simulator was created on a Thursday. The throat was working the following Wednesday.
+
+The vocal tract itself — the tube, the tongue, the vowels, the voices, the test bench, the
+clicking, the weight — is **two and a half days and about two hundred commits.**
+
+Two things are worth separating out of that, because they are not the same claim.
+
+**What compressed was the loop, not the thinking.** Try something, measure it, find out it was
+wrong, try again — that cycle ran hundreds of times in a few days, where it used to be the thing
+that made a project like this take a year. Nobody had to hand-write an analysis tool and then
+debug the tool.
+
+**What did not compress was knowing what to fix.** Every single real diagnosis came from a person
+listening and describing what they heard. Not one came from the measurements. The instruments
+were wrong about the clicking five times running, and the answer, when it came, was *"that sounds
+like a Kalahari bushman, maybe it's physical."*
+
+So the honest version is not "AI built a vocal tract in a weekend". It is closer to: **the part
+that needed a human took exactly as long as it always would have, and everything around it got
+out of the way.**
+
+There is a small joke in here that I am obliged to report. The first draft of this document said
+the project had taken **nine months.** I made the number up, and nobody checked it, and it went
+into the file — in a document whose entire argument is *check your measurements.* Off by a factor
+of forty. The correction came, as usual, from the person who was actually there.
 
 ---
 

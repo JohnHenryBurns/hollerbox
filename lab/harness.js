@@ -212,7 +212,10 @@ const bandShare = (sp, lo, hi) => {
  *  (Voiced-signal LPC has misled this project five times. Do not use it for formants.) */
 function formants(sym, { n = 44, order = 12, art = null } = {}) {
   const { Tract } = require("./tract.js");
-  const t = new Tract();
+  // SIZED TO n. This built a default-length Tract and then wrote n diameters into it, so any
+  // n below the default left stale values in the tail and any n above it threw. Every
+  // measurement taken at a length other than 44 was of a tract that was not that length.
+  const t = new Tract(n);
   // `art` overrides a posture. Without it this could only ever measure the shared ART table,
   // so a voice with FITTED postures — john and johncry, the only two — had never been checked
   // against any target at all. Which is a poor place for the one voice measured from a real

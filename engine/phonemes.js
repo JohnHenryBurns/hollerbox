@@ -363,7 +363,7 @@ const isDiph  = sym => !!DIPH[sym];
 // old worklet had no integrator for, and speakWith bails at `if(!node) return`. A hard reload
 // fixed it, which is not a thing a visitor knows to do.
 // Derived from both files with this line blanked out, so it is stable under itself.
-const BUILD = "02ab38272a";
+const BUILD = "ec4bcde116";
 
 const VOICE_SPEC=[
   {k:'rd',   lo:0.35,   hi:2.40,    d:0.80},    // LF shape: pressed <-> breathy
@@ -445,6 +445,18 @@ const VOICE_SPEC=[
   // made stops fail to seal above artT=0.02.
   {k:'artPush', lo:0,     hi:1,      d:0.45,  off:0,},
 ];
+// John, rebuilt off `man` rather than off the fit.
+//
+// Two independent estimates of what his tract length should be agree. The length-to-pitch line
+// through barry/man/woman/child puts an 88 Hz speaker at 17.9 cm — sect 45. And RECORDING.md
+// records the fitter coming back about 8% low, which turns his measured 15.9 into 17.2 — sect
+// 43. Splitting them at 44 also lands exactly where the shared posture table is calibrated:
+// 10/10 against Peterson & Barney there, against 4/10 at his fitted 40.
+//
+// Pitch is his, measured, and unaffected by any of this — F0 is not a resonance. `rd` is his
+// measured 1.26, from H1-H2, which lives at the first two harmonics and so was not touched by
+// the tract error either; RECORDING.md does warn that the H1-H2 to Rd mapping is approximate,
+// so if he still sounds too breathy, man's 0.95 is the number to try.
 const VOICES = {
   // Measured from a real goal cry: the pitch falls the whole way (158 -> 93 Hz) and the
   // vowel does NOT open. I had modelled it as an arc with the jaw dropping; the recording
@@ -452,7 +464,13 @@ const VOICES = {
   announcer:{ label:'Goal announcer', note:'Pressed and drawn out, pitch falling the whole way. Measured from a real cry.',
     v:{ rd:0.48, press:0.85, jit:1.4, brth:0.20, drawl:0.62, open:0.06, per:0.62,
         sect:44, f0a:196, f0b:188, f0c:118 } },
-  john:{ art:{"i": {"jaw": 0.092, "bodyPos": 0.637, "bodyHi": 0.67, "tipPos": 0.88, "tipHi": 0.25, "lip": 0.65}, "ɪ": {"jaw": 0.785, "bodyPos": 0.602, "bodyHi": 0.924, "tipPos": 0.807, "tipHi": 0.131, "lip": 1}, "ɛ": {"jaw": 0.782, "bodyPos": 0.638, "bodyHi": 0.792, "tipPos": 0.904, "tipHi": 0.086, "lip": 0.966}, "æ": {"jaw": 0.825, "bodyPos": 0.823, "bodyHi": 0.381, "tipPos": 0.742, "tipHi": 0.07, "lip": 0.879}, "ɑ": {"jaw": 0.7, "bodyPos": 0.301, "bodyHi": 0.409, "tipPos": 0.817, "tipHi": 0.059, "lip": 0.589}, "ɔ": {"jaw": 0.33, "bodyPos": 0.336, "bodyHi": 0.482, "tipPos": 0.84, "tipHi": 0.019, "lip": 0.438}, "ʊ": {"jaw": 0.94, "bodyPos": 0.514, "bodyHi": 0.039, "tipPos": 0.84, "tipHi": 0.081, "lip": 0.282}, "u": {"jaw": 0.951, "bodyPos": 0.702, "bodyHi": 0.286, "tipPos": 0.84, "tipHi": 0.037, "lip": 0.178}, "ʌ": {"jaw": 0.33, "bodyPos": 0.223, "bodyHi": 0.308, "tipPos": 0.731, "tipHi": 0.294, "lip": 0.346}, "ɝ": {"jaw": 0.749, "bodyPos": 0.529, "bodyHi": 0.721, "tipPos": 0.79, "tipHi": 0.215, "lip": 0.378}, "ə": {"jaw": 0.891, "bodyPos": 0.55, "bodyHi": 0.406, "tipPos": 0.936, "tipHi": 0.198, "lip": 0.414}, "l": {"jaw": 0.428, "bodyPos": 0.52, "bodyHi": 0.43, "tipPos": 0.7, "tipHi": 0.191, "lip": 1}, "r": {"jaw": 0.617, "bodyPos": 0.708, "bodyHi": 0.147, "tipPos": 0.79, "tipHi": 0.435, "lip": 0.405}, "w": {"jaw": 0.718, "bodyPos": 0.85, "bodyHi": 0.584, "tipPos": 0.84, "tipHi": 0.39, "lip": 0.154}, "j": {"jaw": 0, "bodyPos": 0.677, "bodyHi": 0.603, "tipPos": 0.813, "tipHi": 0.2, "lip": 0.65}, "m": {"jaw": 0.349, "bodyPos": 0.15, "bodyHi": 0.441, "tipPos": 0.85, "tipHi": 0.22, "lip": 0.121}, "n": {"jaw": 0.28, "bodyPos": 0.55, "bodyHi": 0.03, "tipPos": 0.81, "tipHi": 0.78, "lip": 0.545}, "ŋ": {"jaw": 0.347, "bodyPos": 0.592, "bodyHi": 0.78, "tipPos": 0.85, "tipHi": 0, "lip": 0.737}, "s": {"jaw": 0.45, "bodyPos": 0.55, "bodyHi": 0.28, "tipPos": 0.85, "tipHi": 0.85, "lip": 0.975}, "z": {"jaw": 0.45, "bodyPos": 0.55, "bodyHi": 0.28, "tipPos": 0.85, "tipHi": 0.85, "lip": 1}, "ʃ": {"jaw": 0.35, "bodyPos": 0.55, "bodyHi": 0.28, "tipPos": 0.8, "tipHi": 0.75, "lip": 0.577}, "ʒ": {"jaw": 0.35, "bodyPos": 0.55, "bodyHi": 0.28, "tipPos": 0.8, "tipHi": 0.8, "lip": 0.627}, "f": {"jaw": 0.3, "bodyPos": 0.35, "bodyHi": 0.15, "tipPos": 0.68, "tipHi": 0.1, "lip": 0.088}, "v": {"jaw": 0.15, "bodyPos": 0.35, "bodyHi": 0.15, "tipPos": 0.84, "tipHi": 0, "lip": 0.088}, "θ": {"jaw": 0.18, "bodyPos": 0.5, "bodyHi": 0.2, "tipPos": 0.96, "tipHi": 0.79, "lip": 0.759}, "ð": {"jaw": 0.355, "bodyPos": 0.5, "bodyHi": 0.2, "tipPos": 0.945, "tipHi": 0.79, "lip": 0.984}}, label:'John', note:'Measured: a 15.9 cm tract from F3, modal voice, pitch around 93 Hz.',
+  // The fitted one, kept because it is what the recording actually produced and the comparison
+  // is worth keeping. It is not the default any more: its postures score 1/10 within 12% of
+  // Peterson & Barney at their own tract length where the shared table manages 4/10, and its
+  // 15.9 cm tract sits 36% off the length-to-pitch line the other voices lie on — every one of
+  // which is within 17%. A 15.9 cm tract with an 88 Hz larynx is a small adult with a large
+  // voice box, which is not a person.
+  johnfit:{ art:{"i": {"jaw": 0.092, "bodyPos": 0.637, "bodyHi": 0.67, "tipPos": 0.88, "tipHi": 0.25, "lip": 0.65}, "ɪ": {"jaw": 0.785, "bodyPos": 0.602, "bodyHi": 0.924, "tipPos": 0.807, "tipHi": 0.131, "lip": 1}, "ɛ": {"jaw": 0.782, "bodyPos": 0.638, "bodyHi": 0.792, "tipPos": 0.904, "tipHi": 0.086, "lip": 0.966}, "æ": {"jaw": 0.825, "bodyPos": 0.823, "bodyHi": 0.381, "tipPos": 0.742, "tipHi": 0.07, "lip": 0.879}, "ɑ": {"jaw": 0.7, "bodyPos": 0.301, "bodyHi": 0.409, "tipPos": 0.817, "tipHi": 0.059, "lip": 0.589}, "ɔ": {"jaw": 0.33, "bodyPos": 0.336, "bodyHi": 0.482, "tipPos": 0.84, "tipHi": 0.019, "lip": 0.438}, "ʊ": {"jaw": 0.94, "bodyPos": 0.514, "bodyHi": 0.039, "tipPos": 0.84, "tipHi": 0.081, "lip": 0.282}, "u": {"jaw": 0.951, "bodyPos": 0.702, "bodyHi": 0.286, "tipPos": 0.84, "tipHi": 0.037, "lip": 0.178}, "ʌ": {"jaw": 0.33, "bodyPos": 0.223, "bodyHi": 0.308, "tipPos": 0.731, "tipHi": 0.294, "lip": 0.346}, "ɝ": {"jaw": 0.749, "bodyPos": 0.529, "bodyHi": 0.721, "tipPos": 0.79, "tipHi": 0.215, "lip": 0.378}, "ə": {"jaw": 0.891, "bodyPos": 0.55, "bodyHi": 0.406, "tipPos": 0.936, "tipHi": 0.198, "lip": 0.414}, "l": {"jaw": 0.428, "bodyPos": 0.52, "bodyHi": 0.43, "tipPos": 0.7, "tipHi": 0.191, "lip": 1}, "r": {"jaw": 0.617, "bodyPos": 0.708, "bodyHi": 0.147, "tipPos": 0.79, "tipHi": 0.435, "lip": 0.405}, "w": {"jaw": 0.718, "bodyPos": 0.85, "bodyHi": 0.584, "tipPos": 0.84, "tipHi": 0.39, "lip": 0.154}, "j": {"jaw": 0, "bodyPos": 0.677, "bodyHi": 0.603, "tipPos": 0.813, "tipHi": 0.2, "lip": 0.65}, "m": {"jaw": 0.349, "bodyPos": 0.15, "bodyHi": 0.441, "tipPos": 0.85, "tipHi": 0.22, "lip": 0.121}, "n": {"jaw": 0.28, "bodyPos": 0.55, "bodyHi": 0.03, "tipPos": 0.81, "tipHi": 0.78, "lip": 0.545}, "ŋ": {"jaw": 0.347, "bodyPos": 0.592, "bodyHi": 0.78, "tipPos": 0.85, "tipHi": 0, "lip": 0.737}, "s": {"jaw": 0.45, "bodyPos": 0.55, "bodyHi": 0.28, "tipPos": 0.85, "tipHi": 0.85, "lip": 0.975}, "z": {"jaw": 0.45, "bodyPos": 0.55, "bodyHi": 0.28, "tipPos": 0.85, "tipHi": 0.85, "lip": 1}, "ʃ": {"jaw": 0.35, "bodyPos": 0.55, "bodyHi": 0.28, "tipPos": 0.8, "tipHi": 0.75, "lip": 0.577}, "ʒ": {"jaw": 0.35, "bodyPos": 0.55, "bodyHi": 0.28, "tipPos": 0.8, "tipHi": 0.8, "lip": 0.627}, "f": {"jaw": 0.3, "bodyPos": 0.35, "bodyHi": 0.15, "tipPos": 0.68, "tipHi": 0.1, "lip": 0.088}, "v": {"jaw": 0.15, "bodyPos": 0.35, "bodyHi": 0.15, "tipPos": 0.84, "tipHi": 0, "lip": 0.088}, "θ": {"jaw": 0.18, "bodyPos": 0.5, "bodyHi": 0.2, "tipPos": 0.96, "tipHi": 0.79, "lip": 0.759}, "ð": {"jaw": 0.355, "bodyPos": 0.5, "bodyHi": 0.2, "tipPos": 0.945, "tipHi": 0.79, "lip": 0.984}}, label:'John', note:'Measured: a 15.9 cm tract from F3, modal voice, pitch around 93 Hz.',
     v:{ rd:1.26, press:0.18, jit:1.0, brth:0.19, drawl:0.08, open:0.05, per:0.13,
         sect:40, f0a:88, f0b:99, f0c:78 } },
   johncry:{ art:{"i": {"jaw": 0.092, "bodyPos": 0.637, "bodyHi": 0.67, "tipPos": 0.88, "tipHi": 0.25, "lip": 0.65}, "ɪ": {"jaw": 0.785, "bodyPos": 0.602, "bodyHi": 0.924, "tipPos": 0.807, "tipHi": 0.131, "lip": 1}, "ɛ": {"jaw": 0.782, "bodyPos": 0.638, "bodyHi": 0.792, "tipPos": 0.904, "tipHi": 0.086, "lip": 0.966}, "æ": {"jaw": 0.825, "bodyPos": 0.823, "bodyHi": 0.381, "tipPos": 0.742, "tipHi": 0.07, "lip": 0.879}, "ɑ": {"jaw": 0.7, "bodyPos": 0.301, "bodyHi": 0.409, "tipPos": 0.817, "tipHi": 0.059, "lip": 0.589}, "ɔ": {"jaw": 0.33, "bodyPos": 0.336, "bodyHi": 0.482, "tipPos": 0.84, "tipHi": 0.019, "lip": 0.438}, "ʊ": {"jaw": 0.94, "bodyPos": 0.514, "bodyHi": 0.039, "tipPos": 0.84, "tipHi": 0.081, "lip": 0.282}, "u": {"jaw": 0.951, "bodyPos": 0.702, "bodyHi": 0.286, "tipPos": 0.84, "tipHi": 0.037, "lip": 0.178}, "ʌ": {"jaw": 0.33, "bodyPos": 0.223, "bodyHi": 0.308, "tipPos": 0.731, "tipHi": 0.294, "lip": 0.346}, "ɝ": {"jaw": 0.749, "bodyPos": 0.529, "bodyHi": 0.721, "tipPos": 0.79, "tipHi": 0.215, "lip": 0.378}, "ə": {"jaw": 0.891, "bodyPos": 0.55, "bodyHi": 0.406, "tipPos": 0.936, "tipHi": 0.198, "lip": 0.414}, "l": {"jaw": 0.428, "bodyPos": 0.52, "bodyHi": 0.43, "tipPos": 0.7, "tipHi": 0.191, "lip": 1}, "r": {"jaw": 0.617, "bodyPos": 0.708, "bodyHi": 0.147, "tipPos": 0.79, "tipHi": 0.435, "lip": 0.405}, "w": {"jaw": 0.718, "bodyPos": 0.85, "bodyHi": 0.584, "tipPos": 0.84, "tipHi": 0.39, "lip": 0.154}, "j": {"jaw": 0, "bodyPos": 0.677, "bodyHi": 0.603, "tipPos": 0.813, "tipHi": 0.2, "lip": 0.65}, "m": {"jaw": 0.349, "bodyPos": 0.15, "bodyHi": 0.441, "tipPos": 0.85, "tipHi": 0.22, "lip": 0.121}, "n": {"jaw": 0.28, "bodyPos": 0.55, "bodyHi": 0.03, "tipPos": 0.81, "tipHi": 0.78, "lip": 0.545}, "ŋ": {"jaw": 0.347, "bodyPos": 0.592, "bodyHi": 0.78, "tipPos": 0.85, "tipHi": 0, "lip": 0.737}, "s": {"jaw": 0.45, "bodyPos": 0.55, "bodyHi": 0.28, "tipPos": 0.85, "tipHi": 0.85, "lip": 0.975}, "z": {"jaw": 0.45, "bodyPos": 0.55, "bodyHi": 0.28, "tipPos": 0.85, "tipHi": 0.85, "lip": 1}, "ʃ": {"jaw": 0.35, "bodyPos": 0.55, "bodyHi": 0.28, "tipPos": 0.8, "tipHi": 0.75, "lip": 0.577}, "ʒ": {"jaw": 0.35, "bodyPos": 0.55, "bodyHi": 0.28, "tipPos": 0.8, "tipHi": 0.8, "lip": 0.627}, "f": {"jaw": 0.3, "bodyPos": 0.35, "bodyHi": 0.15, "tipPos": 0.68, "tipHi": 0.1, "lip": 0.088}, "v": {"jaw": 0.15, "bodyPos": 0.35, "bodyHi": 0.15, "tipPos": 0.84, "tipHi": 0, "lip": 0.088}, "θ": {"jaw": 0.18, "bodyPos": 0.5, "bodyHi": 0.2, "tipPos": 0.96, "tipHi": 0.79, "lip": 0.759}, "ð": {"jaw": 0.355, "bodyPos": 0.5, "bodyHi": 0.2, "tipPos": 0.945, "tipHi": 0.79, "lip": 0.984}}, label:'John shouting', note:'His own goal cry, measured: pitch falling 158 to 93 Hz over 2.9 seconds.',
@@ -479,18 +497,12 @@ const VOICES = {
   custom:{ label:'Custom', note:'Yours. Tune it in the Lab, then copy the seed — a seed is the whole voice, tract length and timing included.', v:null },
 };
 
-// John's source and timing with the SHARED postures instead of his fitted ones — derived from
-// the entry above rather than copied, so it cannot drift out of step with it.
-//
-// Here to be A/B'd. His fitted set measures 1/10 within 12% of Peterson & Barney at his own
-// tract length, where the shared table manages 4/10: the fit is doing worse than no fit. `john`
-// is also the voice reported as the worst of the set, which is a poor place for the one
-// measured from a real person to be.
-VOICES.johnplain = {
-  label: 'John (shared postures)',
-  v: { ...VOICES.john.v },
-  note: 'John\u2019s source with the shared postures. A/B against John — his fitted set scores '
-      + 'worse against Peterson & Barney than the table it replaced.'
+VOICES.john = {
+  label: 'John',
+  v: { rd: 1.26, press: 0.18, brth: 0.19, f0a: 88, f0b: 99, f0c: 78,
+       drawl: 0.08, sect: 44, per: 0.13 },
+  note: 'Rebuilt off man: his measured pitch and voice quality on the shared postures, at a '
+      + 'tract length that agrees with his pitch. The fitted version is `johnfit`.'
 };
 const defaultVoice = () => Object.fromEntries(VOICE_SPEC.map(p => [p.k, p.d]));
 

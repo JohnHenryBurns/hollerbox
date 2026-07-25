@@ -1710,6 +1710,45 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── a nasal must not cost more than the deadline allows ────────────────────
+report("what a nasal costs against the audio deadline", () => {
+  // An AudioWorklet gets 128 samples every 2.90 ms and must finish inside it or the buffer
+  // drops out. A nasal opens an eleven centimetre second cavity, and when that was written as
+  // two shifting arrays plus a pow() per sample it cost 445% more than a plain vowel and sat
+  // deep enough into the budget that anything else on the device pushed it over. Reported as
+  // static and dropouts after the nasal work landed.
+  //
+  // Reports rather than gates: it times a JIT on shared hardware, and a number that depends on
+  // how busy the machine is has no business failing a build. The minimum of several runs, not
+  // the mean of one — the first version of this measurement used a single mean and produced
+  // numbers that moved 25% on a phoneme with no branch open at all.
+  const P = H.P;
+  const v = { ...P.defaultVoice(), ...P.VOICES.man.v }, n = Math.round(v.sect);
+  const budget = 128/44100*1000;
+  const cost = sym => {
+    const W = P.buildWord(["ɑ", sym, "ɑ"], { D: 1.2, n, pros: v,
+                          glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    const p = H.makeProcessor(n);
+    p.port.onmessage({ data: { type: "voice", v } });
+    p.port.onmessage({ data: { type: "goal",
+      seq: { keys: W.keys, f0: P.buildF0(W.end, v), end: W.end } } });
+    const out = [new Float32Array(128)];
+    for (let i = 0; i < 600; i++) p.process([], [out]);
+    let best = Infinity;
+    for (let r = 0; r < 5; r++) {
+      const t0 = process.hrtime.bigint();
+      for (let k = 0; k < 300; k++) p.process([], [out]);
+      best = Math.min(best, Number(process.hrtime.bigint() - t0)/1e6/300);
+    }
+    return best;
+  };
+  const vow = cost("ɑ"), nas = cost("m");
+  const over = (nas/vow - 1)*100;
+  return { ok: nas < budget*0.5 && over < 60,
+           note: `vowel ${vow.toFixed(2)} ms, nasal ${nas.toFixed(2)} ms ` +
+                 `(${(nas/budget*100).toFixed(0)}% of budget, ${over.toFixed(0)}% over a vowel)` };
+});
+
 // ── the page loads the engine freshly, all of it, together ─────────────────
 check("the engine is fetched rather than linked", () => {
   // There used to be a content hash in the script URLs and a matching BUILD constant in two

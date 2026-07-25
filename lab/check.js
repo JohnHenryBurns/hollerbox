@@ -1777,6 +1777,20 @@ check("voiceless stops are aspirated", () => {
                : `b${vot.b.toFixed(0)} d${vot.d.toFixed(0)} g${vot.g.toFixed(0)} vs p${vot.p.toFixed(0)} t${vot.t.toFixed(0)} k${vot.k.toFixed(0)} ms` };
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ADD NEW CHECKS BELOW THIS LINE.
+//
+// Not in the middle. Every check added during this project went in just above
+// `check("no word clicks")`, because that was a convenient landmark — which meant any two
+// open branches touching this file conflicted at the same three lines, every time. Four
+// rebases in one session were all the same conflict, and all of it self-inflicted.
+//
+// The resolution is also always the same and worth writing down, because stripping the
+// markers alone produces a file that LOOKS right and does not parse: both sides stop at their
+// own `return {...};` and share the single `});` that follows the last marker, so keeping both
+// means closing the first one explicitly.
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ── the runner ─────────────────────────────────────────────────────────────
 // The gate gates correctness. It should not gate iteration. Three things follow:
 //   a subset can be run while working   node lab/check.js stops

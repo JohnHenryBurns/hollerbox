@@ -1734,16 +1734,40 @@ check("the Mouth view defines its geometry once", () => {
     if (!new RegExp("const " + f + "\\b").test(code)) bad.push(`no shared ${f}`);
 
   // and the shapes must not intersect, which is what the duplication caused
-  const V_HINGE = 0.62, NASO_BK = 0.20;
-  const ROOF = u => -(u<0.30 ? 0.95-u*0.6 : u<V_HINGE ? 0.77-(u-0.30)*1.35 : 0.34);
-  const NR = u => -(1.12 - Math.pow(Math.max(0,u-NASO_BK)/(1-NASO_BK),1.5)*0.16);
-  const NF = u => u<V_HINGE ? -(0.80+(V_HINGE-u)*0.10) : ROOF(u);
-  let cross = 0;
-  for (let u = NASO_BK; u <= 0.99; u += 0.01) {
-    if (NR(u) >= NF(u)) cross++;              // nasal roof must stay above its floor
-    if (NF(u) > ROOF(u) + 1e-9) cross++;      // and the floor above the oral roof
+  // CONTINUITY, not just ordering — and against the PAGE'S OWN FUNCTIONS, not a copy of them.
+  //
+  // The first version of this asked only whether one curve sat above another, and passed while
+  // the nasal floor jumped 0.46 at the hinge and ran within 0.012 of the palate at the back.
+  // The second version tested continuity but against its own reimplementation of the geometry —
+  // so an ablation that broke the page left the check green. A check that duplicates the thing
+  // it checks is the same fault the check exists to catch, one level up.
+  //
+  // The declarations are lifted out of index.html and evaluated, so this measures what ships.
+  // the whole block, by its boundaries — picking declarations out one at a time cut them mid
+  // expression, since several span several lines
+  const decls = (code.match(/const V_HINGE[\s\S]*?(?=function drawMouth)/) || [""])[0];
+  if (!/VELUM_AT/.test(decls) || !/TONGUE_AT/.test(decls)) bad.push("cannot find the page's geometry to evaluate");
+  else {
+    let G;
+    try {
+      G = new Function(decls + "\nreturn {V_HINGE,NASO_BK,ROOF,NASAL_ROOF,VELUM_TIP,VELUM_AT};")();
+    } catch (e) { bad.push("the page's geometry does not evaluate: " + e.message); }
+    if (G) for (const open of [0, 0.5, 1]) {
+      const under = u => u < G.V_HINGE ? G.VELUM_AT(open, u) : G.ROOF(u);
+      const port = Math.max(G.NASO_BK + 0.02, G.VELUM_TIP(open).u - 0.05);
+      let step = 0, outside = 0, flat = 0, prev = null;
+      for (let u = port; u <= 0.99; u += 0.01) {
+        const y = (G.NASAL_ROOF(u) + under(u))/2;
+        if (prev !== null) step = Math.max(step, Math.abs(y - prev));
+        if (y < G.NASAL_ROOF(u) || y > under(u)) outside++;
+        if (G.NASAL_ROOF(u) >= under(u)) flat++;
+        prev = y;
+      }
+      if (step > 0.05) bad.push(`the air jumps ${step.toFixed(2)} at velum ${open}`);
+      if (outside) bad.push(`the air leaves the cavity at ${outside} points, velum ${open}`);
+      if (flat) bad.push(`the cavity has no height at ${flat} points, velum ${open}`);
+    }
   }
-  if (cross) bad.push(`the drawn shapes intersect at ${cross} points`);
 
   return { ok: bad.length === 0,
            note: bad.length ? bad.join("  ") : "one roof, one nasal cavity, one tongue, none crossing" };
@@ -2082,11 +2106,16 @@ check("the 3D view knows about both side branches", () => {
   // scanned against the whole script, not drawMouth's body: the geometry constants moved to
   // module scope when the duplicated curves were collapsed into one set, and a check that looks
   // only inside the function reports them missing when they are merely elsewhere.
-  const shut = /shut\s*=\s*\{[^}]*NASAL_FLOOR\(/.test(code);
-  const hang = /hang\s*=\s*\{[^}]*ROOF\(V_TIP\)\s*\+/.test(code);
-  if (!shut || !hang) bad.push("the velum's shut and open positions are not up-and-down");
-  if (!/tip\s*=\s*\{[^\}]*shut\.x\s*\+\s*\(hang\.x - shut\.x\)\*open/.test(code))
-    bad.push("the velum does not travel from shut toward open as nOpen rises");
+  // the velum's travel is now one function of the opening, so evaluate it rather than pattern
+  // match on where its endpoints are written
+  const gd = (code.match(/const V_HINGE[\s\S]*?(?=function drawMouth)/) || [""])[0];
+  try {
+    const G = new Function(gd + "\nreturn {VELUM_TIP};")();
+    const shut = G.VELUM_TIP(0), open = G.VELUM_TIP(1);
+    // shut is UP against the pharynx wall, open hangs DOWN; more negative is higher
+    if (!(shut.y < open.y)) bad.push(`the velum's shut position (${shut.y.toFixed(2)}) is not above its open one (${open.y.toFixed(2)})`);
+    if (!(open.u > shut.u)) bad.push("the velum's free edge does not swing back as it opens");
+  } catch (e) { bad.push("cannot evaluate the velum's travel: " + e.message); }
   // and it hinges where the hard palate ends, not off the back of the throat
   // hinged where BONE MEETS SOFT TISSUE — the back edge of the hard palate, which in this roof
   // is where the flat part begins at 0.62. An earlier version hinged at 0.46, the middle of the
@@ -2095,7 +2124,7 @@ check("the 3D view knows about both side branches", () => {
   // free edge, which is what the velopharyngeal port is.
   if (!/V_HINGE = 0\.62/.test(code)) bad.push("the velum is not hinged at the hard palate's back edge");
   if (!/V_TIP   = 0\.30/.test(code)) bad.push("the velum has no free edge in the pharynx");
-  if (!/const port = V_TIP/.test(code)) bad.push("the air does not enter behind the free edge");
+  if (!/port = Math.max\(NASO_BK/.test(code)) bad.push("the air does not enter behind the free edge");
   // and the drawn air must never sit below the hard palate, which would be through it
   {
     const palAt = u => -(u<0.30 ? 0.95-u*0.6 : u<0.62 ? 0.77-(u-0.30)*1.35 : 0.34);

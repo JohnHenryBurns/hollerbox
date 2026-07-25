@@ -1681,9 +1681,35 @@ const ROOF = u => -(u < 0.30 ? 0.95 - u*0.6
                   : u < V_HINGE ? 0.77 - (u-0.30)*1.35
                   : 0.34);
 const NASAL_ROOF  = u => -(1.12 - Math.pow(Math.max(0,u-NASO_BK)/(1-NASO_BK), 1.5)*0.16);
-// behind the hard palate there is no bone under the nasal cavity, so its floor there is the
-// roof of the nasopharynx, which sits above the velum's hinge rather than following the palate
-const NASAL_FLOOR = u => u < V_HINGE ? -(0.80 + (V_HINGE-u)*0.10) : ROOF(u);
+// THE NASOPHARYNX HAS NO FLOOR. In front of the hinge the nasal cavity sits on the upper
+// surface of the hard palate; behind it there is nothing underneath — the space opens down into
+// the pharynx, and what closes it is the VELUM. Giving it a drawn floor put a line 0.46 above
+// the palate that then had to jump down to meet it at the hinge, which is the vertical drop
+// that appeared on screen, and ran within 0.012 of the palate at the back, which is where the
+// two red lines crossed.
+//
+// So this is only defined where a floor exists. Behind the hinge the boundary is the velum, and
+// the velum is drawn as the boundary rather than as a separate flap floating near it.
+const NASAL_FLOOR = u => ROOF(u);          // valid for u >= V_HINGE only
+// The velum, as a function of position rather than as a curve drawn one way and sampled
+// another. It was a quadratic Bezier on screen and a constant in the code that decided where
+// the air went, so the air stepped 0.26 at the hinge while the picture curved smoothly — the
+// same disagreement, one level down, as the five copies of the roof.
+//
+// Hinged at the hard palate's back edge, free end swinging back and down into the pharynx as it
+// opens. Everything that needs to know where the velum is calls this.
+const VELUM_TIP = open => ({
+  u: V_TIP + 0.02 + 0.06*open,
+  y: (-0.86) + (ROOF(V_TIP) + 0.30 - (-0.86))*open
+});
+const VELUM_AT = (open, u) => {
+  const tip = VELUM_TIP(open), hy = ROOF(V_HINGE);
+  if (u >= V_HINGE) return hy;
+  if (u <= tip.u) return tip.y;
+  let t = (V_HINGE - u)/(V_HINGE - tip.u);
+  t = t*t*(3 - 2*t);                       // eases away from the hinge, like soft tissue
+  return hy + (tip.y - hy)*t;
+};
 const TONGUE_AT = (A, u) => {
   let v = 0.46 + 0.20*A.jaw;
   const xb = (u - A.bodyPos)/0.30;
@@ -1703,33 +1729,36 @@ function drawMouth(){
   g.clearRect(0,0,W,H);
   g.lineWidth=Math.max(1.5,S*0.045);
 
-  // ---- the nasal cavity, the velum, and the port between them ----
-  // All geometry from the shared definitions above. Nothing here redefines a curve.
+  // ---- the nasal cavity, closed below by the palate in front and the velum behind ----
   {
     const open = nOpen;
-    g.beginPath();
-    for(let u=NASO_BK;u<=0.99;u+=0.02){ const x=X(u), y=Y(NASAL_ROOF(u)); u===NASO_BK? g.moveTo(x,y):g.lineTo(x,y); }
-    for(let u=0.99;u>=NASO_BK;u-=0.02) g.lineTo(X(u), Y(NASAL_FLOOR(u)));
-    g.closePath();
-    g.fillStyle = 'rgba(192,85,78,'+(0.04+0.14*open).toFixed(3)+')';
+    const tip = VELUM_TIP(open);
+    // one continuous outline: back along the roof, down at the nostril, back along the palate
+    // to the hinge, then along the velum to its free edge, then up the pharyngeal wall
+    const outline = () => {
+      g.beginPath();
+      g.moveTo(X(NASO_BK), Y(NASAL_ROOF(NASO_BK)));
+      for(let u=NASO_BK;u<=0.99;u+=0.02) g.lineTo(X(u), Y(NASAL_ROOF(u)));
+      g.lineTo(X(0.99), Y(ROOF(0.99)));
+      for(let u=0.99;u>=V_HINGE;u-=0.02) g.lineTo(X(u), Y(ROOF(u)));
+      for(let u=V_HINGE; u>=tip.u; u-=0.01) g.lineTo(X(u), Y(VELUM_AT(open,u)));
+      g.lineTo(X(NASO_BK), Y(tip.y));
+      g.closePath();
+    };
+    outline();
+    g.fillStyle = 'rgba(192,85,78,'+(0.04+0.13*open).toFixed(3)+')';
     g.fill();
+
+    // stroke the fixed parts only — roof and the palate's upper surface
     g.strokeStyle = MOUTH_FIXED;
     g.beginPath();
     for(let u=NASO_BK;u<=0.99;u+=0.02){ const x=X(u), y=Y(NASAL_ROOF(u)); u===NASO_BK? g.moveTo(x,y):g.lineTo(x,y); }
     g.stroke();
-    g.beginPath();                       // the nasopharynx floor, which is not the palate
-    for(let u=NASO_BK;u<=V_HINGE;u+=0.02){ const x=X(u), y=Y(NASAL_FLOOR(u)); u===NASO_BK? g.moveTo(x,y):g.lineTo(x,y); }
-    g.stroke();
 
-    // the velum, hinged at the hard palate's back edge. Raised it meets the nasopharynx floor
-    // and shuts the port; hanging, it drops into the pharynx and the port is open.
-    const hx = X(V_HINGE), hy = Y(ROOF(V_HINGE));
-    const shut = { x: X(V_TIP + 0.02), y: Y(NASAL_FLOOR(V_TIP + 0.02)) };
-    const hang = { x: X(V_TIP + 0.08), y: Y(ROOF(V_TIP) + 0.30) };
-    const tip = { x: shut.x + (hang.x - shut.x)*open, y: shut.y + (hang.y - shut.y)*open };
+    // the velum IS the rest of that boundary, so it is drawn as part of the same line
     g.beginPath();
-    g.moveTo(hx, hy);
-    g.quadraticCurveTo(X(0.46), (hy + tip.y)/2, tip.x, tip.y);
+    g.moveTo(X(V_HINGE), Y(ROOF(V_HINGE)));
+    for(let u=V_HINGE; u>=tip.u; u-=0.01) g.lineTo(X(u), Y(VELUM_AT(open,u)));
     g.strokeStyle = MOUTH_FLAP;
     g.stroke();
   }
@@ -1804,10 +1833,14 @@ function drawMouth(){
       // Drawing it from the middle of the soft palate straight up was the tunnelling.
       g.globalAlpha = 0.85*Math.min(1, nOpen*1.6);
       g.beginPath();
-      const port = V_TIP - 0.04;
-      g.moveTo(X(port), Y((ROOF(port) + TONGUE_AT(A,port))/2));      // in the pharynx
-      g.lineTo(X(port), Y((NASAL_ROOF(port) + NASAL_FLOOR(port))/2));  // up through the port
-      for(let u=port; u<=0.99; u+=0.02) g.lineTo(X(u), Y((NASAL_ROOF(u) + NASAL_FLOOR(u))/2));
+      // in behind the velum's free edge, wherever it currently hangs, then forward through the
+      // cavity — whose lower bound is the velum until the hinge and the palate after it
+      const tip = VELUM_TIP(nOpen);
+      const port = Math.max(NASO_BK + 0.02, tip.u - 0.05);
+      const under = u => u < V_HINGE ? VELUM_AT(nOpen, u) : ROOF(u);
+      g.moveTo(X(port), Y((ROOF(port) + TONGUE_AT(A,port))/2));
+      g.lineTo(X(port), Y((NASAL_ROOF(port) + under(port))/2));
+      for(let u=port; u<=0.99; u+=0.02) g.lineTo(X(u), Y((NASAL_ROOF(u) + under(u))/2));
       g.stroke();
     }
     g.globalAlpha = 1;

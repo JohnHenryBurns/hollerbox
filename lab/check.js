@@ -985,6 +985,43 @@ report("the fitter recovers a known vlen and poly", () => {
            note: bad.length ? bad.join("  ") : `vlen ${out.join(" ")}, poly 0.20 exact` };
 });
 
+// ── a word does not start from digital silence ─────────────────────────────
+check("phonation eases back in after a pause", () => {
+  const P = H.P, S = require(__dirname + "/../engine/spelling.js"), bad = [];
+  const V = P.VOICES.john.v, n = Math.round(V.sect);
+  const r = S.g2p("I love my daughter");
+  // Reported as a pop "before the L and D". It is neither a sample-level glitch nor trapped
+  // air: the biggest sample jump at those onsets is SMALLER than at a mid-word transition in
+  // the same phrase, which nobody hears. It is an onset from true digital silence — 3e-12 to
+  // 1.3e-2 in about nine milliseconds — and the ear flags that as a click however smooth each
+  // individual sample step is. So the thing to assert is a RISE TIME, not a discontinuity.
+  const halfIn = on => {
+    const v = { ...P.defaultVoice(), ...V, onset: on };
+    const { buf } = H.say(r.ph, { D: Math.max(0.8, r.ph.length*v.per), voice: v, n, stress: r.stress });
+    return [0.416, 1.026].map(t0 => {
+      const full = H.rms(buf, t0 + 0.06, t0 + 0.10);
+      for (let k = 0; k < 60; k++)
+        if (H.rms(buf, t0 + k*0.001, t0 + k*0.001 + 0.004) > full*0.5) return k;
+      return 60;
+    });
+  };
+  const on = halfIn(0.035), off = halfIn(0);
+  if (Math.min(...on) < 12) bad.push(`onset still reaches half amplitude in ${Math.min(...on)} ms`);
+  // And it must be the knob doing it, not something else — with onset nulled the old instant
+  // rise has to come back, or this check would pass on a build where the ramp does nothing.
+  if (Math.min(...off) > 9) bad.push(`onset=0 does not restore the instant rise (${Math.min(...off)} ms)`);
+  // Mid-word transitions must NOT be ramped: there is no silence there to ease out of, and
+  // softening them would smear every consonant in the phrase.
+  const v = { ...P.defaultVoice(), ...V };
+  const { buf } = H.say(r.ph, { D: Math.max(0.8, r.ph.length*v.per), voice: v, n, stress: r.stress });
+  if (H.rms(buf, 0.500, 0.520) < H.rms(buf, 0.600, 0.620)*0.5)
+    bad.push("a mid-word transition got ramped too");
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ")
+               : `half amplitude in ${on.join("/")} ms, ${off.join("/")} with onset nulled` };
+});
+
 check("no word clicks", () => {
   // A stop release is a transient, but an outlier far above the signal's own motion is a
   // click. The white-noise burst once measured 13.5x.

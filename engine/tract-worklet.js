@@ -77,7 +77,7 @@ class TractProcessor extends AudioWorkletProcessor {
       if(d.type==='breath') this.breath=d.value;
       if(d.type==='voicing') this.voicing=d.value;
       if(d.type==='goal'){
-        this.seq=d.seq; this.seqT=0; this.voicing=1;
+        this.seq=d.seq; this.seqT=0; this.voicing=1; this.sinceSil=undefined;
         this.seqFrom=Float64Array.from(this.diam);
         this.seqFromB=this.bOpen;
         // The blend exists to avoid snapping the tract while it is ALREADY sounding.
@@ -86,7 +86,7 @@ class TractProcessor extends AudioWorkletProcessor {
         this.blend = this.vAmp>0.02 ? 0.030 : 0.002;
       }
       if(d.type==='stopSeq'){ this.seq=null; this.voicing=0; this.fric=0; this.asp=0; this.vot=0;
-        this.lv=1;
+        this.lv=1; this.sinceSil=undefined;
         this.flow=0; this.flowT=0; this.turb=1; this.turbT=1; this.turbCd=0;
         this.fh1=0; this.fh2=0; this.fhx=0; this.fhy=0; }
       if(d.type==='tract'){
@@ -114,6 +114,7 @@ class TractProcessor extends AudioWorkletProcessor {
         if(v.brth!==undefined) this.breath=v.brth;
         if(v.burst!==undefined) this.burstK=v.burst;
         if(v.hiss !==undefined) this.hiss=v.hiss;
+        if(v.onset!==undefined) this.onset=v.onset;
       }
     };
     this.calcRefl();
@@ -366,7 +367,24 @@ class TractProcessor extends AudioWorkletProcessor {
         if(this.seqT<spin) flow*=this.seqT/spin;
         const tail=this.seq.end-this.seqT;
         if(tail<0.16) flow*=Math.max(0,tail/0.16);   // short, or it eats a final consonant
-        if(this.silNow) flow=0;
+        // AND AFTER EVERY PAUSE, NOT JUST AT THE START. The spin-up above is keyed on seqT,
+        // the time since the whole utterance began, so it ramps once and never again. After an
+        // internal pause the flow went from 0 to 1 with only the 5.7 ms one-pole to soften it —
+        // a rise from DIGITAL SILENCE to full amplitude in about nine milliseconds, which the
+        // ear hears as a click. Measured across "I love my daughter": silence at 3e-12 before
+        // the /l/ of "love" and 1.3e-2 thirty milliseconds later, while a mid-word transition
+        // in the same phrase runs 1.5e-2 to 1.5e-2 with no step at all.
+        //
+        // Reported as a pop "before the L and D", with the guess that it was trapped air
+        // released by the tongue rising to the palate. Right place, wrong mechanism: /l/ and
+        // /d/ are simply what "love" and "daughter" start with, and every word onset after a
+        // pause does this regardless of which sound it is — /m/ in "my" does it too.
+        if(this.silNow){ flow=0; this.sinceSil=0; }
+        else {
+          const on = this.onset===undefined ? 0.035 : this.onset;
+          this.sinceSil = (this.sinceSil===undefined ? on : this.sinceSil) + 1/sr;
+          if(on>0 && this.sinceSil<on) flow*=this.sinceSil/on;
+        }
         this.flowT=flow;
         amp = (this.voiceless||this.vot>0) ? 0 : flow*voiceBar*squeeze*this.lv;
       } else {

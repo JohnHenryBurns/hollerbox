@@ -1,49 +1,201 @@
 {
-  "_": "Formant targets for the sonorants. Adult male, the same reference population as the",
-  "_2": "Peterson & Barney vowel targets the model already fits, so the two sets are comparable.",
-  "_why": [
-    "The vowels have targets and a solver and score 10/10. The consonants had neither, which is",
-    "why a sweep came back 14/20 and why nothing had ever noticed that /n/ and /l/ share an F2 to",
-    "within ten hertz. Hand-placed postures are only as good as whoever placed them, and nothing",
-    "was checking.",
-    "",
-    "Sonorants first because they are the class this machinery already handles: they are voiced,",
-    "they have formants, and H.formants() measures them the same way it measures a vowel.",
-    "Fricatives want a spectral peak and a noise band instead, and stops want a burst spectrum —",
-    "different objectives, and they come after."
-  ],
-  "_tolerance": [
-    "Every target carries a tol in hertz, and they are deliberately not uniform. F3 for /r/ is",
-    "the tightest in the set because F3 IS the English r/l distinction and a listener reported",
-    "exactly that confusion. Nasal F1 is loose because the murmur's first resonance is set by the",
-    "whole coupled system and varies more across speakers than the oral formants do."
-  ],
-  "_sources": {
-    "olive": "Olive, Greenwood & Coleman, Acoustics of American English Speech (1993) — /l r w j/",
-    "fujimura": "Fujimura, Analysis of nasal consonants, JASA 34 (1962) — /m n ŋ/ murmur",
-    "ladefoged": "Ladefoged & Maddieson, The Sounds of the World's Languages (1996) — cross-checks",
-    "hagiwara": "Hagiwara, Acoustic realizations of American /r/, UCLA WPP 90 (1995) — the F3 figure"
+ "_": "Formant targets for the sonorants. Adult male, the same reference population as the",
+ "_2": "Peterson & Barney vowel targets the model already fits, so the two sets are comparable.",
+ "_why": [
+  "The vowels have targets and a solver and score 10/10. The consonants had neither, which is",
+  "why a sweep came back 14/20 and why nothing had ever noticed that /n/ and /l/ share an F2 to",
+  "within ten hertz. Hand-placed postures are only as good as whoever placed them, and nothing",
+  "was checking.",
+  "",
+  "Sonorants first because they are the class this machinery already handles: they are voiced,",
+  "they have formants, and H.formants() measures them the same way it measures a vowel.",
+  "Fricatives want a spectral peak and a noise band instead, and stops want a burst spectrum —",
+  "different objectives, and they come after."
+ ],
+ "_tolerance": [
+  "Every target carries a tol in hertz, and they are deliberately not uniform. F3 for /r/ is",
+  "the tightest in the set because F3 IS the English r/l distinction and a listener reported",
+  "exactly that confusion. Nasal F1 is loose because the murmur's first resonance is set by the",
+  "whole coupled system and varies more across speakers than the oral formants do."
+ ],
+ "_sources": {
+  "olive": "Olive, Greenwood & Coleman, Acoustics of American English Speech (1993) — /l r w j/",
+  "fujimura": "Fujimura, Analysis of nasal consonants, JASA 34 (1962) — /m n ŋ/ murmur",
+  "ladefoged": "Ladefoged & Maddieson, The Sounds of the World's Languages (1996) — cross-checks",
+  "hagiwara": "Hagiwara, Acoustic realizations of American /r/, UCLA WPP 90 (1995) — the F3 figure"
+ },
+ "sonorants": [
+  {
+   "sym": "l",
+   "f": [
+    360,
+    1300,
+    2700
+   ],
+   "tol": [
+    120,
+    250,
+    300
+   ],
+   "source": "olive",
+   "note": "clear /l/, the prevocalic one. dark /l/ has a much lower F2 and is 8.7's problem."
   },
-  "sonorants": [
-    { "sym": "l", "f": [360, 1300, 2700], "tol": [120, 250, 300], "source": "olive",
-      "note": "clear /l/, the prevocalic one. dark /l/ has a much lower F2 and is 8.7's problem." },
-
-    { "sym": "r", "f": [310, 1060, 1600], "tol": [120, 250, 200], "source": "hagiwara",
-      "note": "F3 is the whole distinction from /l/ and carries the tightest tolerance here. Any American /r/ has it below about 1800; ours sits at 2410." },
-
-    { "sym": "w", "f": [290, 610, 2150], "tol": [100, 200, 350], "source": "olive",
-      "note": "labio-VELAR: rounded lips AND a raised tongue body. Ours narrows only at the lips, which is why it was heard as /v/." },
-
-    { "sym": "j", "f": [260, 2070, 3000], "tol": [100, 300, 400], "source": "olive",
-      "note": "the sound at the front of 'yes'. Reported correct by ear, and it measures correct — F2 2060 against 2070." },
-
-    { "sym": "m", "f": [250, 1100, 2100], "tol": [120, 250, 350], "source": "fujimura",
-      "note": "the murmur. Place is carried mostly by F2 and by the antiresonance from the sealed oral branch." },
-
-    { "sym": "n", "f": [250, 1700, 2600], "tol": [120, 250, 350], "source": "fujimura",
-      "note": "ours is at F2 1210, which is /l/'s 1210 exactly. Reported as 'n sounds like l' and that is why." },
-
-    { "sym": "ŋ", "f": [250, 2300, 2900], "tol": [120, 300, 400], "source": "fujimura",
-      "note": "ours is at F2 1950, which is 110 Hz from /j/'s 2060. Reported as 'the ŋ is like y'." }
-  ]
+  {
+   "sym": "r",
+   "f": [
+    310,
+    1060,
+    1600
+   ],
+   "tol": [
+    120,
+    250,
+    200
+   ],
+   "source": "hagiwara",
+   "note": "F3 is the whole distinction from /l/ and carries the tightest tolerance here. Any American /r/ has it below about 1800; ours sits at 2410.",
+   "bounds": {
+    "bodyHi": [
+     0.0,
+     0.45
+    ],
+    "tipHi": [
+     0.45,
+     0.85
+    ],
+    "lip": [
+     0.2,
+     0.6
+    ],
+    "why": "bunched or retroflex: the tip does the work, the body stays low, lips slightly rounded"
+   }
+  },
+  {
+   "sym": "w",
+   "f": [
+    290,
+    610,
+    2150
+   ],
+   "tol": [
+    100,
+    200,
+    350
+   ],
+   "source": "olive",
+   "note": "labio-VELAR: rounded lips AND a raised tongue body. Ours narrows only at the lips, which is why it was heard as /v/.",
+   "bounds": {
+    "bodyHi": [
+     0.55,
+     1.0
+    ],
+    "bodyPos": [
+     0.55,
+     1.0
+    ],
+    "tipHi": [
+     0.0,
+     0.15
+    ],
+    "lip": [
+     0.0,
+     0.25
+    ],
+    "why": "labio-velar: body high AND back, tip down, lips rounded. TWO constrictions, which is what it was missing"
+   }
+  },
+  {
+   "sym": "j",
+   "f": [
+    260,
+    2070,
+    3000
+   ],
+   "tol": [
+    100,
+    300,
+    400
+   ],
+   "source": "olive",
+   "note": "the sound at the front of 'yes'. Reported correct by ear, and it measures correct — F2 2060 against 2070.",
+   "bounds": {
+    "bodyHi": [
+     0.6,
+     1.0
+    ],
+    "bodyPos": [
+     0.3,
+     0.7
+    ],
+    "tipHi": [
+     0.0,
+     0.3
+    ],
+    "lip": [
+     0.4,
+     0.9
+    ],
+    "why": "palatal: body high and front, tip down, lips unrounded"
+   }
+  },
+  {
+   "sym": "m",
+   "f": [
+    250,
+    1100,
+    2100
+   ],
+   "tol": [
+    120,
+    250,
+    350
+   ],
+   "source": "fujimura",
+   "note": "the murmur. Place is carried mostly by F2 and by the antiresonance from the sealed oral branch."
+  },
+  {
+   "sym": "n",
+   "f": [
+    250,
+    1700,
+    2600
+   ],
+   "tol": [
+    120,
+    250,
+    350
+   ],
+   "source": "fujimura",
+   "note": "ours is at F2 1210, which is /l/'s 1210 exactly. Reported as 'n sounds like l' and that is why."
+  },
+  {
+   "sym": "ŋ",
+   "f": [
+    250,
+    2300,
+    2900
+   ],
+   "tol": [
+    120,
+    300,
+    400
+   ],
+   "source": "fujimura",
+   "note": "ours is at F2 1950, which is 110 Hz from /j/'s 2060. Reported as 'the ŋ is like y'."
+  }
+ ],
+ "_bounds": [
+  "Three formants underdetermine a tongue. Run without these and the solver hits every target",
+  "and gets there wrongly: it made /w/ with a FLAT body and a RAISED tip, which is the opposite",
+  "of a labio-velar, and made /j/ with the tip almost touching instead of a high front body.",
+  "Both scored inside tolerance.",
+  "",
+  "That would not have been a cosmetic problem. Coarticulation moves whatever the posture",
+  "specifies, and since Phase 9 the PATH between postures is audible — a /w/ made with the tip",
+  "would drag the tip through every transition it takes part in.",
+  "",
+  "So each sound carries the range its own articulators are allowed to be in. These are not",
+  "fitted; they are what the sound IS, and a solver that has to be told them is a solver being",
+  "asked a well-posed question instead of an ambiguous one."
+ ]
 }

@@ -2466,6 +2466,41 @@ it wants a fresh start rather than the tail of a long session.
 stop closure with its own burst, followed by an independent fricative. A real affricate releases
 the stop *into* the friction — there is one gesture, not two. Even with /ʒ/ fixed, "d then ʒ"
 will not be "j".
+## Consonant solver, stage A  ✅ /r/, /w/ and /j/ solved
+
+**5/7 sonorants within tolerance, up from 2/7.** The three unbranched ones are fitted; /n/ and
+/ŋ/ remain and are stage B, where the measurement itself has to be fixed first.
+
+The number this started from:
+
+    /r/ F3 1610    /l/ F3 2730    gap 1120 Hz    (it was 290)
+
+Reported by ear as *"an Asian saying l"*, which is the r/l contrast, which is F3.
+
+### Three formants underdetermine a tongue
+
+Run without anatomical bounds, the solver hit **every target** and got there **wrongly**. It made
+/w/ with a flat body and a raised tip — the opposite of a labio-velar — and /j/ with the tip
+almost touching instead of a high front body. Both scored inside tolerance.
+
+That is not cosmetic. Coarticulation moves whatever the posture specifies, and since Phase 9 the
+*path* between postures is audible, so a /w/ made with the tip would drag the tip through every
+transition it takes part in.
+
+Each sound now carries the range its own articulators are allowed to be in. They are not fitted
+values; they are what the sound *is*.
+
+**And constraining the search made the fits better, not worse:**
+
+| | unbounded | bounded |
+|---|---|---|
+| /r/ | 0.18 | 0.18 |
+| /w/ | 0.17 | **0.06** |
+| /j/ | 0.51 | **0.12** |
+
+Random restarts across a large space find a mediocre optimum. Restricted to the basin the sound
+actually lives in, the same search finds a good one. The bounds are not a constraint on the
+answer so much as a description of where to look.
 
 <!-- ─────────────────────────────────────────────────────────────────────────
      ADD NEW SECTIONS ABOVE THIS LINE, at the end — not before a heading.

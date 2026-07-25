@@ -1710,6 +1710,47 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── a nasal must not cost more than the deadline allows ────────────────────
+report("what a nasal costs against the audio deadline", () => {
+  // An AudioWorklet gets 128 samples every 2.90 ms and must finish inside it or the buffer
+  // drops out. A nasal opens a second cavity, so it is the phoneme most likely to run out of
+  // time — reported as static and dropouts.
+  //
+  // HELD, not spoken. Three earlier versions of this measurement timed a word and warmed up
+  // past the end of it, so the velum was SHUT for the whole timed stretch and both the fast and
+  // slow builds came out identical. The velum reading is printed so that cannot happen quietly
+  // again. Minimum of several runs, not the mean of one, which reported a 25% improvement on a
+  // phoneme with no branch open at all.
+  const P = H.P;
+  const v = { ...P.defaultVoice(), ...P.VOICES.man.v }, n = Math.round(v.sect);
+  const budget = 128/44100*1000;
+  const hold = sym => {
+    const p = H.makeProcessor(n);
+    p.port.onmessage({ data: { type: "voice", v } });
+    p.port.onmessage({ data: { type: "shape", diam: P.articulate(P.ART[sym], n),
+      br: P.BRANCHED[sym] || 0, nz: P.NASAL[sym] || 0, fr: 0, vl: 0, as: 0, snap: true } });
+    p.voicing = 1; p.vAmp = 1; p.flow = 1; p.flowT = 1; p.f0 = 110;
+    const out = [new Float32Array(128)];
+    for (let i = 0; i < 600; i++) p.process([], [out]);
+    let best = Infinity;
+    for (let r = 0; r < 5; r++) {
+      const t0 = process.hrtime.bigint();
+      for (let k = 0; k < 300; k++) p.process([], [out]);
+      best = Math.min(best, Number(process.hrtime.bigint() - t0)/1e6/300);
+    }
+    return { ms: best, open: p.nasal };
+  };
+  const vow = hold("ɑ"), nas = hold("m");
+  const over = (nas.ms/vow.ms - 1)*100;
+  const bad = [];
+  if (nas.open < 0.9) bad.push(`the velum was only ${nas.open.toFixed(2)} open — nothing was timed`);
+  if (nas.ms > budget*0.5) bad.push(`a nasal takes ${(nas.ms/budget*100).toFixed(0)}% of the block`);
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ")
+               : `vowel ${vow.ms.toFixed(2)} ms, nasal ${nas.ms.toFixed(2)} ms ` +
+                 `(${(nas.ms/budget*100).toFixed(0)}% of budget, +${over.toFixed(0)}% over a vowel)` };
+});
+
 // ── the page loads the engine freshly, all of it, together ─────────────────
 check("the engine is fetched rather than linked", () => {
   // There used to be a content hash in the script URLs and a matching BUILD constant in two

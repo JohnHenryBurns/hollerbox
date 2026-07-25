@@ -46,7 +46,7 @@ class TractProcessor extends AudioWorkletProcessor {
     this.bArea = 0.85; this.bEnd = 0.97;
     this.bOpen = 0; this.bTarget = 0; this.bTgt = 0; this.bv = 0;
     this.bR=new Float64Array(this.bN); this.bL=new Float64Array(this.bN);
-    this.bRin=new Float64Array(this.bN); this.bLin=new Float64Array(this.bN);
+    this.bp=0; this.bLout=0; this.bDamp=1; this.bDampFor=-1;
     // ---- the nasal tract: a long branch at the velum, open at the nostrils ----
     this.nN   = Math.max(8, Math.round(0.11/secM));   // ~11 cm
     // The velopharyngeal port must sit UPSTREAM of a velar closure, or /ŋ/ seals the
@@ -55,7 +55,7 @@ class TractProcessor extends AudioWorkletProcessor {
     this.nArea= 2.4; this.nEnd = -0.82;               // radiating, like the lips
     this.nasal=0; this.nasalT=0; this.nTgt=0; this.nv=0;
     this.nR=new Float64Array(this.nN); this.nL=new Float64Array(this.nN);
-    this.nRin=new Float64Array(this.nN); this.nLin=new Float64Array(this.nN);
+    this.np=0; this.nLout=0; this.nDamp=1; this.nDampFor=-1;
     this.dcX=0; this.dcY=0; this.tick=0;
     this.charge=0; this.burstN=0; this.burstA=0; this.burstAt=1; this.sealAt=1; this.bnz=0; this.bn1=0; this.bn2=0;
     this.vot=0; this.sealVl=0; this.bco=0.885; this.bgain=5.0;   // aspiration countdown; burst filter, set per place
@@ -104,7 +104,7 @@ class TractProcessor extends AudioWorkletProcessor {
         if(nn!==this.n){
           this.n=nn;
           this.R.fill(0); this.L.fill(0); this.Rin.fill(0); this.Lin.fill(0);
-          this.bR.fill(0); this.bL.fill(0); this.nR.fill(0); this.nL.fill(0);
+          this.bR.fill(0); this.bL.fill(0); this.nR.fill(0); this.nL.fill(0); this.nLout=0; this.bLout=0;
           this.bPos=Math.round(nn*0.84); this.nPos=Math.round(nn*0.44);
           if(d.diam) { this.diam.set(d.diam.slice(0,nn)); this.target.set(d.diam.slice(0,nn)); }
           this.calcRefl();
@@ -245,29 +245,59 @@ class TractProcessor extends AudioWorkletProcessor {
     if(this.nasal>0.0005){                 // the velum opens: nasal tract joins the oral one
       const k=Math.max(0,Math.min(n-2,this.nPos));
       const A1=this.A[k], A2=this.A[k+1], An=this.nArea*this.nasal;
-      const pj=2*(this.R[k]+this.L[k+1]+this.nL[0])/(A1+A2+An);
+      const pj=2*(this.R[k]+this.L[k+1]+this.nLout)/(A1+A2+An);
       this.Lin[k]   = A1*pj - this.R[k];
       this.Rin[k+1] = A2*pj - this.L[k+1];
-      const into = An*pj - this.nL[0];
-      for(let j=0;j<this.nN-1;j++){ this.nRin[j+1]=this.nR[j]; this.nLin[j]=this.nL[j+1]; }
-      this.nRin[0]=into;
-      this.nLin[this.nN-1]=this.nR[this.nN-1]*this.nEnd;
-      this.nasalOut=(1+this.nEnd)*this.nR[this.nN-1];      // radiates from the nostrils
+      // A RING, NOT A SHIFT. The nasal tract is a uniform tube, so every internal junction has
+      // a reflection of exactly zero and none of these sections scatter — they only pass the
+      // wave along. Written as two shifting arrays that cost 28 copies each per sample, plus 56
+      // more to apply the damping, which made an /m/ take 2.565 ms of a 2.90 ms block. Nearly
+      // twice a plain vowel, and close enough to the deadline that anything else on the device
+      // pushed it over into dropouts.
+      //
+      // A delay line does not need to move its contents. One index, advanced once a sample:
+      // what is read is what was written nN samples ago. Same arithmetic, same output, O(1)
+      // instead of O(nN).
       const dn=this.dampNow===undefined?this.damp:this.dampNow;
-      for(let j=0;j<this.nN;j++){ this.nR[j]=this.nRin[j]*dn; this.nL[j]=this.nLin[j]*dn; }
+      // The delay is nN-1, not nN: a value entering at index 0 reaches the far end after that
+      // many shifts, not after one per section. And the loss is applied once per element PER
+      // STEP, so crossing the line attenuates by damp^(nN-1) — applying it once at the write
+      // was the second error and the larger one. Cached, because pow() per sample is exactly
+      // the cost this is removing, and recomputed only when the damping actually moves.
+      // nasal. dampNow moves every sample with the constriction, so an exact-equality cache
+      // never hit and this was calling pow() four times a sample — which is the cost the
+      // ring was supposed to remove. Recomputed only when the damping has actually moved
+      // enough to matter; over a line this short the difference is far below hearing.
+      if(Math.abs(dn - this.nDampFor) > 2e-6){ this.nDampFor = dn; this.nDamp = Math.pow(dn, this.nN-1); }
+      const into = An*pj - this.nLout;
+      this.np = this.np+1 >= this.nN-1 ? 0 : this.np+1;
+      const atEnd = this.nR[this.np]*this.nDamp;            // entered nN-1 samples ago
+      this.nLout  = this.nL[this.np]*this.nDamp;
+      this.nR[this.np] = into;
+      this.nL[this.np] = atEnd*this.nEnd;
+      this.nasalOut = (1+this.nEnd)*atEnd;                  // radiates from the nostrils
     } else this.nasalOut=0;
     if(this.bOpen>0.0005){                 // three-port junction where the branch taps in
       const k=Math.max(0,Math.min(n-2,this.bPos));
       const A1=this.A[k], A2=this.A[k+1], Ab=this.bArea*this.bOpen;
-      const pj=2*(this.R[k]+this.L[k+1]+this.bL[0])/(A1+A2+Ab);
+      const pj=2*(this.R[k]+this.L[k+1]+this.bLout)/(A1+A2+Ab);
       this.Lin[k]   = A1*pj - this.R[k];
       this.Rin[k+1] = A2*pj - this.L[k+1];
-      const into = Ab*pj - this.bL[0];
-      for(let j=0;j<this.bN-1;j++){ this.bRin[j+1]=this.bR[j]; this.bLin[j]=this.bL[j+1]; }
-      this.bRin[0]=into;
-      this.bLin[this.bN-1]=this.bR[this.bN-1]*this.bEnd;
+      // same ring as the nasal tract, same reason: the pocket is uniform, so none of its
+      // sections scatter either. Only four of them, so the saving is small — but leaving one
+      // of the two written the old way means the scratch arrays have to stay allocated for it.
       const dmb=this.dampNow===undefined?this.damp:this.dampNow;
-      for(let j=0;j<this.bN;j++){ this.bR[j]=this.bRin[j]*dmb; this.bL[j]=this.bLin[j]*dmb; }
+      // pocket. dampNow moves every sample with the constriction, so an exact-equality cache
+      // never hit and this was calling pow() four times a sample — which is the cost the
+      // ring was supposed to remove. Recomputed only when the damping has actually moved
+      // enough to matter; over a line this short the difference is far below hearing.
+      if(Math.abs(dmb - this.bDampFor) > 2e-6){ this.bDampFor = dmb; this.bDamp = Math.pow(dmb, this.bN-1); }
+      const intoB = Ab*pj - this.bLout;
+      this.bp = this.bp+1 >= this.bN-1 ? 0 : this.bp+1;
+      const bEndV = this.bR[this.bp]*this.bDamp;
+      this.bLout  = this.bL[this.bp]*this.bDamp;
+      this.bR[this.bp] = intoB;
+      this.bL[this.bp] = bEndV*this.bEnd;
     }
     this.Lin[n-1]=this.R[n-1]*this.lipR;
     const out=(1+this.lipR)*this.R[n-1] + (this.nasalOut||0);
@@ -791,10 +821,26 @@ class TractProcessor extends AudioWorkletProcessor {
         // centimetre cavity with its own standing wave and it was invisible: the 3D view showed
         // a sealed tube for every /m/ and no sign that anything was coming out of the nose,
         // which is the single most interesting thing the model does.
-        const nE = new Float32Array(this.nN);
-        for(let j=0;j<this.nN;j++){ const a=this.nR[j]+this.nL[j]; nE[j]=a*a; }
-        const bE = new Float32Array(this.bN);
-        for(let j=0;j<this.bN;j++){ const a=this.bR[j]+this.bL[j]; bE[j]=a*a; }
+        // MAPPED BACK TO POSITION. In a ring the index is WHEN a sample was written, not
+        // WHERE it is in the tube — so sending the raw array made the 3D view colour the nasal
+        // cavity in write order, and the standing wave appeared to crawl along it instead of
+        // standing. A bug the ring introduced and nothing would have caught: it is a picture,
+        // and the gate cannot look at one.
+        //
+        // Position d from the junction is the sample written d steps ago, which is d slots
+        // behind the head, wrapping.
+        const nL1 = this.nN-1, nE = new Float32Array(nL1);
+        for(let d=0;d<nL1;d++){
+          const j = (this.np - d + nL1*2) % nL1;
+          const a = this.nR[j]+this.nL[j];
+          nE[d] = a*a;
+        }
+        const bL1 = this.bN-1, bE = new Float32Array(bL1);
+        for(let d=0;d<bL1;d++){
+          const j = (this.bp - d + bL1*2) % bL1;
+          const a = this.bR[j]+this.bL[j];
+          bE[d] = a*a;
+        }
         this.port.postMessage({e:this.energy, d:Float32Array.from(this.diam),
                                on:this.vAmp>0.02, v:this.voicing, seq:!!this.seq,
                                nOpen:this.nasal, nE, bOpen:this.bOpen, bE});

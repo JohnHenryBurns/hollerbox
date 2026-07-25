@@ -268,4 +268,37 @@ function outlier(x, from = 0.3, to = 0.6) {
   return { ratio: mx, at };
 }
 
-module.exports = { P, SR, sustain, say, plan, setSeed, BASE_SEED, rms, spectrum, peakOf, centroid, bandOf, bandShare, formants, outlier, makeProcessor };
+/** The deepest notch in the transfer function — the antiformant.
+ *
+ *  A nasal's formants come from the nasal cavity, which is the same cavity whatever the place of
+ *  articulation, so /m/, /n/ and /ŋ/ are told apart by a ZERO instead: the oral cavity in front
+ *  of the seal is closed at the lips and open at the junction, and its quarter-wave resonance
+ *  cancels. Seal at the lips and that branch is the whole mouth, so the notch is low; seal at
+ *  the soft palate and there is barely any branch, so it is high. */
+function antiformant(sym, { n = 44, art = null, lo = 300, hi = 4600, step = 20 } = {}) {
+  const { Tract } = require("./tract.js");
+  const t = new Tract(n);
+  t.diam.set(P.articulate((art && art[sym]) || P.ART[sym], n));
+  t.bOpen = P.BRANCHED[sym] || 0;
+  t.nasal = P.NASAL[sym] || 0;
+  t.calcReflections();
+  const N = 8192, ir = new Float64Array(N);
+  ir[0] = t.step(1);
+  for (let i = 1; i < N; i++) ir[i] = t.step(0);
+  const sp = [];
+  for (let f = lo; f <= hi; f += step) {
+    let re = 0, im = 0;
+    const w = 2*Math.PI*f/SR;
+    for (let i = 0; i < N; i++) { re += ir[i]*Math.cos(w*i); im -= ir[i]*Math.sin(w*i); }
+    sp.push([f, 10*Math.log10(re*re + im*im + 1e-30)]);
+  }
+  let best = null;
+  for (let i = 3; i < sp.length - 3; i++) {
+    if (!(sp[i][1] < sp[i-1][1] && sp[i][1] < sp[i+1][1])) continue;
+    const d = (sp[i-3][1] + sp[i+3][1])/2 - sp[i][1];
+    if (!best || d > best.d) best = { f: sp[i][0], d };
+  }
+  return best ? best.f : null;
+}
+
+module.exports = { P, SR, sustain, say, plan, setSeed, BASE_SEED, rms, spectrum, peakOf, centroid, bandOf, bandShare, formants, antiformant, outlier, makeProcessor };

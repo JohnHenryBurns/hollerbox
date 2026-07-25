@@ -153,28 +153,28 @@ const ART = {
   "lip": 0.812
  },
  "m": {
-  "jaw": 0.25,
-  "bodyPos": 0.3,
-  "bodyHi": 0.1,
-  "tipPos": 0.85,
-  "tipHi": 0.0,
-  "lip": 0.0
+  "jaw": 0.06,
+  "bodyPos": 0.343,
+  "bodyHi": 0.373,
+  "tipPos": 0.796,
+  "tipHi": 0.238,
+  "lip": 0.01
  },
  "n": {
-  "jaw": 0.3,
-  "bodyPos": 0.55,
-  "bodyHi": 0.25,
-  "tipPos": 0.83,
-  "tipHi": 1.0,
-  "lip": 0.765
+  "jaw": 0.014,
+  "bodyPos": 0.737,
+  "bodyHi": 0.5,
+  "tipPos": 0.903,
+  "tipHi": 0.856,
+  "lip": 0.862
  },
  "ŋ": {
-  "jaw": 0.28,
-  "bodyPos": 0.56,
-  "bodyHi": 1.0,
-  "tipPos": 0.85,
-  "tipHi": 0.0,
-  "lip": 0.737
+  "jaw": 0.48,
+  "bodyPos": 0.635,
+  "bodyHi": 0.94,
+  "tipPos": 0.642,
+  "tipHi": 0.184,
+  "lip": 0.521
  },
  "p": {
   "jaw": 0.25,
@@ -363,7 +363,7 @@ const isDiph  = sym => !!DIPH[sym];
 // old worklet had no integrator for, and speakWith bails at `if(!node) return`. A hard reload
 // fixed it, which is not a thing a visitor knows to do.
 // Derived from both files with this line blanked out, so it is stable under itself.
-const BUILD = "96561c2561";
+const BUILD = "bc5c578146";
 
 const VOICE_SPEC=[
   {k:'rd',   lo:0.35,   hi:2.40,    d:0.80},    // LF shape: pressed <-> breathy

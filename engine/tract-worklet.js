@@ -5,7 +5,7 @@
 //
 // Everything it needs arrives in processorOptions: { n, velar }.
 
-const BUILD = "96561c2561";   // must match engine/phonemes.js — see the note there
+const BUILD = "bc5c578146";   // must match engine/phonemes.js — see the note there
 
 class TractProcessor extends AudioWorkletProcessor {
   constructor(opt){

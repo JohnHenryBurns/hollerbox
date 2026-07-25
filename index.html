@@ -1640,36 +1640,49 @@ function drawMouth(){
   g.lineWidth=Math.max(1.5,S*0.045);
 
   // ---- the nasal cavity, above the palate, and the velum that gates it ----
-  // The floor of the nasal passage IS the roof of the mouth, so it does not get a line of its
-  // own — drawing one put a wall between the two cavities that anatomy does not have. Only the
-  // roof is stroked, in the same weight as everything else here, and the fill is closed along
-  // the palate without being drawn. The one thing between the two is the flap.
+  //
+  // Three things were wrong with the first version of this.
+  //
+  // IT HUNG THE FLAP OFF THE PHARYNX WALL. The velum hinges at the BACK EDGE OF THE HARD
+  // PALATE — where the bone stops and the soft palate begins — not from the back of the throat.
+  // Drawing it at 0.30 put it behind the palate entirely, so the passage and the flap met in
+  // the pharynx and the whole assembly looked bolted on at the wrong end.
+  //
+  // THE PASSAGE STARTED TOO FAR BACK for the same reason. A nasal cavity sits ABOVE the hard
+  // palate and runs forward from the soft palate to the nostrils; it does not extend back down
+  // the throat.
+  //
+  // AND THE FLAP MOVED THE WRONG WAY. Raising the soft palate CLOSES the nasal port — that is
+  // what velopharyngeal closure is, and it is why every non-nasal sound has the velum up. It
+  // hangs DOWN for /m/, /n/ and /ŋ/. The old drawing lifted it to open, which is backwards, and
+  // it is the sort of thing that teaches a child the opposite of the truth.
   {
     const open = nOpen;
-    const roofAt = u => -(1.02 - Math.pow(Math.max(0,u-0.30)/0.69, 1.7)*0.16);
+    const HINGE = 0.46;                            // where the hard palate ends
+    const roofAt = u => -(1.06 - Math.pow(Math.max(0,u-HINGE)/(0.99-HINGE), 1.6)*0.14);
     const palAt  = u => -(u<0.30 ? 0.95-u*0.6 : u<0.62 ? 0.77-(u-0.30)*1.35 : 0.34);
-    // fill the passage, closing along the palate but never stroking it
+
+    // the passage: floor is the palate itself, so only the roof is drawn
     g.beginPath();
-    for(let u=0.30;u<=0.99;u+=0.02){ const x=X(u), y=Y(roofAt(u)); u===0.30? g.moveTo(x,y):g.lineTo(x,y); }
-    for(let u=0.99;u>=0.30;u-=0.02) g.lineTo(X(u), Y(palAt(u)));
+    for(let u=HINGE;u<=0.99;u+=0.02){ const x=X(u), y=Y(roofAt(u)); u===HINGE? g.moveTo(x,y):g.lineTo(x,y); }
+    for(let u=0.99;u>=HINGE;u-=0.02) g.lineTo(X(u), Y(palAt(u)));
     g.closePath();
     g.fillStyle = 'rgba(109,120,126,'+(0.05+0.18*open).toFixed(3)+')';
     g.fill();
-    // and stroke the roof alone
     g.beginPath();
-    for(let u=0.30;u<=0.99;u+=0.02){ const x=X(u), y=Y(roofAt(u)); u===0.30? g.moveTo(x,y):g.lineTo(x,y); }
+    for(let u=HINGE;u<=0.99;u+=0.02){ const x=X(u), y=Y(roofAt(u)); u===HINGE? g.moveTo(x,y):g.lineTo(x,y); }
     g.strokeStyle = '#6d787e';
     g.stroke();
 
-    // the velum: the only thing between the two cavities. Hinged at the back of the palate,
-    // hanging shut against the pharynx wall or swung up to seal against the nasal roof.
-    const hx = X(0.30), hy = Y(palAt(0.30));
-    const shut = Y(palAt(0.30)+0.42), lift = Y(roofAt(0.30));
-    const tipY = shut + (lift - shut)*open;
-    const tipX = hx - S*0.30*(1-open);
+    // the velum. Up and back against the pharynx wall seals the nose; hanging down opens it.
+    const hx = X(HINGE), hy = Y(palAt(HINGE));
+    const len = S*0.66;
+    const up   = { x: hx - len*0.30, y: Y(roofAt(HINGE)) };     // sealed: raised and back
+    const down = { x: hx - len*0.16, y: hy + len*0.92 };        // open: hanging into the pharynx
+    const tip  = { x: up.x + (down.x-up.x)*open, y: up.y + (down.y-up.y)*open };
     g.beginPath();
     g.moveTo(hx, hy);
-    g.quadraticCurveTo(hx - S*0.22*(1-open*0.5), (hy+tipY)/2, tipX, tipY);
+    g.quadraticCurveTo(hx - len*0.34, (hy + tip.y)/2, tip.x, tip.y);
     g.strokeStyle = open>0.05 ? 'rgba(240,150,70,0.95)' : '#6d787e';
     g.stroke();
   }

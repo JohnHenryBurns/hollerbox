@@ -166,7 +166,7 @@
     350
    ],
    "source": "fujimura",
-   "note": "ours is at F2 1210, which is /l/'s 1210 exactly. Reported as 'n sounds like l' and that is why."
+   "note": "measured with the nose open it sits at F2 1250, still 450 low. Before the offline tract had a nasal cavity at all it read 1210, which happened to be /l/'s to within ten hertz — the right conclusion from the wrong measurement."
   },
   {
    "sym": "ŋ",
@@ -181,7 +181,7 @@
     400
    ],
    "source": "fujimura",
-   "note": "ours is at F2 1950, which is 110 Hz from /j/'s 2060. Reported as 'the ŋ is like y'."
+   "note": "F2 1090 with the nose open, against 1950 without one. The earlier reading put it 80 Hz from /j/ and explained a reported 'nya' that way; that was an artifact of measuring a sealed tube. The 'nya' is real and now unexplained."
   }
  ],
  "_bounds": [

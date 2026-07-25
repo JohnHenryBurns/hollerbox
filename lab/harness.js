@@ -224,6 +224,10 @@ function formants(sym, { n = 44, order = 12, art = null } = {}) {
   // Measure a branched phoneme the way it is HEARD — with its pocket open. Measuring /l/
   // with the branch shut hid the fact that the branch was turning it into an /r/.
   t.bOpen = P.BRANCHED[sym] || 0;
+  // and open the velum for a nasal, which until now was never opened at all — so /m/, /n/ and
+  // /ŋ/ were measured as a tube sealed part-way along with no outlet. A closed cavity, not a
+  // murmur, and every nasal figure the gate has reported was of that wrong system.
+  t.nasal = P.NASAL[sym] || 0;
   t.calcReflections();
   const L = 8192, ir = new Float64Array(L);
   ir[0] = t.sample(1); for (let i = 1; i < L; i++) ir[i] = t.sample(0);

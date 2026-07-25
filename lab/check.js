@@ -1059,6 +1059,99 @@ check("no keyframe pair asks the tract to move in zero time", () => {
                : "5 phrases, every co-timed keyframe pair agrees" };
 });
 
+// ── articulators have mass ─────────────────────────────────────────────────
+const ARTIC = ["jaw","bodyPos","bodyHi","tipPos","tipHi","lip"];
+function articSpeeds() {
+  const P = H.P, S = require(__dirname + "/../engine/spelling.js");
+  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  const worst = {}, where = {};
+  ARTIC.forEach(k => worst[k] = 0);
+  for (const t of ["I love my daughter", "hello world", "how now brown cow", "my wife is great",
+                   "the quick brown fox jumps over the lazy dog", "banana and a tomato"]) {
+    const r = S.g2p(t);
+    const W = P.buildWord(r.ph, { D: Math.max(0.8, r.ph.length*v.per), n, stress: r.stress,
+                                  pros: v, glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    for (let i = 1; i < W.art.length; i++) {
+      const dt = W.art[i].t - W.art[i-1].t;
+      for (const k of ARTIC) {
+        const d = Math.abs(W.art[i].A[k] - W.art[i-1].A[k]);
+        const sp = dt < 1e-9 ? (d > 1e-9 ? Infinity : 0) : d/dt;
+        if (sp > worst[k]) { worst[k] = sp; where[k] = `${t} @${(W.art[i].t*1000).toFixed(0)}ms`; }
+      }
+    }
+  }
+  return { worst, where };
+}
+
+check("no articulator is asked to move impossibly fast", () => {
+  // A tongue has mass. The model does not know that, and until the diphthong fix it would
+  // cheerfully command an INFINITE velocity — 41 units of tract shape in zero time, which is
+  // what the pop turned out to be. This is the general form of that bug: not "are two
+  // keyframes equal" but "is the motion between them something an anatomy could perform".
+  //
+  // The bound here is deliberately loose — 200 range-lengths per second, a full sweep in 5 ms.
+  // Nothing anatomical is anywhere near it. It is set to catch a FAULT (a teleport, a
+  // degenerate interval, a keyframe out of order), not to enforce plausibility, because the
+  // model is currently 5-7x faster than muscle everywhere and that is a Phase 9 limitation
+  // rather than a bug. The plausibility figures are reported separately, below.
+  const { worst, where } = articSpeeds();
+  const bad = [];
+  for (const k of ARTIC)
+    if (!(worst[k] < 200)) bad.push(`${k} ${worst[k] === Infinity ? "instantly" : worst[k].toFixed(0)+"/s"} — ${where[k]}`);
+
+  // AND THE DIAMETERS, which is what the engine actually interpolates. The first version of
+  // this check watched only the six articulator parameters — and `art` is emitted by buildWord
+  // and IGNORED by the worklet, so it missed the very teleport it was written to generalise.
+  // Reintroducing the diphthong bug in the diameter line left `art` perfectly well behaved and
+  // the check green. Watching a representation the engine does not use is not watching.
+  //
+  // That gap is itself the argument for Phase 9: the two representations can disagree because
+  // nothing makes them agree.
+  const P = H.P, S = require(__dirname + "/../engine/spelling.js");
+  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  let dWorst = 0, dWhere = "";
+  for (const t of ["I love my daughter", "hello world", "how now brown cow",
+                   "the quick brown fox jumps over the lazy dog"]) {
+    const r = S.g2p(t);
+    const W = P.buildWord(r.ph, { D: Math.max(0.8, r.ph.length*v.per), n, stress: r.stress,
+                                  pros: v, glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    for (let i = 1; i < W.keys.length; i++) {
+      const dt = W.keys[i].t - W.keys[i-1].t;
+      let d = 0;
+      for (let k = 0; k < n; k++) d += Math.abs(W.keys[i].d[k] - W.keys[i-1].d[k]);
+      const sp = dt < 1e-9 ? (d > 0.01 ? Infinity : 0) : d/dt;
+      if (sp > dWorst) { dWorst = sp; dWhere = `${t} @${(W.keys[i].t*1000).toFixed(0)}ms`; }
+    }
+  }
+  // Legitimate transitions peak around 1100 units/s. 20000 is a full tract reshape in 2 ms.
+  if (!(dWorst < 20000))
+    bad.push(`tract shape ${dWorst === Infinity ? "teleports" : dWorst.toFixed(0)+"/s"} — ${dWhere}`);
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ")
+               : `articulators ${Math.max(...ARTIC.map(k => worst[k])).toFixed(0)}/s, tract shape ${dWorst.toFixed(0)}/s` };
+});
+
+report("how far the articulators are from real anatomy", () => {
+  // Measured against how long a real articulator needs to cross its own range: a jaw or a
+  // tongue body about 150-200 ms, a tongue tip about 100 ms, lips about 120 ms. These are
+  // order-of-magnitude figures from articulography, not precise limits, which is exactly why
+  // this reports rather than blocks.
+  //
+  // This is the quantitative case for Phase 9. Interpolating in articulatory space with
+  // per-articulator time constants would make these numbers a consequence of the model rather
+  // than an accident of how long a segment happened to be.
+  const WANT = { jaw: 0.170, bodyPos: 0.170, bodyHi: 0.170, tipPos: 0.100, tipHi: 0.100, lip: 0.120 };
+  const { worst } = articSpeeds();
+  const rows = ARTIC.map(k => {
+    const ms = 1000/Math.max(1e-9, worst[k]);
+    return `${k} ${ms.toFixed(0)}ms(${(WANT[k]*1000/Math.max(1,ms)).toFixed(1)}x)`;
+  });
+  const over = ARTIC.filter(k => 1000/Math.max(1e-9, worst[k]) < WANT[k]*1000).length;
+  return { ok: over === 0,
+           note: `${over}/6 faster than anatomy — ${rows.join("  ")}` };
+});
+
 check("no word clicks", () => {
   // A stop release is a transient, but an outlier far above the signal's own motion is a
   // click. The white-noise burst once measured 13.5x.

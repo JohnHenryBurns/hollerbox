@@ -702,10 +702,10 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
      exactly what happened: a fix landed in phonemes.js, the bench had it and this
      page did not, and the same phrase in the same voice sounded different in the
      two. The gate recomputes this hash and fails if it has not been bumped. -->
-<script src="engine/phonemes.js?v=f75a633ba3"></script>
+<script src="engine/phonemes.js?v=11761451e3"></script>
 <!-- The speller: g2p rules, the built-in dictionary, the personal one on top. Shared with
      the gate, which runs it with no storage and therefore tests the shipped dictionary. -->
-<script src="engine/spelling.js?v=f75a633ba3"></script>
+<script src="engine/spelling.js?v=11761451e3"></script>
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
 // The tract shapes, solved offline by searching tube geometry until the
@@ -725,7 +725,7 @@ const articulate = HOLLER.articulate;
 // stop consonants are the same move at three places along the tract
 const STOPS = HOLLER.STOPS;
 const VELAR = HOLLER.VELAR;
-const ENGINE_URL = new URL('engine/tract-worklet.js?v=f75a633ba3', document.baseURI).href;
+const ENGINE_URL = new URL('engine/tract-worklet.js?v=11761451e3', document.baseURI).href;
 
 
 // ─────────────────────────────────────────────────────────────────────────────

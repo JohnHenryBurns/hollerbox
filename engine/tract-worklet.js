@@ -441,7 +441,17 @@ class TractProcessor extends AudioWorkletProcessor {
           if(on>0 && this.sinceSil<on) flow*=this.sinceSil/on;
         }
         this.flowT=flow;
-        amp = (this.voiceless||this.vot>0) ? 0 : flow*voiceBar*squeeze*this.lv;
+        // Voicing may not resume before the seal has actually broken. `voiceless` steps back
+        // to 0 at the keyframe midpoint, which was fine while the tract arrived exactly on
+        // time — but under inertia the release is late and the flag is not, so voicing leaked
+        // out for the ten milliseconds between them and VOT measured 20 ms instead of 65. The
+        // engine had already set the right VOT; the voice simply started before the burst.
+        //
+        // A voiceless stop that has charged and not yet released is still shut, and no air is
+        // crossing the folds. `charge` is zeroed at the burst, so this ends exactly there and
+        // hands over to `vot`. Inert when artT is 0, because then the release is never late.
+        const stillShut = this.sealVl && (this.charge||0)>0.12;
+        amp = (this.voiceless||this.vot>0||stillShut) ? 0 : flow*voiceBar*squeeze*this.lv;
       } else {
         this.flowT = this.voicing;
         amp = (this.voiceless||this.vot>0) ? 0 : this.voicing*voiceBar*squeeze;
@@ -573,7 +583,13 @@ class TractProcessor extends AudioWorkletProcessor {
         // looked voiced and got no aspiration at all while /p/ got 55 ms. Whether a stop is
         // aspirated is decided by what the folds were doing behind the seal, not by what
         // they happen to be doing at the instant it breaks.
-        this.sealVl=this.voiceless;
+        // ONCE, on the way in — not every sample. Latching continuously means the LAST sample
+        // before the release wins, and under inertia the release comes after the next segment's
+        // keyframe midpoint has already handed voicing back. So `sealVl` was overwritten with 0
+        // a few milliseconds before the burst read it, /k/ got no VOT at all, and voicing
+        // resumed immediately. That is the very failure this latch was added to prevent; it
+        // just did not survive the release being late.
+        if(this.prevClose>=0.14) this.sealVl=this.voiceless;
       } else if((this.charge||0)>0.12 && cl>0.22){
         this.burstN=Math.floor(sr*0.014);
         // A release near the lips radiates almost directly; one at the velum has a whole

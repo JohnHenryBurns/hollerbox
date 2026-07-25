@@ -363,7 +363,7 @@ const isDiph  = sym => !!DIPH[sym];
 // old worklet had no integrator for, and speakWith bails at `if(!node) return`. A hard reload
 // fixed it, which is not a thing a visitor knows to do.
 // Derived from both files with this line blanked out, so it is stable under itself.
-const BUILD = "673a0c6e3f";
+const BUILD = "fa50268f3a";
 
 const VOICE_SPEC=[
   {k:'rd',   lo:0.35,   hi:2.40,    d:0.80},    // LF shape: pressed <-> breathy
@@ -770,6 +770,18 @@ function buildWord(chain, opts){
   const apw = P_('apw', 0.34) * APPROX_REF;
   const gcap = P_('gcap', 0.5);
   const wgap = P_('wgap', 0.045);
+  // /h/ HAS NO SHAPE OF ITS OWN. It is a voiceless version of whatever vowel is beside it — the
+  // tongue is already in position for the "ee" in "he" and the "oo" in "who" while the /h/ is
+  // still going, which is why those two /h/ sounds are audibly different. A fixed posture put a
+  // mid-front tongue in the middle of every one, so "ah-h-ah" came out with a front excursion
+  // in it and was reported as "hya".
+  const ctxFor = (sym, i) => {
+    if (sym !== 'h') return sym;
+    const nxt = chain[i+1], prv = chain[i-1];
+    if (nxt && !isPause(nxt)) return nxt;
+    if (prv && !isPause(prv)) return prv;
+    return sym;
+  };
   const base  = sym => baseFor(sym, vart);
   const shape = sym => articulate(base(sym), n);
   const isStop=c=>STOP_KEYS.includes(c), isAp=c=>APPROX.includes(c);
@@ -887,8 +899,9 @@ function buildWord(chain, opts){
       keys.push({t,d:nd,b:0,nz:0,vl:quiet,fr:0,as:0,sil:quiet,lv:1}); art.push({t,A:nA});
       return;
     }
-    const d=Array.from(shape(sym));
-    const A=base(sym);
+    const ctx=ctxFor(sym,i);
+    const d=Array.from(shape(ctx));
+    const A=base(ctx);
     const b=branchFor(sym), nz=nasalFor(sym), vl=voicelessFor(sym),
           fr=fricFor(sym), as=aspFor(sym);
     const lv=(stress && stress[i]===0) ? wklev : 1;

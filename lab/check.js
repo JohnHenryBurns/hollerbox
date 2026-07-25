@@ -1785,6 +1785,36 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── /h/ is a voiceless vowel ───────────────────────────────────────────────
+check("/h/ takes the shape of the vowel beside it", () => {
+  // /h/ has no posture of its own. The tongue is already in position for the "ee" in "he" and
+  // the "oo" in "who" while the /h/ is still going, which is why those two are audibly
+  // different sounds. A fixed posture put a mid-front tongue in the middle of every one, and
+  // "ah-h-ah" came out with a front excursion that was reported as "hya".
+  const P = H.P, bad = [];
+  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  const narrowAt = (a, b) => {
+    const W = P.buildWord([a, "h", b], { D: 0.9, n, pros: v,
+                          glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    const seg = W.seg.find(x => x.sym === "h");
+    const k = W.keys.find(x => Math.abs(x.t - seg.a) < 1e-6);
+    if (!k) return null;
+    let mn = 9, mi = 0;
+    for (let i = 1; i < n-1; i++) if (k.d[i] < mn) { mn = k.d[i]; mi = i; }
+    return mi/n;
+  };
+  const back = narrowAt("ɑ", "ɑ"), front = narrowAt("i", "i"), round = narrowAt("u", "u");
+  if (back === null || front === null || round === null) return { ok: false, note: "no keyframe at /h/" };
+  // three different vowels must give three different tongue positions, and in the right order:
+  // /ɑ/ is a back constriction, /i/ a front one, /u/ at the lips
+  if (!(back < front)) bad.push(`ɑhɑ ${(back*100).toFixed(0)}% not behind ihi ${(front*100).toFixed(0)}%`);
+  if (!(front < round)) bad.push(`ihi ${(front*100).toFixed(0)}% not behind uhu ${(round*100).toFixed(0)}%`);
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ")
+               : `ɑhɑ ${(back*100).toFixed(0)}%  ihi ${(front*100).toFixed(0)}%  uhu ${(round*100).toFixed(0)}% along` };
+});
+
 // ── the formant measure is right at every length, not just one ─────────────
 check("a uniform tube reads c/4L at every tract length in use", () => {
   // There was a uniform-tube check already and it ran at ONE length. That is enough to catch a

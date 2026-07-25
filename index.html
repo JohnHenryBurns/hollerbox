@@ -702,10 +702,10 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
      exactly what happened: a fix landed in phonemes.js, the bench had it and this
      page did not, and the same phrase in the same voice sounded different in the
      two. The gate recomputes this hash and fails if it has not been bumped. -->
-<script src="engine/phonemes.js?v=4d80265b31"></script>
+<script src="engine/phonemes.js?v=53813c41ac"></script>
 <!-- The speller: g2p rules, the built-in dictionary, the personal one on top. Shared with
      the gate, which runs it with no storage and therefore tests the shipped dictionary. -->
-<script src="engine/spelling.js?v=4d80265b31"></script>
+<script src="engine/spelling.js?v=53813c41ac"></script>
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
 // The tract shapes, solved offline by searching tube geometry until the
@@ -725,7 +725,7 @@ const articulate = HOLLER.articulate;
 // stop consonants are the same move at three places along the tract
 const STOPS = HOLLER.STOPS;
 const VELAR = HOLLER.VELAR;
-const ENGINE_URL = new URL('engine/tract-worklet.js?v=4d80265b31', document.baseURI).href;
+const ENGINE_URL = new URL('engine/tract-worklet.js?v=53813c41ac', document.baseURI).href;
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -756,6 +756,16 @@ async function start(){
   gainNode = ctx.createGain(); gainNode.gain.value = +sVol.value;
   node.connect(analyser); analyser.connect(gainNode); gainNode.connect(ctx.destination);
   node.port.onmessage = e => {
+    // The engine announces which build it is, and it has to match the one phonemes.js was
+    // written against. The two files cache INDEPENDENTLY, so a browser holding a stale
+    // index.html requests them at unversioned URLs and can pair a fresh phonemes.js with an
+    // old worklet. That made no sound and no error — buildWord emitted keyframes the old
+    // worklet had no integrator for. A hard reload fixed it, which is not a thing a visitor
+    // knows to do, so it says so now instead.
+    if(e.data && e.data.type==='build'){
+      if(e.data.build !== HOLLER.BUILD) engineSkew(e.data.build);
+      return;
+    }
     energy=e.data.e; liveDiam=e.data.d; voicedNow=e.data.on;
     const changed = (e.data.seq!==sequencing) || (e.data.v!==voicing);
     sequencing=e.data.seq; voicing=e.data.v;
@@ -1025,13 +1035,33 @@ let champion=defaultVoice();
 // One copy of each, in phonemes.js beside VOICE_SPEC, because they are pure functions over it.
 const encodeVoice=HOLLER.encodeVoice, decodeVoice=HOLLER.decodeVoice;
 
+// Two ways the engine can be unusable, and neither used to say anything at all.
+function engineNote(msg){
+  let el = document.getElementById('engineNote');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'engineNote';
+    el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99;padding:10px 14px;'
+      + 'background:#5b1a1a;color:#ffd7d7;font:13px/1.45 system-ui,sans-serif;text-align:center';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+}
+function engineSkew(got){
+  engineNote('The audio engine is a different build from the page — ' + got + ' against '
+    + HOLLER.BUILD + '. Reload with a hard refresh (Ctrl-F5, or Cmd-Shift-R) to fix it.');
+}
+function engineDown(){
+  engineNote('The audio engine did not start. A hard refresh (Ctrl-F5, or Cmd-Shift-R) '
+    + 'usually fixes it; if not, the browser console will say why.');
+}
 function applyVoice(v){
   if(!node) return;
   node.port.postMessage({type:'voice', v});
 }
 async function speakWith(v){
   if(!started) await start();
-  if(!node) return;                     // audio never came up — fail quietly, not fatally
+  if(!node){ engineDown(); return; }    // audio never came up — say so rather than nothing
   applyVoice(v);
   const D=+sDur.value;
   const W=buildWord(chain, D, v.drawl, v.glide, v.stopT, v.open||0, v);

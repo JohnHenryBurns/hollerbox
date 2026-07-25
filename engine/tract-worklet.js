@@ -5,6 +5,8 @@
 //
 // Everything it needs arrives in processorOptions: { n, velar }.
 
+const BUILD = "e911bcc720";   // must match engine/phonemes.js — see the note there
+
 class TractProcessor extends AudioWorkletProcessor {
   constructor(opt){
     super();
@@ -69,6 +71,7 @@ class TractProcessor extends AudioWorkletProcessor {
     this.seqFrom=null; this.seqFromB=0; this.blend=0.03;
     this.seq=null; this.seqT=0; this.prevClose=1;
     this.velar=Math.round((opt.processorOptions.velar ?? 0.568)*(n-1));
+    this.port.postMessage({type:'build', build:BUILD});
     this.port.onmessage=(e)=>{
       const d=e.data;
       if(d.type==='shape'){

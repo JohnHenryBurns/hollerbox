@@ -1362,6 +1362,42 @@ check("bad is longer than bat", () => {
                  `goal stretches ${nat.toFixed(2)}s to ${long.toFixed(2)}s` };
 });
 
+// ── the two engine files must be the same build ────────────────────────────
+check("phonemes.js and the worklet agree on which build they are", () => {
+  // They cache INDEPENDENTLY. A browser holding a stale index.html requests them at
+  // unversioned URLs and can pair a fresh phonemes.js with an old worklet — which made no
+  // sound and no error, because buildWord emitted keyframes the old worklet had no integrator
+  // for and speakWith bails at `if(!node) return`. Deployed, undetected, and only found by
+  // someone noticing the app had stopped working.
+  //
+  // The token is derived from both files with the declaration line REMOVED, so it does not
+  // depend on the value it is producing. Blanking the line instead of removing it was not
+  // stable under itself — checked, and it was not.
+  const fs = require("fs"), crypto = require("crypto"), bad = [];
+  const strip = t => t.replace(/^const BUILD = "[^"]*";.*\n/m, "");
+  const h = crypto.createHash("sha1");
+  const src = {};
+  for (const f of ["engine/phonemes.js", "engine/tract-worklet.js"]) {
+    src[f] = fs.readFileSync(__dirname + "/../" + f, "utf8");
+    h.update(strip(src[f]));
+  }
+  const want = h.digest("hex").slice(0, 10);
+  for (const f of Object.keys(src)) {
+    const got = (src[f].match(/^const BUILD = "([a-f0-9]+)"/m) || [])[1];
+    if (!got) bad.push(`${f} declares no BUILD`);
+    else if (got !== want) bad.push(`${f} says ${got}`);
+  }
+  if (H.P.BUILD !== want) bad.push(`phonemes exports ${H.P.BUILD}`);
+  // and the worklet has to actually announce it, or the page has nothing to compare against
+  if (!/postMessage\(\{type:'build'/.test(src["engine/tract-worklet.js"]))
+    bad.push("the worklet never announces its build");
+  const page = fs.readFileSync(__dirname + "/../index.html", "utf8");
+  if (!/HOLLER\.BUILD/.test(page)) bad.push("the page never checks it");
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ") + `  — should be ${want}` : `both at ${want}` };
+});
+
 check("no word clicks", () => {
   // A stop release is a transient, but an outlier far above the signal's own motion is a
   // click. The white-noise burst once measured 13.5x.

@@ -2172,6 +2172,44 @@ harness, the targets with their sources, and the isolation check are in place fo
 
 ---
 
+## The deployed app stopped making words, and nothing said so
+
+Reported as *"the deployed app is no longer reliable generating words at all — not sure when
+this slipped in, I thought I'd been smoke testing every PR."* It was not in any PR. A hard
+reload fixed it.
+
+**The cache token cannot fix a stale `index.html`.** The token lives *in* the HTML, so it only
+takes effect once the page itself is re-fetched. A browser still holding the pre-#24 page
+requests the engine at **unversioned URLs** — and the three files cache **independently**, so it
+can pair a fresh `phonemes.js` with a stale `tract-worklet.js`. Phase 9 changed both:
+`buildWord` emits keyframes the old worklet has no integrator for.
+
+The result was no sound and **no error**, because `speakWith` bails at `if(!node) return` with a
+comment saying "fail quietly, not fatally". Quietly was the problem.
+
+Ruled out first, all healthy: plan generation over 29 words, seed decoding of every older seed
+length, integrator stability down to `artT=0.001`, worklet parse and registration, and sample
+rates of 22, 44.1, 48 and 96 kHz. Everything testable from outside a browser was fine, which is
+what pointed at deployment.
+
+**Both files now carry a `BUILD` string**, the worklet announces it on init, and the page
+compares it against what `phonemes.js` was written with. A mismatch puts a red bar across the
+bottom naming both builds and saying to hard-refresh. `if(!node)` does the same rather than
+returning in silence.
+
+The token is derived from both files **with the declaration line removed**, so it does not
+depend on the value it is producing. Blanking the line instead of removing it is not stable
+under itself — tried, checked, and it was not.
+
+Gated, and verified by ablation: rewrite one file's build string and the check fails with the
+value it should be.
+
+**What this does not fix.** A visitor with a stale page still has to reload; nothing here can
+reach into their cache. It converts a silent failure into an instruction, which is the most a
+static site can do without a service worker.
+
+---
+
 ## Note on method
 
 Four times during the earlier synthesis work, a confident diagnosis turned out to be a

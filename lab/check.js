@@ -1710,6 +1710,50 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── a fricative is not a closure, however narrow ───────────────────────────
+check("no fricative is treated as a stop", () => {
+  // The engine decides "shut" from the narrowest point alone, and /z/ holds a channel of 0.073
+  // — tighter than the 0.14 that means closed. So it charged pressure behind a fricative, cut
+  // its voice bar by 88%, and fired a stop burst when it opened. Measured in a word, /z/ had 1%
+  // of its energy below 800 Hz, the same as the voiceless /s/, and one burst: a voiced sibilant
+  // with no voice in it.
+  //
+  // Exactly the fault the nasals had, one line from where it was fixed for them. `cl` alone
+  // cannot tell a seal from a very narrow gap; `fric` already knows.
+  const P = H.P, bad = [];
+  const v = { ...P.defaultVoice(), ...P.VOICES.man.v }, n = Math.round(v.sect);
+  const run = sym => {
+    const W = P.buildWord(["ɑ", sym, "ɑ"], { D: 0.9, n, pros: v,
+                          glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    const p = H.makeProcessor(n);
+    p.port.onmessage({ data: { type: "voice", v } });
+    p.port.onmessage({ data: { type: "goal",
+      seq: { keys: W.keys, f0: P.buildF0(W.end, v), end: W.end } } });
+    const out = [new Float32Array(128)];
+    let prev = 0, bursts = 0, charge = 0;
+    for (let b = 0; b < Math.ceil(W.end*H.SR/128); b++) {
+      p.process([], [out]);
+      if (p.burstN > prev) bursts++;
+      prev = p.burstN;
+      charge = Math.max(charge, p.charge || 0);
+    }
+    return { bursts, charge };
+  };
+  // no fricative may charge or burst, however tight its channel
+  for (const f of ["s", "z", "ʃ", "ʒ", "f", "v", "θ", "ð"]) {
+    const r = run(f);
+    if (r.bursts) bad.push(`/${f}/ fired ${r.bursts} burst(s)`);
+    if (r.charge > 0.12) bad.push(`/${f}/ charged to ${r.charge.toFixed(2)}`);
+  }
+  // and a real stop still must
+  const d = run("d");
+  if (!d.bursts) bad.push("/d/ no longer bursts — the exclusion is too wide");
+  if (d.charge < 0.5) bad.push(`/d/ only charged to ${d.charge.toFixed(2)}`);
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ") : "eight fricatives, none charging; /d/ still does" };
+});
+
 // ── starting the audio is not a race ───────────────────────────────────────
 check("every caller waits for the same start", () => {
   // start() set `started = true` on its first line and then did several hundred milliseconds of

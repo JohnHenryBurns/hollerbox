@@ -5,7 +5,7 @@
 //
 // Everything it needs arrives in processorOptions: { n, velar }.
 
-const BUILD = "fa50268f3a";   // must match engine/phonemes.js — see the note there
+const BUILD = "96561c2561";   // must match engine/phonemes.js — see the note there
 
 class TractProcessor extends AudioWorkletProcessor {
   constructor(opt){
@@ -768,8 +768,17 @@ class TractProcessor extends AudioWorkletProcessor {
         }
       }
       if((this.tick % 512)===0){
+        // The branches go out too, so the page can draw them. The nasal tract is an eleven
+        // centimetre cavity with its own standing wave and it was invisible: the 3D view showed
+        // a sealed tube for every /m/ and no sign that anything was coming out of the nose,
+        // which is the single most interesting thing the model does.
+        const nE = new Float32Array(this.nN);
+        for(let j=0;j<this.nN;j++){ const a=this.nR[j]+this.nL[j]; nE[j]=a*a; }
+        const bE = new Float32Array(this.bN);
+        for(let j=0;j<this.bN;j++){ const a=this.bR[j]+this.bL[j]; bE[j]=a*a; }
         this.port.postMessage({e:this.energy, d:Float32Array.from(this.diam),
-                               on:this.vAmp>0.02, v:this.voicing, seq:!!this.seq});
+                               on:this.vAmp>0.02, v:this.voicing, seq:!!this.seq,
+                               nOpen:this.nasal, nE, bOpen:this.bOpen, bE});
       }
       this.tick++;
     }

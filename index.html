@@ -1433,11 +1433,28 @@ let tubes=[], ghost=null, nasalTubes=[], pocketTubes=[];
 // the pocket at 0.84. The nasal cavity runs up and forward from there, because that is where a
 // nose is.
 const NASAL_AT = 0.44, POCKET_AT = 0.84;
-function branchPath(atU, dir, lengthFrac, lift){
+
+// The nasal cavity runs from the velum to the nostrils, which sit just above and behind the
+// lips — not straight up. The first version aimed it along a fixed direction for a fixed
+// fraction of the oral length and it ended three units ABOVE the lips, pointing at the sky. An
+// antenna, not a nose.
+//
+// It has to satisfy two things at once: come out in the right place, and be the right LENGTH,
+// since 11.1 cm against the oral tract's 17.5 is 0.634 of it. A straight line to the nostril is
+// only 5.53 units where 7.23 are needed, so the passage arches — which is what a real one does.
+// The arch is solved for rather than eyeballed.
+function curveTo(atU, endPt, lengthFrac){
   const p0 = path.getPointAt(atU);
-  const end = p0.clone().add(dir.clone().normalize().multiplyScalar(path.getLength()*lengthFrac));
-  const mid = p0.clone().lerp(end, 0.5).add(new THREE.Vector3(0, lift, 0));
-  return new THREE.CatmullRomCurve3([p0, mid, end]);
+  const want = path.getLength()*lengthFrac;
+  const arc = lift => {
+    const mid = p0.clone().lerp(endPt, 0.5).add(new THREE.Vector3(0, lift, 0));
+    const c = new THREE.QuadraticBezierCurve3(p0, mid, endPt);
+    return c.getLength();
+  };
+  let lo = 0, hi = 8, m = 0;
+  for (let i = 0; i < 30; i++) { m = (lo + hi)/2; if (arc(m) < want) lo = m; else hi = m; }
+  const mid = p0.clone().lerp(endPt, 0.5).add(new THREE.Vector3(0, m, 0));
+  return new THREE.QuadraticBezierCurve3(p0, mid, endPt);
 }
 function buildTubes(){
   tubes.forEach(t=>{scene.remove(t.mesh); t.mesh.geometry.dispose(); t.mesh.material.dispose();});
@@ -1454,8 +1471,8 @@ function buildTubes(){
     m.scale.set(0.6,0.28,0.6);
     scene.add(m); tubes.push({mesh:m,u});
   }
-  buildBranch(nasalTubes, branchPath(NASAL_AT, new THREE.Vector3(1.6,1.5,0), 0.63, 0.35), 28, 0.30);
-  buildBranch(pocketTubes, branchPath(POCKET_AT, new THREE.Vector3(0.2,-1,0), 0.09, -0.05), 4, 0.22);
+  buildBranch(nasalTubes, curveTo(NASAL_AT, new THREE.Vector3(5.0,3.35,0), 0.634), 28, 0.30);
+  buildBranch(pocketTubes, curveTo(POCKET_AT, path.getPointAt(POCKET_AT).clone().add(new THREE.Vector3(0.35,-0.9,0)), 0.09), 4, 0.22);
 }
 /** One row of cylinders along a branch curve. Same material and ramp as the main tube, so the
  *  colour means the same thing in all three. */
@@ -1475,15 +1492,18 @@ function buildBranch(into, curve, count, radius){
     scene.add(m); into.push({mesh:m, u});
   }
 }
-/** Fade a branch in with how far open it is, and colour it by its own standing wave. */
+/** A branch is always there — a nose does not appear when you use it. What changes is whether
+ *  air is going into it, so a closed one sits faint and grey and an open one takes the colour of
+ *  its own standing wave. The first version made the whole cavity blink in and out, which reads
+ *  as a rendering glitch rather than as a velum. */
 function paintBranch(list, open, nrg){
   if(!list.length) return;
   let peak = 1e-6;
   if(nrg) for(let i=0;i<nrg.length;i++) peak = Math.max(peak, nrg[i]);
   for(let i=0;i<list.length;i++){
     const t = list[i];
-    t.mesh.material.opacity = 0.94*Math.min(1, open*1.4);
-    t.mesh.visible = open > 0.01;
+    t.mesh.material.opacity = 0.18 + 0.76*Math.min(1, open*1.4);
+    t.mesh.visible = true;
     const k = nrg ? Math.min(nrg.length-1, Math.round(t.u*(nrg.length-1))) : 0;
     const e = nrg ? Math.pow(nrg[k]/peak, 0.6) : 0;
     const c = ramp(e);
@@ -1606,6 +1626,41 @@ function drawMouth(){
 
   g.clearRect(0,0,W,H);
   g.lineWidth=Math.max(1.5,S*0.045);
+
+  // ---- the nasal cavity, above the palate, and the velum that gates it ----
+  // This diagram had no nose at all, which for the one view that is explicitly anatomical is a
+  // strange thing to leave out — a nasal is two cavities coupled through a flap, and only one
+  // cavity was drawn. The cavity is always here, because it always is; what moves is the velum.
+  {
+    const open = nOpen;                       // 0..1, straight from the engine
+    const NB = 0.55, NT = 1.02;               // floor and roof of the nasal passage, above the palate
+    g.beginPath();
+    for(let u=0.30;u<=0.99;u+=0.02){          // roof of the nose
+      const x=X(u), y=Y(-(NT - Math.pow(Math.max(0,u-0.30)/0.69,1.7)*0.16));
+      u===0.30? g.moveTo(x,y) : g.lineTo(x,y);
+    }
+    for(let u=0.99;u>=0.30;u-=0.02){          // and back along its floor
+      g.lineTo(X(u), Y(-(NB + Math.pow(Math.max(0,u-0.30)/0.69,1.4)*0.10)));
+    }
+    g.closePath();
+    g.fillStyle = 'rgba(109,120,126,'+(0.06+0.20*open).toFixed(3)+')';
+    g.fill();
+    g.strokeStyle = 'rgba(109,120,126,'+(0.45+0.45*open).toFixed(3)+')';
+    g.stroke();
+
+    // the velum itself: a flap at the back of the palate, hanging shut or swung up and open
+    const vu = 0.30;
+    const hinge = [X(vu), Y(-NB)];
+    const ang = -Math.PI*0.42 + open*Math.PI*0.40;    // shut hangs down, open lifts to the roof
+    const len = S*0.62;
+    g.beginPath();
+    g.moveTo(hinge[0], hinge[1]);
+    g.lineTo(hinge[0]+Math.cos(ang)*len, hinge[1]-Math.sin(ang)*len);
+    g.lineWidth = Math.max(2, S*0.075);
+    g.strokeStyle = open>0.05 ? 'rgba(240,150,70,0.95)' : 'rgba(109,120,126,0.85)';
+    g.stroke();
+    g.lineWidth = Math.max(1.5, S*0.045);
+  }
 
   // ---- the fixed roof: pharynx wall curving into the hard palate ----
   g.beginPath();

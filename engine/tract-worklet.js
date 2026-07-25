@@ -472,7 +472,28 @@ class TractProcessor extends AudioWorkletProcessor {
       // A stop is silence, then a bang. Charge while the tube is sealed — a stand-in for the
       // pressure a real speaker builds — then spend it the moment the seal breaks.
       if(cl<0.14){
-        this.charge=Math.min(1,(this.charge||0)+1/(sr*0.05));
+        // THE VELUM VENTS. A nasal seals the mouth exactly as a stop does — /m/ at the lips,
+        // /n/ at the ridge, /ŋ/ at the velum — so `cl` alone cannot tell them apart, and this
+        // charged behind every one of them and fired a stop burst on release. That is a
+        // sealed cavity released under pressure, which is what a CLICK is, and it was heard
+        // as one: reported as sounding like a Kalahari bushman rather than like an artifact.
+        // The right description, because the burst was not a glitch — it was correct
+        // synthesis of an event that should not have been happening.
+        //
+        // The file already knew this. A hundred lines up, `sealedFor` checks `nasal<0.15`
+        // with the comment "pressure only builds if the air has nowhere to go — with the
+        // velum open it escapes through the nose, which is exactly why /m/ can be held
+        // forever and /b/ cannot". The fact was applied to the voice bar and not to the
+        // charge that feeds the burst.
+        //
+        // A threshold is not enough: the mouth closes before the velum has finished opening,
+        // so a hard `nasal<0.15` test still let three of eight bursts through during the
+        // approach. Pressure does not vent at a threshold, it vents continuously — so the
+        // charge builds at a rate set by how sealed the system is, and what is already there
+        // leaks away through an open nose with about a 20 ms time constant.
+        const vent=Math.min(1,this.nasal/0.15);
+        this.charge=Math.min(1,(this.charge||0)+(1-vent)/(sr*0.05));
+        if(vent>0) this.charge*=1-vent/(sr*0.02);
         this.sealAt=mi;
         // Latch the glottal state DURING the closure. Read at the release instead, /t/ and
         // /k/ open after the keyframe midpoint has already handed voicing back, so they

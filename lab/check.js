@@ -2037,13 +2037,32 @@ check("the 3D view knows about both side branches", () => {
   // which is backwards, and a diagram that teaches a child the opposite of the truth is worse
   // than no diagram. The check reads the two endpoints: the sealed one must be ABOVE the open
   // one on screen, and y grows downward here.
-  const up = /const up\s*=\s*\{[^}]*Y\(roofAt/.test(mouth);
-  const down = /const down\s*=\s*\{[^}]*hy \+ len/.test(mouth);
-  if (!up || !down) bad.push("the velum's open and shut positions are not up-and-down");
-  if (!/tip\s*=\s*\{[^}]*up\.x \+ \(down\.x-up\.x\)\*open/.test(mouth))
+  // shut is UP against the pharynx wall, open is hanging DOWN into it, and y grows downward
+  // here — so the shut position must be the more negative of the two.
+  const shut = /shutTip\s*=\s*\{[^}]*Y\(-0\.72\)/.test(mouth);
+  const opened = /openTip\s*=\s*\{[^}]*palAt\(V_TIP\)\s*\+/.test(mouth);
+  if (!shut || !opened) bad.push("the velum's shut and open positions are not up-and-down");
+  if (!/tip\s*=\s*\{[^\}]*shutTip\.x\s*\+\s*\(openTip\.x-shutTip\.x\)\*open/.test(mouth))
     bad.push("the velum does not travel from shut toward open as nOpen rises");
   // and it hinges where the hard palate ends, not off the back of the throat
-  if (!/HINGE = 0\.4[0-9]/.test(mouth)) bad.push("the velum is not hinged at the hard palate");
+  // hinged where BONE MEETS SOFT TISSUE — the back edge of the hard palate, which in this roof
+  // is where the flat part begins at 0.62. An earlier version hinged at 0.46, the middle of the
+  // soft palate, so the nasal passage began inside the palate and the air tunnelled up through
+  // the roof to reach it. Air does not pass through the palate; it passes BEHIND the velum's
+  // free edge, which is what the velopharyngeal port is.
+  if (!/V_HINGE = 0\.62/.test(mouth)) bad.push("the velum is not hinged at the hard palate's back edge");
+  if (!/V_TIP = 0\.30/.test(mouth)) bad.push("the velum has no free edge in the pharynx");
+  if (!/const port = V_TIP/.test(mouth)) bad.push("the air does not enter behind the free edge");
+  // and the drawn air must never sit below the hard palate, which would be through it
+  {
+    const palAt = u => -(u<0.30 ? 0.95-u*0.6 : u<0.62 ? 0.77-(u-0.30)*1.35 : 0.34);
+    const roof = u => -(1.08 - Math.pow(Math.max(0,u-0.24)/0.75, 1.6)*0.14);
+    const floor = u => u < 0.62 ? -0.72 : palAt(u);
+    let through = 0;
+    for (let u = 0.26; u <= 0.99; u += 0.01)
+      if (u >= 0.62 && (roof(u)+floor(u))/2 > palAt(u)) through++;
+    if (through) bad.push(`the nasal air crosses the hard palate at ${through} points`);
+  }
   // and a branch may not blink in and out — a nose is there whether or not it is in use
   if (/t\.mesh\.visible\s*=\s*open/.test(page)) bad.push("the nasal cavity vanishes when closed");
   // the engine must send what the page needs to draw them

@@ -1790,6 +1790,34 @@ check("voiceless stops are aspirated", () => {
 // means closing the first one explicitly.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── clearing the champion has to be followed by re-seeding it ──────────────
+check("the bench never leaves the tournament without a champion", () => {
+  const fs = require("fs"), bad = [];
+  const b = fs.readFileSync(__dirname + "/bench.html", "utf8");
+  // `tChamp` is re-seeded inside drawTourney(), which only runs when that tab is DRAWN. So
+  // nulling it while the tournament is already the open tab left nothing to put it back:
+  // mutateVoice(null) throws, and `{...null}` is `{}`, so the next preview replaced VOICE with
+  // a voice that had no parameters in it. Reported as the tournament going silent after a
+  // voice change.
+  //
+  // Structural rather than behavioural — this is DOM wiring and the gate cannot click. It
+  // asserts the one thing that went wrong: every clear is followed by a re-seed.
+  const lines = b.split("\n");
+  lines.forEach((l, i) => {
+    if (!/\btChamp\s*=\s*null\b/.test(l)) return;
+    if (/^\s*(let|var|const)\s/.test(l)) return;      // the declaration is not a clear
+    const after = lines.slice(i, i + 6).join(" ");
+    if (!/drawTourney\s*\(/.test(after))
+      bad.push(`line ${i+1} clears tChamp with no drawTourney() after it`);
+  });
+  // and a null champion must not be able to reach VOICE even if some other path clears it
+  if (!/if\s*\(\s*tChamp\s*\)\s*VOICE\s*=/.test(b))
+    bad.push("tSay restores VOICE from tChamp without checking it");
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ") : "every clear is followed by a re-seed" };
+});
+
 // ── the runner ─────────────────────────────────────────────────────────────
 // The gate gates correctness. It should not gate iteration. Three things follow:
 //   a subset can be run while working   node lab/check.js stops

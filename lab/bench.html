@@ -348,7 +348,14 @@ async function boot(src){
     // otherwise the Knobs sliders keep showing the previous voice's numbers while the engine
     // plays the new one, and the two disagree with nothing on screen saying so.
     if(typeof mode !== 'undefined' && mode === 'knobs') drawKnobs();
-    tChamp = null;                 // the tournament restarts from the voice you just chose
+    // The tournament restarts from the voice you just chose — but clearing the champion is
+    // only half of that. It is re-seeded inside drawTourney(), which does not run if the
+    // tournament is ALREADY the open tab, so changing voice while looking at it left tChamp
+    // null with nothing to put it back: mutateVoice(null) throws, and `{...null}` is `{}`, so
+    // the next preview replaced VOICE with a voice that had no parameters in it at all.
+    // Reported as the tournament going silent after a voice change.
+    tChamp = null;
+    if(typeof mode !== 'undefined' && mode === 'tourney') drawTourney();
   };
   document.getElementById('boot').textContent =
     'engine from ' + (ENGSRC.length>52 ? '…'+ENGSRC.slice(-49) : ENGSRC) +
@@ -556,7 +563,9 @@ async function tSay(v){
   const art = VOICE.art, name = VOICE.name;
   VOICE = { ...v, art, name };
   try { await speak(p.ph, p.stress); }
-  finally { VOICE = { ...tChamp, art, name }; }        // back to the champion, not to before
+  // Back to the champion, not to before. Guarded: `{...null}` is `{}`, which would hand the
+  // engine a voice with no parameters and nothing on screen to say why.
+  finally { if(tChamp) VOICE = { ...tChamp, art, name }; }
 }
 function drawTourney(){
   const gs = document.getElementById('tGroup');

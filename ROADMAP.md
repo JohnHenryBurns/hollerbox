@@ -2259,6 +2259,29 @@ It was still the right test for John, because John is an adult male whose tract 
 a woman's length.
 ---
 
+## The tournament went silent after a voice change
+
+Clearing the champion on a voice change was only half of a fix. `tChamp` is re-seeded inside
+`drawTourney()`, which runs when that tab is **drawn** — so changing voice while the tournament
+was already open left it null with nothing to put it back. `mutateVoice(null)` throws, and
+`{...null}` is `{}`, so the next preview replaced `VOICE` with a voice that had no parameters in
+it at all.
+
+Introduced by the fix that made a voice change repaint the Knobs panel: that path called
+`drawKnobs()` and the tournament path called nothing.
+
+Gated structurally, since this is DOM wiring the gate cannot click: **every clear of `tChamp`
+must be followed by a re-seed**, and `tSay` may not restore `VOICE` from a champion it has not
+checked. Verified by ablation.
+
+Two things worth remembering from doing it. The check flagged the *declaration* `let tChamp =
+null` as a clear on its first run — a structural check has to know the difference between
+initialising a thing and emptying it. And `git checkout -- <file>` after an ablation reverted
+the fix along with the bug, for the second time in this session; committing before ablating is
+the habit that avoids it.
+
+---
+
 ## Note on method
 
 Four times during the earlier synthesis work, a confident diagnosis turned out to be a

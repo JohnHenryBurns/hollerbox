@@ -2402,46 +2402,37 @@ anything is fitted to it.
 Reporting, not gating, until the solver exists. Failing the gate on a gap nobody has had a chance
 to close helps nobody.
 
-## Consonant solver, stage A  ◐ written, blocked on which formant measure is right
+## Consonant solver, stage A  ◐ measure adjudicated, solver ready to run
 
-`lab/solve-consonants.js` exists and fits the unbranched sonorants — /r/, /w/, /j/ — by random
-restarts and a local walk, weighted by each target's own tolerance so that /r/'s F3 dominates its
-own fit, which is correct since F3 is the whole distinction from /l/.
+The blocker was which of two formant measures to trust. Settled against the one case with an
+exact answer — a uniform tube rings at c/4L — run at **every length the model uses**, which the
+existing single-length check could not have done:
 
-It has not been run, for two reasons found in the writing.
+| n | exact | LPC | DFT |
+|---|---|---|---|
+| 30 | 735/2205/3675 | 714/2130/3522 — **3% low** | ✓ |
+| 44 | 501/1503/2506 | ✓ | ✓ |
+| 52 | 424/1272/2120 | **nothing found** | ✓ |
+| 60 | 368/1103/1838 | **nothing found** | ✓ |
 
-**The objective costs 123 ms.** `H.formants()` sweeps a brute-force DFT over the impulse
-response, so 1400 restarts across three phonemes is around nine minutes before refinement.
-`fit-preset.js` carries a comment saying exactly this — *"a brute-force DFT inside a search loop
-is about a hundred times slower, and this project has fallen for that once already"* — and it has
-now fallen for it twice, by the same author, four hundred lines away from the warning.
+**LPC returns no formants at all above about 48 sections, and `barry` is 48.** Fifty times
+quicker and unusable. The sweep is correct and stays.
 
-**And the fast alternative disagrees with the slow one.** `formantsOf`, the LPC version already
-in `fit-preset.js`, runs in 2.5 ms — fifty times quicker — and gives different answers:
+**It is 3.6× faster now anyway.** The impulse response has to stay 8192 long — at 4096 the peaks
+of a high-Q shape smear and /ŋ/ lands 910 Hz out — but the frequency *step* is not what limits
+accuracy. Measured across sixteen postures, 8192/40 disagrees with 8192/10 by at most **20 Hz**,
+an order of magnitude inside the tightest tolerance in the targets file. 123 ms → 35 ms.
 
-| | LPC | DFT |
-|---|---|---|
-| /r/ | 486 1350 2454 | 480 1340 2410 |
-| /w/ | 150 846 2538 | **260** 846 2540 |
-| /j/ | 270 **2286 3570** | 260 **2060 2320** |
+**And the trap on the way was the usual one.** A 1024-sample response gives the exact answer on a
+uniform tube in 8 ms — 15× faster — and is up to **2460 Hz wrong** on real postures. The uniform
+tube is low-Q with well-separated peaks and survives anything; validating on it and generalising
+is how five of the wrong measurements in this file happened.
 
-1250 Hz apart on /j/'s F3. It is not a range limit: extending the sweep's ceiling from 3400 to
-5000 Hz changed nothing at all, so the two are genuinely measuring different things and one of
-them is wrong about real postures.
+Gated: c/4L at six lengths from 30 to 60 sections, all within 3%. A single-length check catches a
+measure that is wrong everywhere and is useless against one that degrades with size, which is
+precisely the failure mode LPC had.
 
-**Both pass the only case with a known answer.** A uniform tube should ring at 500/1500/2500 and
-LPC gives 498/1506/2502 against the DFT's 500/1505/2505. So the test the gate already has does
-not discriminate them, and there is currently nothing that does.
-
-Stage A therefore starts by **adjudicating the two measurements**, not by solving. Fitting
-postures to a number two methods disagree about by a quarter of an octave would produce confident
-values for whichever one happens to be wrong — which is the failure this project has recorded
-more times than any other.
-
-A discriminating test wants a shape whose resonances are known analytically and which is *not*
-uniform: a two-tube approximation, where the formants follow from the two lengths and the
-junction, is the obvious candidate.
-
+The solver can now run in about a minute. That is the next piece.
 <!-- ─────────────────────────────────────────────────────────────────────────
      ADD NEW SECTIONS ABOVE THIS LINE, at the end — not before a heading.
 

@@ -39,6 +39,12 @@ is slow and most of them are nobody's target.
     HOLLER_VOICES=woman,child node lab/check.js
     HOLLER_ALL=1 node lab/check.js          # all ten, before a release
 
+## Testing by ear
+
+[TESTING.md](TESTING.md) — how to use the Knobs panel to localise a fault, and what to send back
+so it can be acted on. Written because every measurement here is a proxy and the roadmap records
+seven confident diagnoses that did not survive one; what works is *you localise it, I ablate it*.
+
 ## The gate
 
     node lab/check.js            # 19 gate checks, ~28s, blocks

@@ -348,15 +348,38 @@ class TractProcessor extends AudioWorkletProcessor {
       //
       // artTau = 0 tracks the target exactly, which is the behaviour before this existed.
       if(this.artTau>0){
-        const w=1/this.artTau, kk=w*w, cc=2*w, dt=1/sr;
+        const dt=1/sr;
         for(let i=0;i<n;i++){
+          // CRITICAL GESTURES ARE STIFFER. A constriction you have to hit — a stop's closure,
+          // a fricative's channel — is made with more effort than a vowel target, and in a
+          // mass-spring account that is literally a stiffer spring and so a shorter time
+          // constant. Articulatory phonology says the same thing in its own words.
+          //
+          // Criticality here is just how narrow the target is, which needs no extra data and
+          // is the right shape anyway: a vowel has no surface to press against and nothing to
+          // be precise about, while a sibilant channel is a few millimetres wide and being
+          // wrong by one of them is the difference between /z/ and a glide.
+          //
+          // Without this, a uniform time constant silenced /z/ outright — 0% of a vowel —
+          // because undershoot widened the channel past the point where the jet forms. A
+          // fricative with no turbulence is not a quieter fricative.
+          const tt=this.tgt[i];
+          const stiff = tt<0.6 ? Math.max(0.22, tt/0.6) : 1;
+          const w=1/(this.artTau*stiff), kk=w*w, cc=2*w;
           // A tongue does not AIM at the palate, it aims past it and the palate stops it. That
           // is why a stop closes even in fast speech while a vowel is free to fall short: the
           // target is beyond the surface and contact clamps it. Without this, a uniform time
           // constant above about 20 ms stops the tract sealing at all — measured, /d/ and /t/
           // reaching 0.308 where 0.14 is needed — and a stop that does not close is not a
           // reduced stop, it is a different sound.
-          const goal = this.tgt[i] < 0.14 ? this.tgt[i]-0.45 : this.tgt[i];
+          // Aim past the surface only when the gesture is actually a CLOSURE. Narrowness alone
+          // cannot tell one from a tight fricative: /z/ targets 0.062, well under the 0.14 that
+          // marks a stop, and aiming past it drove the channel shut — /z/ measured 0.020 and
+          // fell silent, because the jet needs the constriction to stay above 0.030. A
+          // fricative is not trying to close; it is trying to hold a gap a few millimetres
+          // wide, which is the harder thing and the reason sibilants are acquired late.
+          // `fric` already says which is which, so nothing new has to be plumbed.
+          const goal = (this.fric<0.01 && this.tgt[i]<0.14) ? this.tgt[i]-0.45 : this.tgt[i];
           this.dv[i]+=(kk*(goal-this.diam[i]) - cc*this.dv[i])*dt;
           this.diam[i]+=this.dv[i]*dt;
           if(this.diam[i]<0.02) { this.diam[i]=0.02; if(this.dv[i]<0) this.dv[i]=0; }

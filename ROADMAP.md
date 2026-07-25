@@ -1536,7 +1536,42 @@ Real anatomy does not have this problem because a tongue does not *aim at* the p
 the existing clamp does the rest, which pushes the usable range from about 0.02 out to 0.035.
 Nothing linguistic is special-cased; the geometry does it.
 
-### Why it ships off: fricatives are critical too
+### Critical gestures are stiffer  ✅ built
+
+Reported after listening: *"we lost some articulation on some consonants but the overall speech
+becomes smoother — this feels like a major leap forward."* Which is the measurement in words:
+the smoothing and the lost articulation are the same mechanism.
+
+The fix is articulatory phonology's own: **a critical gesture is made with a stiffer spring.** A
+constriction you have to hit arrives because more effort goes into it; a vowel target does not
+need to. In a mass-spring account that is literally a shorter time constant, and criticality here
+is just how narrow the target is — no extra data, and the right shape anyway, since a vowel has
+no surface to press against while a sibilant channel is a few millimetres wide.
+
+That alone fixed the closures completely: stops now seal at 0.020 across the whole range up to
+`artT=0.05`, where before they gave out at 0.035.
+
+**And one more distinction was needed.** Aiming past the surface has to apply to a *closure* and
+not to a tight fricative — narrowness cannot tell them apart. /z/ targets **0.062**, well under
+the 0.14 that marks a stop, so it was being aimed past and driven shut: measured at 0.020, silent,
+because the jet needs the constriction to stay above 0.030. A fricative is not trying to close.
+It is trying to hold a gap a few millimetres wide, which is the harder thing and the reason
+sibilants are acquired late. `fric` already says which is which.
+
+| | before | after |
+|---|---|---|
+| /z/ constriction at `artT=0.025` | 0.020 — silent | **0.062 — frication** |
+| stops sealing at `artT=0.035` | 0.101 | 0.020 |
+| stops sealing at `artT=0.05` | 0.407 — open | **0.020** |
+
+### Still off by default: voice onset time
+
+One failure remains at `artT=0.025`: VOT on /p t k/ falls to 20–30 ms against a floor of 50. The
+stops seal and the bursts fire, so it is not the closure — it is the *timing* of the release
+under inertia, and it wants its own look rather than a guess at the end of a long session.
+
+Everything else that was broken at 0.025 is fixed: /z/ sounds, word-final stops no longer drift
+open, and the gate is down from four failures to one.
 
 At `artT=0.025` the gate fails three ways, and they are regressions rather than band drift:
 

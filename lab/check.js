@@ -1815,6 +1815,37 @@ check("/h/ takes the shape of the vowel beside it", () => {
                : `ɑhɑ ${(back*100).toFixed(0)}%  ihi ${(front*100).toFixed(0)}%  uhu ${(round*100).toFixed(0)}% along` };
 });
 
+// ── the engine has to reach real time before the first word ────────────────
+report("how many blocks before the engine keeps up", () => {
+  // An AudioWorklet gets one 128-sample block every 2.90 ms and must finish inside it, or the
+  // buffer drops out — which sounds exactly like a click. The engine is interpreted before it
+  // is compiled, and cold it is twice as slow as real time.
+  //
+  // Reported as the first few sounds of a sweep popping, and the same sounds being clean on the
+  // way back. Not the phonemes: their position in the session. index.html now runs 300 ms of
+  // silence through the node before the first word, which this measures the need for.
+  //
+  // Reports rather than gates because it times a JIT on shared hardware, and a number that
+  // depends on how busy the machine is has no business failing a build.
+  const P = H.P;
+  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  const p = H.makeProcessor(n);
+  p.port.onmessage({ data: { type: "voice", v } });
+  const out = [new Float32Array(128)];
+  const budget = 128/44100*1000;
+  const slice = (a, b) => {
+    const t0 = process.hrtime.bigint();
+    for (let i = a; i < b; i++) p.process([], [out]);
+    return Number(process.hrtime.bigint() - t0)/1e6/(b - a);
+  };
+  const cold = slice(0, 20);
+  slice(20, 103);                      // the 300 ms the page now primes with
+  const warm = slice(103, 203);
+  return { ok: warm < budget,
+           note: `cold ${cold.toFixed(2)} ms/block (${(cold/budget*100).toFixed(0)}% of budget), ` +
+                 `after 300 ms priming ${warm.toFixed(2)} ms (${(warm/budget*100).toFixed(0)}%)` };
+});
+
 // ── the formant measure is right at every length, not just one ─────────────
 check("a uniform tube reads c/4L at every tract length in use", () => {
   // There was a uniform-tube check already and it ran at ONE length. That is enough to catch a

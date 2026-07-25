@@ -996,7 +996,9 @@ check("phonation eases back in after a pause", () => {
   // 1.3e-2 in about nine milliseconds — and the ear flags that as a click however smooth each
   // individual sample step is. So the thing to assert is a RISE TIME, not a discontinuity.
   const halfIn = on => {
-    const v = { ...P.defaultVoice(), ...V, onset: on };
+    // wgap at its `off` value, because the ramp exists for REAL pauses — at an ordinary
+    // word boundary there is now no silence to ease out of, which is the better fix.
+    const v = { ...P.defaultVoice(), ...V, onset: on, wgap: 0.14 };
     const { buf } = H.say(r.ph, { D: Math.max(0.8, r.ph.length*v.per), voice: v, n, stress: r.stress });
     return [0.416, 1.026].map(t0 => {
       const full = H.rms(buf, t0 + 0.06, t0 + 0.10);
@@ -1012,7 +1014,7 @@ check("phonation eases back in after a pause", () => {
   if (Math.min(...off) > 9) bad.push(`onset=0 does not restore the instant rise (${Math.min(...off)} ms)`);
   // Mid-word transitions must NOT be ramped: there is no silence there to ease out of, and
   // softening them would smear every consonant in the phrase.
-  const v = { ...P.defaultVoice(), ...V };
+  const v = { ...P.defaultVoice(), ...V, wgap: 0.14 };
   const { buf } = H.say(r.ph, { D: Math.max(0.8, r.ph.length*v.per), voice: v, n, stress: r.stress });
   if (H.rms(buf, 0.500, 0.520) < H.rms(buf, 0.600, 0.620)*0.5)
     bad.push("a mid-word transition got ramped too");
@@ -1096,35 +1098,51 @@ check("output stays finite and unclipped", () => {
   return { ok: bad.length === 0, note: bad.length ? bad.join(" ") : "clean" };
 });
 
-check("a pause is silent, but the tract keeps moving", () => {
-  // Two words joined by a gap should sound like a phrase, not two recordings. That means
-  // silence with MOVEMENT — the articulators travelling to the next target while no air
-  // flows, which is what anticipatory coarticulation is.
+check("a word boundary is a transition, and a real pause is silent", () => {
+  // This used to assert that a boundary is SILENT with movement in it. Half of that was
+  // wrong: real connected speech does not stop between words, and inserting 90-300 ms of
+  // digital silence at every space is what made each word begin from nothing — measured at
+  // 6e-12 before the /l/ of "love" against 2e-2 with the boundaries closed up. The movement
+  // half was always right and is kept.
+  const P = H.P, bad = [];
   const chain = ["h", "eɪ", " ", "d", "ɑ", "d"];
-  const { buf, seg } = H.say(chain, { D: 1.5, extra: 0.2 });
-  const pz = seg.find(g => g.sym === " ");
-  if (!pz) return { ok: false, note: "no pause segment produced" };
-  const quiet = H.rms(buf, pz.a + 0.02, pz.b - 0.02);
-
-  const P = H.makeProcessor(44);
-  const plan = H.plan(chain, 1.5, null, 44);
-  P.port.onmessage({ data: { type: "voice", v: plan.v } });
-  P.port.onmessage({ data: { type: "goal",
-    seq: { keys: plan.keys, f0: [[0, plan.v.f0a], [plan.end, plan.v.f0c]], end: plan.end } } });
-  const out = [new Float32Array(128)];
-  let firstAt = null, lastAt = null;
-  for (let b = 0; b * 128 < H.SR * (plan.end + 0.2); b++) {
-    P.process([], [out]);
-    if (P.silNow) {
-      let mn = 9, mi = 0;
-      for (let i = 1; i < 43; i++) if (P.diam[i] < mn) { mn = P.diam[i]; mi = i; }
-      if (firstAt === null) firstAt = mi;
-      lastAt = mi;
+  const trav = (wgap) => {
+    const v = { ...P.defaultVoice(), wgap };
+    const plan = H.plan(chain, 1.5, v, 44);
+    const pz = plan.seg.find(g => g.sym === " ");
+    const p = H.makeProcessor(44);
+    p.port.onmessage({ data: { type: "voice", v } });
+    p.port.onmessage({ data: { type: "goal",
+      seq: { keys: plan.keys, f0: [[0, v.f0a], [plan.end, v.f0c]], end: plan.end } } });
+    const out = [new Float32Array(128)];
+    let first = null, last = null, loud = 0, cnt = 0;
+    for (let b = 0; b*128 < H.SR*(plan.end + 0.2); b++) {
+      p.process([], [out]);
+      const t = b*128/H.SR;
+      if (pz && t >= pz.a && t <= pz.b) {
+        let mn = 9, mi = 0;
+        for (let i = 1; i < 43; i++) if (p.diam[i] < mn) { mn = p.diam[i]; mi = i; }
+        if (first === null) first = mi;
+        last = mi;
+        for (let k = 0; k < 128; k++) { loud += out[0][k]*out[0][k]; cnt++; }
+      }
     }
-  }
-  const moved = (firstAt !== null && lastAt !== null) ? Math.abs(lastAt - firstAt) : 0;
-  return { ok: quiet < 0.005 && moved >= 2,
-           note: `pause ${quiet.toFixed(5)} loud, constriction travelled ${moved} sections` };
+    return { moved: first === null ? 0 : Math.abs(last - first),
+             rms: Math.sqrt(loud/Math.max(1,cnt)) };
+  };
+  // 1. At the default, the boundary is a TRANSITION: the tract travels and the voice keeps going.
+  const a = trav(P.VOICE_SPEC.find(x => x.k === "wgap").d);
+  if (a.moved < 2) bad.push(`boundary: constriction travelled ${a.moved} sections`);
+  if (a.rms < 0.002) bad.push(`boundary is silent (${a.rms.toFixed(5)}) — it should be spoken through`);
+  // 2. A REAL pause still silences. The machinery has to survive for when punctuation reaches
+  //    the speller, which is what 8.4 step 4 is blocked on.
+  const b2 = trav(0.20);
+  if (b2.rms > 0.005) bad.push(`a 200 ms pause is not silent (${b2.rms.toFixed(5)})`);
+  if (b2.moved < 2) bad.push(`during a real pause the tract stopped moving (${b2.moved})`);
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ")
+               : `boundary ${a.rms.toFixed(4)} loud and travels ${a.moved}; a 200 ms pause ${b2.rms.toFixed(5)}, travels ${b2.moved}` };
 });
 
 check("the glottis moves with the folds", () => {

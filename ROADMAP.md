@@ -999,7 +999,44 @@ no silence there to ease out of and softening them would smear every consonant i
 that most word boundaries should carry no silence at all — still stands, and would mean far
 fewer onsets needing to be eased in the first place.
 
-### 8.5 Pause policy
+### 8.5 Pause policy  ✅ built
+
+Reported after the onset ramp landed: *"tried a wide variety of onset values and the click is
+still there. Some values dull the first or second pop but none dull both."*
+
+**That pattern is the whole diagnosis.** One knob cannot dull two events unless they are two
+mechanisms — and they were. The /l/ of "love" is a voiced onset and rides the amplitude envelope,
+so `onset` reaches it. The /d/ of "daughter" is a **burst**, and the burst is the only excitation
+path in the engine not scaled by the envelope at all, so `onset` cannot touch it. Measured: the
+/d/ release sits at 4.10e-2 for every value of `onset` from 0 to 0.06.
+
+But scaling the burst by the envelope does not fix it either — tried, measured, reverted. A
+60 ms closure gives the ramp time to finish, so `flow` is already 1 by the release. And the
+mid-word /t/ in the same phrase releases at **222%** of its vowel against the post-pause /d/'s
+114%, so the burst is not anomalously loud. It is simply the first thing after silence.
+
+**Both pops existed only because there was nothing in front of them:**
+
+| | 30 ms before /l/ | 30 ms before /d/ |
+|---|---|---|
+| a pause at every boundary | 6.2e-12 | 9.5e-12 |
+| boundaries closed up | 2.0e-2 | 1.7e-2 |
+
+A word boundary is now a **transition**, not a silence: `wgap`, default 45 ms, during which the
+articulators travel and phonation continues. At or above 90 ms it becomes a real pause and is
+silenced as before, which `off:0.14` restores exactly.
+
+The old comment on that branch said a gap should make two words *"sound like a phrase rather
+than two recordings played back to back"* — and then silenced it anyway. The intent was right
+and the implementation contradicted it.
+
+**Check 15 was rewritten, as this file predicted it would have to be.** It asserted that a
+boundary is silent *with* movement; half of that was wrong. It now asserts the boundary is
+travelled *through* while sounding, and separately that a 200 ms pause still silences — because
+the silencing machinery has to survive for when punctuation reaches the speller, which is what
+8.4 step 4 is blocked on.
+
+### 8.5 Pause policy — the original note
 
 `isPause` emits `sil:1, vl:1` and a 90–300 ms gap at **every** space. Most word boundaries
 inside a phrase carry no silence at all — only continuous articulation. Default the gap to

@@ -410,6 +410,11 @@ const VOICE_SPEC=[
   // as a click, and it is what "a pop before the L and D" turned out to be: /l/ and /d/ are
   // simply what those words start with. off:0 restores the instant onset.
   {k:'onset',lo:0,      hi:0.12,    d:0.035, off:0,},
+  // How long a word boundary takes, and whether it is silent. Below 0.09 it is a TRANSITION —
+  // the articulators travel while phonation continues, which is what connected speech does.
+  // At or above 0.09 it becomes a real pause and is silenced, which is the old behaviour and
+  // what `off` restores.
+  {k:'wgap', lo:0.015,  hi:0.30,    d:0.045, off:0.14, p8:1,},
 ];
 const VOICES = {
   // Measured from a real goal cry: the pitch falls the whole way (158 -> 93 Hz) and the
@@ -481,7 +486,7 @@ const VOICE_GROUPS = {
   source: ['rd','press','jit','brth','folds','damp','lipR'],
   pitch:  ['f0a','f0b','f0c','pert'],
   stress: ['wkdur','wklev','acc'],
-  rhythm: ['per','drawl','glide','stopT','vlen','coda','fnl','poly','stopVc','apw','gcap','onset'],
+  rhythm: ['per','drawl','glide','stopT','vlen','coda','fnl','poly','stopVc','apw','gcap','onset','wgap'],
   tract:  ['sect','open','burst','hiss'],
 };
 
@@ -687,6 +692,7 @@ function buildWord(chain, opts){
   const fnl = P_('fnl', FINAL_LENGTH), stopVc = P_('stopVc', 1.5);
   const apw = P_('apw', 0.34) * APPROX_REF;
   const gcap = P_('gcap', 0.5);
+  const wgap = P_('wgap', 0.045);
   const base  = sym => baseFor(sym, vart);
   const shape = sym => articulate(base(sym), n);
   const isStop=c=>STOP_KEYS.includes(c), isAp=c=>APPROX.includes(c);
@@ -749,20 +755,33 @@ function buildWord(chain, opts){
   const keys=[], art=[], seg=[]; let t=0, k=0;
   chain.forEach((sym,i)=>{
     if(isPause(sym)){
-      // Hold the previous shape briefly, then GLIDE to the next sound while silent. The
-      // articulators travel during the gap, which is what makes two words sound like a
-      // phrase rather than two recordings played back to back.
+      // A WORD BOUNDARY IS A TRANSITION, NOT A SILENCE. This used to insert 90-300 ms of
+      // `sil:1, vl:1` at every space, so every word began from true digital silence — measured
+      // at 6e-12 before the /l/ of "love" and 9e-12 before the /d/ of "daughter", against
+      // 2e-2 with the pauses removed. That is what was heard as a pop at each of them, and it
+      // is why one knob could never dull both: the /l/ is a voiced onset and rides the
+      // amplitude envelope, the /d/ is a burst and does not, but BOTH existed only because
+      // there was nothing in front of them.
+      //
+      // Real connected speech does not stop between words. The articulators travel while
+      // phonation continues, which is the thing that makes a phrase a phrase — the old comment
+      // here said exactly that and then silenced it anyway.
+      //
+      // The silencing machinery is kept, because a real pause is real. It just needs something
+      // to trigger it, and punctuation does not currently survive the speller — filed under
+      // 8.4 step 4, which is blocked on the same gap.
       const nextSym=chain[i+1];
-      const gap=Math.max(0.09, Math.min(0.30, 0.14*(1+drawl)));
+      const gap=Math.max(0.015, Math.min(0.30, wgap*(1+drawl)));
+      const quiet=wgap>=0.09 ? 1 : 0;        // long enough to be a pause rather than a boundary
       const prev=chain[i-1];
       const pd=prev?Array.from(shape(prev)):Array.from(shape('ə'));
       const nd=nextSym?Array.from(shape(nextSym)):pd;
       const pA=prev?base(prev):base('ə');
       const nA=nextSym?base(nextSym):pA;
-      keys.push({t,d:pd,b:0,nz:0,vl:1,fr:0,as:0,sil:1,lv:1}); art.push({t,A:pA});
+      keys.push({t,d:pd,b:0,nz:0,vl:quiet,fr:0,as:0,sil:quiet,lv:1}); art.push({t,A:pA});
       seg.push({sym:' ', a:t, b:t+gap});
       t+=gap;
-      keys.push({t,d:nd,b:0,nz:0,vl:1,fr:0,as:0,sil:1,lv:1}); art.push({t,A:nA});
+      keys.push({t,d:nd,b:0,nz:0,vl:quiet,fr:0,as:0,sil:quiet,lv:1}); art.push({t,A:nA});
       return;
     }
     const d=Array.from(shape(sym));

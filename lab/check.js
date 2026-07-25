@@ -1710,6 +1710,38 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── starting the audio is not a race ───────────────────────────────────────
+check("every caller waits for the same start", () => {
+  // start() set `started = true` on its first line and then did several hundred milliseconds of
+  // work. Four things call it, each guarded with `if(!started) await start()` — so the first
+  // caller began the work and any other arriving during it saw the flag already set, skipped
+  // the await, and carried on with `node` still null. speakWith then returned at `if(!node)`
+  // and nothing was heard.
+  //
+  // Harmless while start() was quick. Fetching the engine instead of linking it widened the
+  // window to a fetch plus the 300 ms warm-up, which is exactly when someone is clicking
+  // around — and setVoice is one of the four callers. Reported as switching voices
+  // intermittently silencing the voice.
+  const fs = require("fs"), bad = [];
+  const page = fs.readFileSync(__dirname + "/../index.html", "utf8");
+  const code = page.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+  // the flag-then-work pattern is the bug itself
+  if (/function start\s*\([^)]*\)\s*\{\s*if\s*\(\s*started\s*\)\s*return;\s*started\s*=\s*true/.test(code))
+    bad.push("start() still sets its flag before doing the work");
+  // and no caller may skip the wait on a flag
+  const skipped = (code.match(/if\s*\(\s*!started\s*\)\s*\{?\s*await start\(\)/g) || []).length;
+  if (skipped) bad.push(`${skipped} caller(s) still await start() only when a flag is unset`);
+  // what should be there instead: one promise, shared
+  if (!/startPromise\s*\|\|\s*\(\s*startPromise\s*=/.test(code))
+    bad.push("start() does not share a single promise");
+  const awaits = (code.match(/await start\(\)/g) || []).length;
+  if (awaits < 4) bad.push(`only ${awaits} unconditional awaits of start(), expected 4`);
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ") : `${awaits} callers, all awaiting one shared start` };
+});
+
 // ── a nasal must not cost more than the deadline allows ────────────────────
 report("what a nasal costs against the audio deadline", () => {
   // An AudioWorklet gets 128 samples every 2.90 ms and must finish inside it or the buffer

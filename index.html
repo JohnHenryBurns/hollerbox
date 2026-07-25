@@ -771,8 +771,25 @@ let heldSym='';                    // which sound the tract is currently shaped 
 let artTrack=null;                        // {t0,keys,end} while a word is being spoken
 let view='tube';
 
-async function start(){
-  if(started) return; started=true;
+// EVERY CALLER WAITS FOR THE SAME START, not just the first one.
+//
+// This set `started = true` on its first line and then did several hundred milliseconds of
+// work — fetching the worklet, compiling it, building the node, and idling 300 ms so the engine
+// is warm. Four different things call it, each guarded with `if(!started) await start()`. So the
+// first caller began the work and any other arriving during it saw `started` already true,
+// skipped the await entirely, and carried on with `node` still null. `speakWith` then returned
+// at `if(!node)` and nothing was heard.
+//
+// Harmless while start() was quick. Fetching the engine instead of linking it widened the window
+// from nearly nothing to a fetch plus the warm-up, which is exactly the moment someone is
+// clicking around — and `setVoice` is one of the four callers, which is why it showed up as
+// switching voices intermittently silencing the voice.
+//
+// A shared promise is the whole fix: the first call starts the work, every other call awaits the
+// same completion.
+let startPromise = null;
+function start(){ return startPromise || (startPromise = reallyStart()); }
+async function reallyStart(){
   ctx = new (window.AudioContext||window.webkitAudioContext)();
   // keep the tract ~17.5 cm whatever the hardware sample rate is
   N = Math.max(24, Math.round(ctx.sampleRate*2*0.175/350));
@@ -862,8 +879,10 @@ function setVoicing(v){
   paintBtn();
 }
 holdBtn.addEventListener('click', async ()=>{
-  if(!started){ await start(); setVoicing(1); }   // any control may unlock the audio
-  else setVoicing(voicing?0:1);
+  // any control may unlock the audio; the first press turns voicing ON, later ones toggle
+  const first = !startPromise;
+  await start();
+  setVoicing(first ? 1 : (voicing ? 0 : 1));
 });
 // space bar is the obvious thing to reach for
 addEventListener('keydown', e=>{
@@ -1099,7 +1118,7 @@ function applyVoice(v){
   node.port.postMessage({type:'voice', v});
 }
 async function speakWith(v){
-  if(!started) await start();
+  await start();
   if(!node){ engineDown(); return; }    // audio never came up — say so rather than nothing
   applyVoice(v);
   const D=+sDur.value;
@@ -1314,7 +1333,7 @@ function applyDelivery(){
 let auditionTimer=null;
 async function audition(sym){
   if(sequencing) return;
-  if(!started) await start();
+  await start();
   if(!node) return;
   setVoicing(voicing?voicing:1);
   clearTimeout(auditionTimer);
@@ -1381,7 +1400,7 @@ function buildWord(chain, D, drawl, glide, stopHold, open, pros){
 }
 async function playWord(){
   if(!chain.length) return;
-  if(!started) await start();
+  await start();
   if(!node) return;
   const D=+sDur.value, drawl=+sHold.value;
   const W=buildWord(chain, D, drawl, champion.glide, champion.stopT, champion.open||0, champion);

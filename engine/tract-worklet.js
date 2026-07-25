@@ -123,6 +123,9 @@ class TractProcessor extends AudioWorkletProcessor {
         if(v.hiss !==undefined) this.hiss=v.hiss;
         if(v.onset!==undefined) this.onset=v.onset;
         if(v.artT !==undefined) this.artTau=v.artT;
+        if(v.artCrit !==undefined) this.artCrit=v.artCrit;
+        if(v.artStiff!==undefined) this.artStiff=v.artStiff;
+        if(v.artPush !==undefined) this.artPush=v.artPush;
       }
     };
     this.calcRefl();
@@ -364,7 +367,9 @@ class TractProcessor extends AudioWorkletProcessor {
           // because undershoot widened the channel past the point where the jet forms. A
           // fricative with no turbulence is not a quieter fricative.
           const tt=this.tgt[i];
-          const stiff = tt<0.6 ? Math.max(0.22, tt/0.6) : 1;
+          const crit = this.artCrit===undefined ? 0.6 : this.artCrit;
+          const flr  = this.artStiff===undefined ? 0.22 : this.artStiff;
+          const stiff = (crit>0 && tt<crit) ? Math.max(flr, tt/crit) : 1;
           const w=1/(this.artTau*stiff), kk=w*w, cc=2*w;
           // A tongue does not AIM at the palate, it aims past it and the palate stops it. That
           // is why a stop closes even in fast speech while a vowel is free to fall short: the
@@ -379,7 +384,8 @@ class TractProcessor extends AudioWorkletProcessor {
           // fricative is not trying to close; it is trying to hold a gap a few millimetres
           // wide, which is the harder thing and the reason sibilants are acquired late.
           // `fric` already says which is which, so nothing new has to be plumbed.
-          const goal = (this.fric<0.01 && this.tgt[i]<0.14) ? this.tgt[i]-0.45 : this.tgt[i];
+          const push = this.artPush===undefined ? 0.45 : this.artPush;
+          const goal = (push>0 && this.fric<0.01 && this.tgt[i]<0.14) ? this.tgt[i]-push : this.tgt[i];
           this.dv[i]+=(kk*(goal-this.diam[i]) - cc*this.dv[i])*dt;
           this.diam[i]+=this.dv[i]*dt;
           if(this.diam[i]<0.02) { this.diam[i]=0.02; if(this.dv[i]<0) this.dv[i]=0; }

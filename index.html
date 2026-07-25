@@ -696,10 +696,16 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <!-- The phoneme layer: tract shapes, classes, voices, articulation, buildWord. One copy,
      shared with lab/harness.js and lab/bench.html. Must load before the app script. -->
-<script src="engine/phonemes.js"></script>
+<!-- ENGINE_V is a hash of the engine files. The bench fetches them with
+     cache:"no-store"; this page loads them as plain script tags, so without a
+     token in the URL a browser or GitHub Pages can serve a stale copy — which is
+     exactly what happened: a fix landed in phonemes.js, the bench had it and this
+     page did not, and the same phrase in the same voice sounded different in the
+     two. The gate recomputes this hash and fails if it has not been bumped. -->
+<script src="engine/phonemes.js?v=9bec4fda11"></script>
 <!-- The speller: g2p rules, the built-in dictionary, the personal one on top. Shared with
      the gate, which runs it with no storage and therefore tests the shipped dictionary. -->
-<script src="engine/spelling.js"></script>
+<script src="engine/spelling.js?v=9bec4fda11"></script>
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
 // The tract shapes, solved offline by searching tube geometry until the
@@ -719,7 +725,7 @@ const articulate = HOLLER.articulate;
 // stop consonants are the same move at three places along the tract
 const STOPS = HOLLER.STOPS;
 const VELAR = HOLLER.VELAR;
-const ENGINE_URL = new URL('engine/tract-worklet.js', document.baseURI).href;
+const ENGINE_URL = new URL('engine/tract-worklet.js?v=9bec4fda11', document.baseURI).href;
 
 
 // ─────────────────────────────────────────────────────────────────────────────

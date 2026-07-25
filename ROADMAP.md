@@ -1845,6 +1845,34 @@ merged branch fails loudly.
 
 ---
 
+## The page and the bench were running different engines
+
+Reported as *"the pops are gone in the bench for 'I love my daughter' on the John voice, but
+still there on the main model page."* Same phrase, same voice, same repository — different sound.
+
+Neither file was wrong. **The bench fetches the engine with `cache:"no-store"`; the page loaded
+it as plain `<script src="engine/phonemes.js">`.** So the bench always had the diphthong fix and
+the page was free to serve whatever the browser or GitHub Pages had cached.
+
+That is not a class of bug findable by reading either file, because both were correct. It is
+only visible from *outside*, by noticing that two things which should agree do not — which is
+how it was found.
+
+The engine URLs now carry a token derived from the engine's own bytes, and the gate recomputes
+it: change `phonemes.js`, `spelling.js` or `tract-worklet.js` without bumping it and the check
+fails and prints the value to paste in. Verified by ablation, and it caught its own first version
+flagging the comment that explains it.
+
+**A second divergence, smaller, found while looking.** The two pages compute a word's duration
+with different formulas — the page floors at 0.35 s, clamps to 5 and rounds to 0.1 through the
+slider; the bench floors at 0.45 and does neither. The rounding is a legitimate consequence of
+the page having a duration slider and the bench not, but the differing floor is not, and two
+copies of a formula is how this project has been bitten before. Filed rather than changed, since
+the page's value is user-editable and the bench's is not, and making them one thing means
+deciding what the slider is *for*.
+
+---
+
 ## Note on method
 
 Four times during the earlier synthesis work, a confident diagnosis turned out to be a

@@ -1152,6 +1152,45 @@ report("how far the articulators are from real anatomy", () => {
            note: `${over}/6 faster than anatomy — ${rows.join("  ")}` };
 });
 
+// ── the page cannot serve a stale engine ───────────────────────────────────
+check("index.html's engine URLs carry the current version token", () => {
+  // The bench fetches the engine with cache:"no-store". This page loads it as plain script
+  // tags, so a browser or GitHub Pages can serve a stale copy — and did: the diphthong fix
+  // landed in phonemes.js, the bench picked it up, the page did not, and the same phrase in
+  // the same voice sounded different in the two. That is not a class of bug you can find by
+  // reading either file, because both were correct.
+  //
+  // So the token is derived from the engine's own bytes and this check recomputes it. Change
+  // the engine without bumping it and the gate says so, with the value to paste in.
+  const fs = require("fs"), crypto = require("crypto");
+  const h = crypto.createHash("sha1");
+  for (const f of ["engine/phonemes.js", "engine/spelling.js", "engine/tract-worklet.js"])
+    h.update(fs.readFileSync(__dirname + "/../" + f));
+  const want = h.digest("hex").slice(0, 10);
+
+  const page = fs.readFileSync(__dirname + "/../index.html", "utf8");
+  const bad = [];
+  // Every engine URL the page references must carry it — one stale tag is enough to load an
+  // old copy of the one file that changed.
+  for (const f of ["phonemes.js", "spelling.js", "tract-worklet.js"]) {
+    const re = new RegExp("engine/" + f.replace(".", "\\.") + "\\?v=([a-f0-9]+)", "g");
+    const found = [...page.matchAll(re)].map(m => m[1]);
+    if (!found.length) bad.push(`${f} has no ?v= token`);
+    else if (found.some(v => v !== want)) bad.push(`${f} is at ${found[0]}, engine is ${want}`);
+  }
+  // And no unversioned reference may survive alongside them — one stale tag is enough.
+  // Comments are stripped first: the first version of this flagged the comment that explains
+  // the token, because that prose names the files without one.
+  const code = page.replace(/<!--[\s\S]*?-->/g, "").replace(/^\s*\/\/.*$/gm, "");
+  for (const f of ["phonemes.js", "spelling.js", "tract-worklet.js"])
+    if (new RegExp("engine/" + f.replace(".", "\\.") + "(?!\\?v=)").test(code))
+      bad.push(`${f} is also referenced without a token`);
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ") + `  — set them all to ?v=${want}`
+                            : `all three at ?v=${want}` };
+});
+
 check("no word clicks", () => {
   // A stop release is a transient, but an outlier far above the signal's own motion is a
   // click. The white-noise burst once measured 13.5x.

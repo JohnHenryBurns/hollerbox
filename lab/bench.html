@@ -249,6 +249,17 @@ let ENG = null, ctx = null, node = null, N = 44, VOICE = null;
 
 const CONS = ['b','d','g','p','t','k','s','z','ʃ','ʒ','θ','ð','f','v','h','m','n','ŋ','l','r','w','j'];
 
+/* An English word for each, because bare IPA is unreportable. A sweep came back with /j/ marked
+   "started, not identified — clearly y", and /j/ IS y: it is the sound at the front of "yes".
+   The engine was right and the answer sheet gave no way to say so. The same listener said of
+   /ð/ "I don't know what it's supposed to sound like", which is a fair thing not to know about
+   a symbol and not a fair thing not to know about the word "this". */
+const CONS_CUE = {
+  b:'bee', d:'dee', g:'go', p:'pea', t:'tea', k:'key', s:'see', z:'zoo',
+  'ʃ':'shoe', 'ʒ':'vision', 'θ':'thin', 'ð':'this', f:'fee', v:'view', h:'hat',
+  m:'me', n:'no', 'ŋ':'sing', l:'low', r:'row', w:'we', j:'yes'
+};
+
 /* THE THREE DIMENSIONS. They were one. A single-choice verdict mixed "what was it",
    "how good was it" and "what was wrong with it" into one tap, which is why the sheet could
    say "ok" and "heard as d" at the same time and mean nothing definite.
@@ -767,6 +778,10 @@ const NONSPEECH = [
   ['#hiss', 'Hiss — noise, no identity'],
   ['#blip', 'Blip — a click or thump only'],
   ['#buzz', 'Buzz — voiced, but no consonant'],
+  // A sweep reported /ð/ as "a lispy w or oo" and had nowhere to put it. A consonant that has
+  // turned into a vowel is a specific failure — the constriction is not narrow enough to make
+  // turbulence — and lumping it under "buzz" loses that.
+  ['#vowel', 'A vowel — no constriction heard'],
   ['#none', 'Nothing — silence'],
   ['#?',    "Can't tell — heard something, can't name it"]
 ];
@@ -803,7 +818,8 @@ ACC.forEach(([k,label],n)=>{
 });
 CONS.forEach(c=>{
   ['hearas','blindpick'].forEach(host=>{
-    const b=document.createElement('button'); b.textContent=c; b.dataset.heard=c;
+    const b=document.createElement('button'); b.dataset.heard=c;
+    b.innerHTML = c + '<br><span class="mini">' + (CONS_CUE[c]||'') + '</span>';
     b.onclick = host==='hearas' ? ()=>setHeard(c) : ()=>blindPick(c);
     document.getElementById(host).appendChild(b);
   });

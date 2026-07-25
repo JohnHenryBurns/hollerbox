@@ -1662,6 +1662,37 @@ function bounceWord(){
 const MOUTH_FIXED = '#c0554e', MOUTH_FLAP = '#e8a33c', MOUTH_AIR = '#3f7fd6',
       MOUTH_TONGUE = '#93a1a8';   // its own, deliberately: it shapes the air rather than gating it
 
+// ── the shape of a head, defined ONCE ──────────────────────────────────────
+//
+// This roof curve used to be written out four separate times inside drawMouth, in TWO different
+// sign conventions — one returning 0.34 and another returning -0.34 for the same place — and the
+// nasal roof and floor were defined twice more in different scopes with different bodies. Every
+// repair to this view fixed one copy and let the others drift, which is why the lines ended up
+// crossing each other: a red palate through a red nasal floor, a yellow velum through both, and
+// an air path that went where none of them were.
+//
+// One convention now: every function returns the drawing coordinate directly, the number handed
+// to Y(). More negative is higher up. Nothing redefines these locally.
+const V_HINGE = 0.62,      // where bone meets soft tissue: the back edge of the hard palate
+      V_TIP   = 0.30,      // the velum's free edge, hanging in the pharynx
+      NASO_BK = 0.20;      // how far back the nasal cavity reaches
+
+const ROOF = u => -(u < 0.30 ? 0.95 - u*0.6
+                  : u < V_HINGE ? 0.77 - (u-0.30)*1.35
+                  : 0.34);
+const NASAL_ROOF  = u => -(1.12 - Math.pow(Math.max(0,u-NASO_BK)/(1-NASO_BK), 1.5)*0.16);
+// behind the hard palate there is no bone under the nasal cavity, so its floor there is the
+// roof of the nasopharynx, which sits above the velum's hinge rather than following the palate
+const NASAL_FLOOR = u => u < V_HINGE ? -(0.80 + (V_HINGE-u)*0.10) : ROOF(u);
+const TONGUE_AT = (A, u) => {
+  let v = 0.46 + 0.20*A.jaw;
+  const xb = (u - A.bodyPos)/0.30;
+  if (Math.abs(xb) < 1) v -= A.bodyHi*0.78*0.5*(1 + Math.cos(Math.PI*xb));
+  const xt = (u - A.tipPos)/0.085;
+  if (Math.abs(xt) < 1) v -= A.tipHi*0.86*0.5*(1 + Math.cos(Math.PI*xt));
+  return v;
+};
+
 function drawMouth(){
   if(!mw) return;
   const A=artNow();
@@ -1673,62 +1704,39 @@ function drawMouth(){
   g.lineWidth=Math.max(1.5,S*0.045);
 
   // ---- the nasal cavity, the velum, and the port between them ----
-  //
-  // The velum hinges where BONE MEETS SOFT TISSUE — at the back edge of the hard palate, which
-  // in this roof is where the flat part begins at 0.62. Its free edge swings back to about 0.30.
-  // Everything between those two is the soft palate; everything behind 0.30 is pharynx wall.
-  //
-  // An earlier version hinged it at 0.46, which is the MIDDLE of the soft palate, so the nasal
-  // passage began inside the palate and the air had to tunnel up through the roof to reach it.
-  // The air does not go through the palate. It goes BEHIND the velum's free edge, up the
-  // pharynx and into the nasopharynx — which is what the velopharyngeal port is.
-  const V_HINGE = 0.62, V_TIP = 0.30;
+  // All geometry from the shared definitions above. Nothing here redefines a curve.
   {
     const open = nOpen;
-    const palAt = u => -(u<0.30 ? 0.95-u*0.6 : u<0.62 ? 0.77-(u-0.30)*1.35 : 0.34);
-    // the passage runs from the nasopharynx forward to the nostrils, its floor the palate
-    const nasalRoof = u => -(1.08 - Math.pow(Math.max(0,u-0.24)/0.75, 1.6)*0.14);
-    const nasalFloor = u => u < V_HINGE ? -0.72 : palAt(u);
-
     g.beginPath();
-    for(let u=0.24;u<=0.99;u+=0.02){ const x=X(u), y=Y(nasalRoof(u)); u===0.24? g.moveTo(x,y):g.lineTo(x,y); }
-    for(let u=0.99;u>=0.24;u-=0.02) g.lineTo(X(u), Y(nasalFloor(u)));
+    for(let u=NASO_BK;u<=0.99;u+=0.02){ const x=X(u), y=Y(NASAL_ROOF(u)); u===NASO_BK? g.moveTo(x,y):g.lineTo(x,y); }
+    for(let u=0.99;u>=NASO_BK;u-=0.02) g.lineTo(X(u), Y(NASAL_FLOOR(u)));
     g.closePath();
-    g.fillStyle = 'rgba(192,85,78,'+(0.05+0.16*open).toFixed(3)+')';
+    g.fillStyle = 'rgba(192,85,78,'+(0.04+0.14*open).toFixed(3)+')';
     g.fill();
-    g.beginPath();
-    for(let u=0.24;u<=0.99;u+=0.02){ const x=X(u), y=Y(nasalRoof(u)); u===0.24? g.moveTo(x,y):g.lineTo(x,y); }
     g.strokeStyle = MOUTH_FIXED;
+    g.beginPath();
+    for(let u=NASO_BK;u<=0.99;u+=0.02){ const x=X(u), y=Y(NASAL_ROOF(u)); u===NASO_BK? g.moveTo(x,y):g.lineTo(x,y); }
     g.stroke();
-    // the floor of the nasopharynx, behind the hard palate, is not the palate — draw that bit
-    g.beginPath();
-    for(let u=0.24;u<=V_HINGE;u+=0.02){ const x=X(u), y=Y(nasalFloor(u)); u===0.24? g.moveTo(x,y):g.lineTo(x,y); }
-    g.strokeStyle = MOUTH_FIXED;
+    g.beginPath();                       // the nasopharynx floor, which is not the palate
+    for(let u=NASO_BK;u<=V_HINGE;u+=0.02){ const x=X(u), y=Y(NASAL_FLOOR(u)); u===NASO_BK? g.moveTo(x,y):g.lineTo(x,y); }
     g.stroke();
 
-    // the velum: hinged at the hard palate's back edge, free end swinging back and down.
-    // Raised, it meets the pharynx wall and shuts the port. Hanging, the port is open.
-    const hx = X(V_HINGE), hy = Y(palAt(V_HINGE));
-    const shutTip = { x: X(V_TIP - 0.03), y: Y(-0.72) };            // up against the wall
-    const openTip = { x: X(V_TIP + 0.06), y: Y(palAt(V_TIP)+0.34) }; // hanging into the pharynx
-    const tip = { x: shutTip.x + (openTip.x-shutTip.x)*open,
-                  y: shutTip.y + (openTip.y-shutTip.y)*open };
+    // the velum, hinged at the hard palate's back edge. Raised it meets the nasopharynx floor
+    // and shuts the port; hanging, it drops into the pharynx and the port is open.
+    const hx = X(V_HINGE), hy = Y(ROOF(V_HINGE));
+    const shut = { x: X(V_TIP + 0.02), y: Y(NASAL_FLOOR(V_TIP + 0.02)) };
+    const hang = { x: X(V_TIP + 0.08), y: Y(ROOF(V_TIP) + 0.30) };
+    const tip = { x: shut.x + (hang.x - shut.x)*open, y: shut.y + (hang.y - shut.y)*open };
     g.beginPath();
     g.moveTo(hx, hy);
-    g.quadraticCurveTo(X(0.46), (hy + tip.y)/2 + S*0.10*open, tip.x, tip.y);
+    g.quadraticCurveTo(X(0.46), (hy + tip.y)/2, tip.x, tip.y);
     g.strokeStyle = MOUTH_FLAP;
     g.stroke();
   }
 
   // ---- the fixed roof: pharynx wall curving into the hard palate ----
   g.beginPath();
-  for(let u=0;u<=1.0001;u+=0.02){
-    const roof = u<0.30 ? 0.95-u*0.6
-               : u<0.62 ? 0.77-(u-0.30)*1.35
-               : 0.34;
-    const x=X(u), y=Y(-roof);
-    u===0? g.moveTo(x,y) : g.lineTo(x,y);
-  }
+  for(let u=0;u<=1.0001;u+=0.02){ const x=X(u), y=Y(ROOF(u)); u===0? g.moveTo(x,y) : g.lineTo(x,y); }
   g.strokeStyle=MOUTH_FIXED; g.stroke();
 
   // ---- the jaw line: opens downward ----
@@ -1745,14 +1753,10 @@ function drawMouth(){
   // ---- the tongue: a body that humps, and a tip that can rise ----
   g.beginPath();
   const pts=[];
-  for(let u=0.06;u<=0.97;u+=0.015){
-    let v=0.46+0.20*A.jaw;                                   // resting height, follows the jaw
-    const xb=(u-A.bodyPos)/0.30;
-    if(Math.abs(xb)<1) v-=A.bodyHi*0.78*0.5*(1+Math.cos(Math.PI*xb));
-    const xt=(u-A.tipPos)/0.085;
-    if(Math.abs(xt)<1) v-=A.tipHi*0.86*0.5*(1+Math.cos(Math.PI*xt));
-    pts.push([X(u),Y(v)]);
-  }
+  // the fifth copy of a curve that is now defined once — this one drew the tongue while the
+  // airway used its own identical version to decide where the air went, so the two could and
+  // did disagree about where the tongue was
+  for(let u=0.06;u<=0.97;u+=0.015) pts.push([X(u), Y(TONGUE_AT(A,u))]);
   pts.forEach((pt,i)=>i? g.lineTo(pt[0],pt[1]) : g.moveTo(pt[0],pt[1]));
   const last=pts[pts.length-1];
   g.lineTo(last[0],Y(1.5)); g.lineTo(pts[0][0],Y(1.5)); g.closePath();
@@ -1778,15 +1782,6 @@ function drawMouth(){
     const dd = articulate(A, N);
     let seal = -1;                                  // first section tight enough to stop the air
     for(let i=1;i<N-1;i++) if(dd[i] < 0.06){ seal = i/(N-1); break; }
-    const roofOf = u => u<0.30 ? 0.95-u*0.6 : u<0.62 ? 0.77-(u-0.30)*1.35 : 0.34;
-    const tongueOf = u => {
-      let v = 0.46+0.20*A.jaw;
-      const xb=(u-A.bodyPos)/0.30;
-      if(Math.abs(xb)<1) v -= A.bodyHi*0.78*0.5*(1+Math.cos(Math.PI*xb));
-      const xt=(u-A.tipPos)/0.085;
-      if(Math.abs(xt)<1) v -= A.tipHi*0.86*0.5*(1+Math.cos(Math.PI*xt));
-      return v;
-    };
     g.lineWidth = Math.max(2.5, S*0.085);
     g.lineCap = 'round';
     g.strokeStyle = MOUTH_AIR;
@@ -1796,7 +1791,7 @@ function drawMouth(){
     g.beginPath();
     let started = false;
     for(let u=0.04; u<=stopAt+1e-9; u+=0.02){
-      const mid = ( -roofOf(u) + tongueOf(u) ) / 2;
+      const mid = ( ROOF(u) + TONGUE_AT(A,u) ) / 2;
       const x=X(u), y=Y(mid);
       started ? g.lineTo(x,y) : (g.moveTo(x,y), started=true);
     }
@@ -1807,14 +1802,12 @@ function drawMouth(){
     if(nOpen > 0.02){
       // up the pharynx and in BEHIND the velum's free edge — through the port, not the palate.
       // Drawing it from the middle of the soft palate straight up was the tunnelling.
-      const nasalRoof = u => -(1.08 - Math.pow(Math.max(0,u-0.24)/0.75, 1.6)*0.14);
-      const nasalFloor = u => u < V_HINGE ? -0.72 : -(u<0.62 ? 0.77-(u-0.30)*1.35 : 0.34);
       g.globalAlpha = 0.85*Math.min(1, nOpen*1.6);
       g.beginPath();
       const port = V_TIP - 0.04;
-      g.moveTo(X(port), Y((-roofOf(port) + tongueOf(port))/2));      // in the pharynx
-      g.lineTo(X(port), Y((nasalRoof(port) + nasalFloor(port))/2));  // up through the port
-      for(let u=port; u<=0.99; u+=0.02) g.lineTo(X(u), Y((nasalRoof(u) + nasalFloor(u))/2));
+      g.moveTo(X(port), Y((ROOF(port) + TONGUE_AT(A,port))/2));      // in the pharynx
+      g.lineTo(X(port), Y((NASAL_ROOF(port) + NASAL_FLOOR(port))/2));  // up through the port
+      for(let u=port; u<=0.99; u+=0.02) g.lineTo(X(u), Y((NASAL_ROOF(u) + NASAL_FLOOR(u))/2));
       g.stroke();
     }
     g.globalAlpha = 1;
@@ -1827,14 +1820,14 @@ function drawMouth(){
   g.lineWidth=Math.max(1.2,S*0.03);
   g.strokeStyle = mn<0.25 ? '#ff8c42' : 'rgba(185,198,204,.45)';
   g.setLineDash(mn<0.25?[]:[S*0.10,S*0.10]);
-  const roofAt = u<0.30 ? 0.95-u*0.6 : u<0.62 ? 0.77-(u-0.30)*1.35 : 0.34;
-  g.beginPath(); g.moveTo(X(u),Y(-roofAt)); g.lineTo(X(u),Y(0.30)); g.stroke();
+
+  g.beginPath(); g.moveTo(X(u),Y(ROOF(u))); g.lineTo(X(u),Y(0.30)); g.stroke();
   g.setLineDash([]);
 
   g.font=`500 ${Math.max(11,S*0.20)}px "IBM Plex Mono", monospace`;
   g.fillStyle = mn<0.25 ? '#ff8c42' : '#7e888f';
   g.textAlign='center';
-  g.fillText(mn<0.25?'sealed':'narrowest', X(u), Y(-roofAt)-S*0.16);
+  g.fillText(mn<0.25?'sealed':'narrowest', X(u), Y(ROOF(u))-S*0.16);
 }
 
 document.querySelector('.viewtabs').addEventListener('click',e=>{

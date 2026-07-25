@@ -1790,6 +1790,30 @@ check("voiceless stops are aspirated", () => {
 // means closing the first one explicitly.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── the sonorants against their targets ────────────────────────────────────
+report("sonorants against the literature", () => {
+  // The vowels have targets and a solver and score 10/10. The consonants had neither, which is
+  // why a sweep came back 14/20 and why nothing had ever noticed that /n/ and /l/ share an F2
+  // to within ten hertz. This is the first half of fixing that: the targets. The solver that
+  // fits postures to them comes next, and until it does this reports rather than blocks —
+  // failing the gate on a gap nobody has had a chance to close yet helps nobody.
+  const fs = require("fs");
+  const T = JSON.parse(fs.readFileSync(__dirname + "/consonant-targets.json", "utf8"));
+  const rows = [], off = [];
+  for (const t of T.sonorants) {
+    const f = H.formants(t.sym, { n: 44 });
+    if (!f || f.length < 3) { off.push(`${t.sym} unmeasurable`); continue; }
+    const bad = [];
+    for (let k = 0; k < 3; k++)
+      if (Math.abs(f[k] - t.f[k]) > t.tol[k]) bad.push("F" + (k+1) + " " + f[k] + "≠" + t.f[k]);
+    if (bad.length) off.push(`${t.sym}(${bad.join(",")})`);
+    else rows.push(t.sym);
+  }
+  return { ok: off.length === 0,
+           note: `${rows.length}/${T.sonorants.length} within tolerance` +
+                 (off.length ? "   off: " + off.join("  ") : "") };
+});
+
 // ── clearing the champion has to be followed by re-seeding it ──────────────
 check("the bench never leaves the tournament without a champion", () => {
   const fs = require("fs"), bad = [];

@@ -2366,6 +2366,42 @@ to the digit. The identical numbers were the tell; a real dependency does not re
 
 ---
 
+## Consonant targets, part 1: the sonorants  ◐ targets in, solver next
+
+The vowels have measured targets and a solver that fits postures to them, and score 10/10. The
+consonants had **neither** — nothing anywhere said what /n/'s F2 should be, so nothing had ever
+noticed it was /l/'s. That is why a full sweep came back 14/20.
+
+`lab/consonant-targets.json` now carries the sonorants, adult male, the same reference population
+as the Peterson & Barney vowel set so the two are comparable. Each target has a source and its
+own tolerance — F3 for /r/ is the tightest in the file because F3 *is* the English r/l
+distinction, and nasal F1 is the loosest because the murmur's first resonance is set by the whole
+coupled system.
+
+Sonorants first because they are the class the existing machinery handles: voiced, with
+formants, measurable by `H.formants()` exactly as a vowel is. Fricatives want a spectral peak and
+a noise band; stops want a burst spectrum. Different objectives, and they come after.
+
+**2/7 within tolerance**, and the pattern is what makes the targets trustworthy:
+
+| | measured against target | what the ear reported |
+|---|---|---|
+| /l/ | within tolerance | ok, clear |
+| /m/ | within tolerance | ok, clear |
+| /n/ | F2 1210 ≠ 1700 | *"sounds like l"* |
+| /ŋ/ | F2 1950 ≠ 2300 | *"is like y"* |
+| /r/ | F3 2410 ≠ 1600 | *"an Asian saying l"* |
+| /w/ | F2 860 ≠ 610 | *"heard as v"* |
+| /j/ | F3 2320 ≠ 3000 | identified correctly |
+
+**The two that pass are the two marked "ok, clear".** Every one that misses is one that was
+misheard. The targets and the listener agree on all seven, independently — which is the evidence
+that these are the right numbers, and it is the check that should be run on any target set before
+anything is fitted to it.
+
+Reporting, not gating, until the solver exists. Failing the gate on a gap nobody has had a chance
+to close helps nobody.
+
 <!-- ─────────────────────────────────────────────────────────────────────────
      ADD NEW SECTIONS ABOVE THIS LINE, at the end — not before a heading.
 

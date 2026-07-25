@@ -300,5 +300,60 @@
   "",
   "Fitting F2 for these was the wrong objective and it showed: the solver made /ŋ/ worse and",
   "could not do better, because the number being asked for was not one the physics sets."
+ ],
+ "_fricatives": [
+  "STAGE C. Fricatives are not fitted on formants — /f/, /v/, /θ/ and /ð/ all share an F2 of",
+  "1090, which is to say four of them are the same sound by that measure. Nor on postures alone:",
+  "/f/ and /v/ are byte-identical and should be, since they differ only in voicing.",
+  "",
+  "What is wrong is the BALANCE between a voiced fricative's noise and its own voice. Measured in",
+  "a word, energy below 800 Hz:",
+  "",
+  "    /ʃ/   0%      /ʒ/  83%        /θ/   3%      /ð/  99%",
+  "    /s/   1%      /z/   4%        /f/  20%      /v/  40%",
+  "",
+  "/ʒ/ and /ð/ are almost entirely voice with a trace of frication on top, which is why one was",
+  "heard as /z/ and the other as 'a-loo-a'. Forcing them voiceless drops them to 0% and 1%: the",
+  "NOISE was always right, and the sustained measurements that said so were not wrong, they were",
+  "measuring a case where voicing is forced to a fixed level.",
+  "",
+  "TWO KNOBS HAVE TO MOVE TOGETHER. Raising frication alone makes /ʒ/ louder than a vowel before",
+  "it makes it sound like a fricative — 116% of a vowel while still 58% voice. Cutting voicing",
+  "alone leaves too little noise to hear. The pair is the objective:",
+  "",
+  "  - low-band share near the voiceless partner's, plus what voicing should add",
+  "  - level BELOW a vowel, since every fricative is quieter than one",
+  "",
+  "which is two targets and two knobs, and wants solving rather than tuning by hand."
+ ],
+ "fricatives": [
+  {
+   "sym": "v",
+   "lowBand": 40,
+   "lowTol": 18,
+   "levelMax": 55,
+   "note": "share of energy below 800 Hz, and the ceiling on loudness as a percentage of a vowel"
+  },
+  {
+   "sym": "ð",
+   "lowBand": 45,
+   "lowTol": 18,
+   "levelMax": 60,
+   "note": "share of energy below 800 Hz, and the ceiling on loudness as a percentage of a vowel"
+  },
+  {
+   "sym": "z",
+   "lowBand": 15,
+   "lowTol": 18,
+   "levelMax": 45,
+   "note": "share of energy below 800 Hz, and the ceiling on loudness as a percentage of a vowel"
+  },
+  {
+   "sym": "ʒ",
+   "lowBand": 20,
+   "lowTol": 18,
+   "levelMax": 50,
+   "note": "share of energy below 800 Hz, and the ceiling on loudness as a percentage of a vowel"
+  }
  ]
 }

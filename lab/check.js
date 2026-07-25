@@ -1710,6 +1710,44 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── a voiced fricative is not just a voice ─────────────────────────────────
+check("voiced fricatives are frication, not voicing with a trace on top", () => {
+  // Measured in a word, /ð/ had 99% of its energy below 800 Hz and /ʒ/ 83% — almost entirely
+  // voice, which is why one was heard as "a loo a" and the other as /z/. Forcing them voiceless
+  // dropped them to 1% and 0%, so the noise was always right; the balance was not.
+  //
+  // `fricDuck` is what a real constriction costs the voice: the pressure above the folds rises
+  // and the flow across them nearly stops, so the folds keep vibrating but weakly.
+  const P = H.P, bad = [];
+  const v = { ...P.defaultVoice(), ...P.VOICES.man.v }, n = Math.round(v.sect);
+  const share = (sym, voice) => {
+    const W = P.buildWord(["ɑ", sym, "ɑ"], { D: 1.2, n, pros: voice,
+                          glide: voice.glide, stopHold: voice.stopT, drawl: voice.drawl });
+    const p = H.makeProcessor(n);
+    p.port.onmessage({ data: { type: "voice", v: voice } });
+    p.port.onmessage({ data: { type: "goal",
+      seq: { keys: W.keys, f0: P.buildF0(W.end, voice), end: W.end } } });
+    const out = [new Float32Array(128)], buf = [];
+    for (let b = 0; b < Math.ceil(W.end*H.SR/128); b++) { p.process([], [out]); buf.push(...out[0]); }
+    const B = Float64Array.from(buf), seg = W.seg.find(x => x.sym === sym);
+    const a = seg.a + (seg.b-seg.a)*0.3, z = seg.a + (seg.b-seg.a)*0.7;
+    const sp = H.spectrum(B.slice(Math.floor(a*H.SR), Math.floor(z*H.SR)),
+                          { from: 0, lo: 200, hi: 9000, step: 100, hops: 4, win: 1024 });
+    return H.bandShare(sp, 200, 800);
+  };
+  const on = share("ʒ", v), off = share("ʒ", { ...v, fricDuck: 0 });
+  if (on > 45) bad.push(`/ʒ/ is ${on.toFixed(0)}% voice`);
+  // and the knob must be doing it, not something else
+  if (!(off > on + 25)) bad.push(`nulling fricDuck only moves /ʒ/ from ${on.toFixed(0)}% to ${off.toFixed(0)}%`);
+  // /v/ must keep a voice bar — a voiced fricative with none is just its voiceless partner
+  const vv = share("v", v);
+  if (vv < 8) bad.push(`/v/ has only ${vv.toFixed(0)}% voice bar left`);
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ")
+               : `/ʒ/ ${on.toFixed(0)}% voice with the duck, ${off.toFixed(0)}% without; /v/ keeps ${vv.toFixed(0)}%` };
+});
+
 // ── the Mouth view's colours mean something ────────────────────────────────
 check("the Mouth view colours by role, and the airway follows the state", () => {
   // It used to be a greyscale hierarchy — roof and jaw one grey, tongue another, lips a third —

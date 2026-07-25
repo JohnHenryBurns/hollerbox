@@ -355,5 +355,19 @@
    "levelMax": 50,
    "note": "share of energy below 800 Hz, and the ceiling on loudness as a percentage of a vowel"
   }
+ ],
+ "_dh": [
+  "/ð/ RESISTS BOTH KNOBS and is the one fricative still wrong. Gridded across fricDuck 0.55 to",
+  "0.85 and FRICATIVE 0.20 to 0.65, no combination reaches a low-band share under 55% while",
+  "staying quieter than a vowel — the best is 56% at 89% of a vowel, and 89% is too loud.",
+  "",
+  "Its noise, isolated by forcing it voiceless, peaks at 9500 Hz: the top of the measured range,",
+  "and possibly above it. So most of what is injected sits at or beyond the edge of hearing, and",
+  "getting an audible amount into the speech band means turning it up until the whole sound is",
+  "louder than a vowel. Raising FRICATIVE from 0.20 to 0.65 takes the level from 52% to 139%",
+  "while the share only falls from 98% to 85%.",
+  "",
+  "That is a spectrum problem, not a balance one, and it is the third distinct fault in this set",
+  "rather than a harder case of the first two."
  ]
 }

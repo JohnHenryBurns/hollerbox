@@ -441,6 +441,11 @@ const VOICE_SPEC=[
   // SLOWEST articulator there is: a flap of soft tissue with no bone in it and nothing to brace
   // against. The lateral pocket is the sides of the tongue parting, so it runs at half this.
   {k:'velT',    lo:0,     hi:0.06,   d:0.020, off:0,},
+  // How much of the voicing a full-strength frication costs. A voiced fricative is much
+  // quieter than a vowel — the constriction raises the pressure above the folds and the flow
+  // across them nearly stops — and `squeeze` alone was not cutting nearly enough, leaving /ð/
+  // at 99% voice and /ʒ/ at 83%.
+  {k:'fricDuck',lo:0,     hi:0.95,   d:0.75,  off:0,},
 ];
 // John, rebuilt off `man` rather than off the fit.
 //
@@ -541,7 +546,7 @@ const VOICE_GROUPS = {
   rhythm: ['per','drawl','glide','stopT','vlen','coda','fnl','poly','stopVc','apw','gcap','onset','wgap'],
   tract:  ['sect','open','burst','hiss'],
   // The articulators themselves — how a consonant is dialled.
-  gesture:['artT','artCrit','artStiff','artPush','velT'],
+  gesture:['artT','artCrit','artStiff','artPush','velT','fricDuck'],
 };
 
 // seed = each parameter as two base-36 digits of its position in range

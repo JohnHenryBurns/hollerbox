@@ -36,6 +36,24 @@ class Tract {
     this.bEnd  = 0.97;                   // +closed pocket, -0.85 open (nostrils)
     this.bR=new Float64Array(this.bN); this.bL=new Float64Array(this.bN);
     this.bRin=new Float64Array(this.bN); this.bLin=new Float64Array(this.bN);
+    // ---- the nasal tract: a second output, out of the nostrils ----
+    // This was missing entirely, so a nasal measured here was a tube sealed part-way along
+    // with nowhere for the air to go — a closed cavity, not a murmur. Every nasal formant the
+    // gate has ever reported was of the wrong system.
+    //
+    // Mirrors engine/tract-worklet.js: about 11 cm, joining at 44% along, radiating at the far
+    // end the way the lips do rather than reflecting the way the lateral pocket does. The
+    // numbers must stay in step with the worklet or the harness measures geometry the app does
+    // not have.
+    const secM = 350/(2*44100);
+    this.nN    = Math.max(8, Math.round(0.11/secM));
+    this.nPos  = Math.round(n*0.44);
+    this.nArea = 2.4;
+    this.nEnd  = -0.82;                  // radiating, like the lips
+    this.nasal = 0;                      // 0..1 velum opening
+    this.nasalOut = 0;
+    this.nR=new Float64Array(this.nN); this.nL=new Float64Array(this.nN);
+    this.nRin=new Float64Array(this.nN); this.nLin=new Float64Array(this.nN);
     this.calcReflections();
   }
 
@@ -72,9 +90,24 @@ class Tract {
       this.bLin[this.bN - 1] = this.bR[this.bN - 1] * this.bEnd;
       for (let j = 0; j < this.bN; j++) { this.bR[j] = this.bRin[j] * this.damp; this.bL[j] = this.bLin[j] * this.damp; }
     }
+    // ---- the velum opens: the nasal tract joins the oral one ----
+    this.nasalOut = 0;
+    if (this.nasal > 0.0005) {
+      const k = Math.max(0, Math.min(n - 2, this.nPos));
+      const A1 = this.A[k], A2 = this.A[k + 1], An = this.nArea * this.nasal;
+      const pj = 2 * (this.R[k] + this.L[k + 1] + this.nL[0]) / (A1 + A2 + An);
+      this.Lin[k]     = A1 * pj - this.R[k];
+      this.Rin[k + 1] = A2 * pj - this.L[k + 1];
+      const into = An * pj - this.nL[0];
+      for (let j = 0; j < this.nN - 1; j++) { this.nRin[j + 1] = this.nR[j]; this.nLin[j] = this.nL[j + 1]; }
+      this.nRin[0] = into;
+      this.nLin[this.nN - 1] = this.nR[this.nN - 1] * this.nEnd;
+      this.nasalOut = (1 + this.nEnd) * this.nR[this.nN - 1];   // out of the nostrils
+      for (let j = 0; j < this.nN; j++) { this.nR[j] = this.nRin[j] * this.damp; this.nL[j] = this.nLin[j] * this.damp; }
+    }
     // lip boundary: mostly reflected (open end), the rest radiates out
     this.Lin[n - 1] = this.R[n - 1] * this.lipReflection;
-    this.out = (1 + this.lipReflection) * this.R[n - 1];
+    this.out = (1 + this.lipReflection) * this.R[n - 1] + this.nasalOut;
     // propagate one section with a little loss
     for (let i = 0; i < n; i++) {
       this.R[i] = this.Rin[i] * this.damp;

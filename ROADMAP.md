@@ -570,6 +570,22 @@ something already known to be broken:
 
 ---
 
+## Build-a-voice wizard  ❌ not started
+
+The tournament works but asks the wrong question of a person: it offers A against B with the
+group being mutated chosen from a dropdown, so it is easy to lose track of which dimension is
+even moving.
+
+Wanted instead: a guided path a **child** can use. Pick a direction — silly, scary, tiny, giant,
+robot — hear a few options, keep going in whichever direction is more fun, then **name it** and
+get a seed back that can be saved and shared. The seed format already does the preserving; what
+is missing is the framing that turns twenty-nine numbers into four or five questions with
+obvious answers.
+
+Depends on the phonemes being dialled first — a wizard that produces reliably silly voices is
+only worth building on top of an engine whose consonants are trustworthy, or every voice a kid
+makes will have the same faults underneath the fun.
+
 ## Open questions
 
 - **Does a stadium cry even want to be intelligible?** Real ones are half-articulated. Perhaps

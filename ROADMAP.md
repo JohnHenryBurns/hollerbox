@@ -31,6 +31,29 @@ seal-and-release. But the word currently comes out, in the project's own field n
 
 ---
 
+## What is next, in order
+
+1. **The fitter cannot see a fricative.** `lab/fit-preset.js` scores postures on formants, and a
+   fricative's channel is not something formants can see — so John's fitted /z/ came out 97%
+   too wide to fricate and his /θ/ came out SEALED, which is a stop. Give the fit a second
+   objective: does this posture actually make its sound. Fixes the class, not two symbols.
+2. **Then re-test the tempo ceiling.** `per` is held at 0.095 only because a fricative goes
+   silent below it, and that silence is those two postures. It may reach 0.075 and land inside
+   15% of the recording.
+3. **/ð/'s noise peaks at 9500 Hz**, at or past the edge of hearing, so it needs absurd gain to
+   be audible at all. Spectrum, not balance.
+4. **The pops**, located to the gap after a stop, two causes eliminated, still unexplained.
+5. **The affricate.** "Jump" is *doo-ump*: /dʒ/ is spelled d+ʒ and rendered as two segments
+   where a real affricate releases a stop INTO friction, as one gesture.
+6. **The wizard**, after the phonemes are trustworthy enough that a child's saved seed is worth
+   keeping.
+
+Open and not queued: **the follower is a critically damped spring, and a muscle is not one.** Its
+acceleration is proportional to the distance remaining, so it slows as it closes. That is not
+what bites on the fricatives — those are stiffened and arrive at 97% — but it is why vowels
+undershoot by 0.24 to 0.50, and a minimum-jerk or force-limited profile would be more honest.
+A Phase 9 revision rather than a tweak.
+
 ## Where it stands
 
 | | |
@@ -794,7 +817,7 @@ and you can watch it happen.
 
 ---
 
-## Phase 8 — the suprasegmental layer  ◐ in progress
+## Phase 8 — the suprasegmental layer  ✅ complete
 
 Phase 4 said prosody was "the shape of the shout over time" and left it at six parameters.
 That framing was too small. What is actually missing is everything **above the phoneme**:
@@ -1722,43 +1745,24 @@ a real objection rather than an isolation problem.
 travel — while "she sells sea shells" barely moved. Human difficulty in that phrase comes from
 precision between *similar* targets, /s/ against /ʃ/, which a distance-based limit cannot see.
 
-## Every phrase comes out the same length  ❌ diagnosed against a recording, not fixed
+## The tempo was half real speech  ✅ fixed for John, ❌ open for the rest
 
-A reading of the twelve bench phrases, 30.7 seconds, `lab/ref/john-phrases.m4a`. Segmented by
-energy and compared against the model as the PAGE calls it — `D=2.9`, the slider's default,
-with `rate: rateFor(...)`, which is not the path the gate or any of this session's measurements
-used.
+Measured against `lab/ref/john-phrases.m4a`, calling `buildWord` the way the page does — D
+recomputed per phrase as `chain.length * per`, with `rate: rateFor(...)`.
 
-| phrase | model | spoken | ratio |
-|---|---|---|---|
-| Hello World | 2283 | 700 | **3.26** |
-| my wife is great | 2834 | 960 | **2.95** |
-| I love my daughter | 2745 | 1080 | 2.54 |
-| how now brown cow | 3058 | 1340 | 2.28 |
-| my mother and my brother | 2567 | 1240 | 2.07 |
-| she sells sea shells | 3192 | 1820 | 1.75 |
-| the quick brown fox jumps over the lazy dog | 3205 | 2700 | **1.19** |
+**The model ran a mean 1.7 to 2.0 times the speaker's duration on every phrase.** `per` was 130
+to 170 ms a sound where connected speech averages 70 to 80. John's is 0.095 now, mean 1.38. The
+other voices are deliberately untouched — one voice at a time, and this is the one with a
+recording.
 
-The spoken phrases run 700 to 2700 ms. The model's run 2180 to 3205. **It is not uniformly
-slow — it makes every utterance about the same length whatever is in it**, which is why the
-short phrases were reported as too slow and the nine-word one was not.
+**A WRONG DIAGNOSIS IS RECORDED HERE, because it was in this file for a while and someone may
+remember it.** An earlier version of this section said the model made every phrase the same
+length whatever was in it, with a table showing ratios from 1.19 to 3.26. That came from pinning
+`D=2.9`, the stale default in index.html, rather than letting `applyDelivery()` recompute it per
+phrase as the app does. With the real D the ratios are 1.58 to 2.55 — uniformly slow, not
+length-blind. Three separate measurements this session used a `buildWord` path the app does not
+use.
 
-**The cause.** `rateFor(chain, D, v)` returns `base*(D/(chain.length*per))`. Dividing by the
-chain's own length means the rate falls as a phrase gets longer, so length cancels out and D
-behaves as an absolute duration target rather than a tempo.
-
-**The fix works and is not a one-line change.** Making the rate length-independent brings the
-ratios from 1.19-3.26 to 0.78-1.44 — the shape becomes right and what is left is a uniform
-offset, which is exactly what D is for. But it breaks six gate checks, because VOT, glides and
-the slider's own range and default are all calibrated against the old meaning: at the mapping
-that makes D=2.9 natural, the slider's maximum of 5 is still faster than natural, and the goal
-cry could no longer be drawn out. Slider range, default, `rateFor` and those six checks have to
-move together.
-
-**Also recorded:** an earlier note in this file said the rate was fine at 4.3 syllables a
-second. That counted "vowels" by asking whether a symbol had an entry in VDUR, which stopped
-being a vowel test when consonants were given durations. The real figure for that phrase without
-`rate` is 2.2 syllables a second; as the page calls it, 3.4; the recording is 4.1.
 
 ## Open faults
 
@@ -1973,7 +1977,7 @@ This is no longer just a known fault — it is Phase 8, with a build order.
 
 ---
 
-## Consonant targets and solver  ◐ 5/7 sonorants
+## Consonant targets and solver  ✅ 7/7 sonorants, ◐ fricatives
 
 `lab/consonant-targets.json` holds the targets, `lab/solve-consonants.js` fits postures to them.
 
@@ -1992,39 +1996,21 @@ murmur. Fitting to that would produce confident numbers for the wrong system.
 Each target carries anatomical bounds on its own articulators. Three formants underdetermine a
 tongue: unbounded, the solver hit every target and reached /w/ with a flat body and a raised tip.
 
-## /ʒ/ is right when sustained and wrong in a word  ❌ open
+## /ʒ/ is right when sustained and wrong in a word  ✅ solved
 
-Narrowing the channel fixed the sustained sound and did **not** fix the affricate. Reported
-still as *"(static blast)doo-ump"*.
+It was the balance, not the noise. In a word /ʒ/ had 83% of its energy below 800 Hz and /ð/ had
+99% — almost entirely voice with a trace of frication on top. Forcing them voiceless dropped
+them to 0% and 1%, which is what showed the noise was always right.
 
-Everything checkable in context is correct:
+`squeeze` cuts voicing as the tract narrows and did not cut nearly enough for a fricative. A real
+one is much quieter than a vowel: the constriction raises the pressure above the folds and the
+flow across them nearly stops. `fricDuck` is what that costs, 0.75 by default. /ʒ/ is 37% voice
+now.
 
-| | in a word | |
-|---|---|---|
-| constriction | 0.151, target 0.151 | held for the whole segment |
-| in the jet's range? | yes, 0.030 < cl < 0.48 | |
-| `fric` | 0.34 | on throughout |
-| `jet` term evaluates to | **0.861** | healthy |
-| `squeeze` should give | **0.411** | voicing cut to 41% |
+The sustained measurements that said it was fine were not wrong either — `sustain()` forces
+voicing to a fixed level, so it was measuring a case that does not occur in speech.
 
-And sustained, /ʒ/ measures **96% of its energy above 3 kHz, peaking at 5800 Hz** — a proper
-sibilant.
 
-In a word it measures **16%**, and it is **louder than the vowel after it** — 3.8e-2 against
-/ʌ/'s 2.7e-2. A voiced fricative is quieter than its neighbouring vowel; the constriction raises
-supraglottal pressure and drops the flow across the folds. Ours is louder, which means voicing is
-not being reduced *and* the turbulence is not arriving.
-
-So the posture, the geometry, the frication flag, the jet and the noise shaping are all confirmed
-right — in context — and the output is still wrong. The fault is somewhere in the injection path
-itself (`hgain`, `fh2`, the front-cavity resonance) or in how the voicing level is arrived at
-through the sequence as against the way `sustainRaw` sets it directly. That is the next probe and
-it wants a fresh start rather than the tail of a long session.
-
-**The affricate is a second, separate thing.** /dʒ/ is spelled `d` + `ʒ` and rendered as a full
-stop closure with its own burst, followed by an independent fricative. A real affricate releases
-the stop *into* the friction — there is one gesture, not two. Even with /ʒ/ fixed, "d then ʒ"
-will not be "j".
 ## Note on method
 
 Four times during the earlier synthesis work, a confident diagnosis turned out to be a

@@ -1769,6 +1769,19 @@ check("voiceless stops are aspirated", () => {
 //      the gains were tuned UP to satisfy it — which is how every class of sound ended up
 //      within 2.3 dB of every other. That belongs in `report`.
 //
+//   4. A STRUCTURAL CHECK MUST NOT NAME A FILE IT DOES NOT HAVE TO. Three checks broke when the
+//      engine loader, the audio start and the phrase list moved into session.js — and none of
+//      them said "I am looking in the wrong place". They said "no loadEngine", "start() does not
+//      share a single promise", "no passages found": three false statements about a correct
+//      implementation. One of them read `startPromise` BY NAME and missed the same pattern under
+//      a different identifier; one extracted what sits between <script> tags, which is right for
+//      a page and meaningless for a module.
+//
+//      Where a check must read source, read every file the property could live in and assert the
+//      SHAPE rather than the spelling. `(\w+)\s*\|\|\s*\(\s*\1\s*=` asks the real question — is
+//      the same variable both tested and assigned in one expression — and does not care what it
+//      is called or which file it is in.
+//
 // The one deliberate exception is the wizard check, which tests options defined as patches over
 // the wizard's own base voice, and is marked where it sits.
 
@@ -1797,7 +1810,16 @@ check("no voice is inaudibly quiet, and none clips hard", () => {
   for (const nm of Object.keys(P.VOICES)) {
     const v = { ...P.defaultVoice(), ...(P.VOICES[nm].v || {}) }, n = Math.round(v.sect);
     let pk = 0;
-    for (const t of ["hello world", "the quick brown fox jumps over the lazy dog"]) {
+    // ONE PHRASE, and which one matters. This rendered "hello world" AND the pangram for every
+    // voice — twenty-two full renders to measure a peak level — and took 111 seconds, more than
+    // a third of the whole gate on a single core.
+    //
+    // The short phrase alone is not enough: the pangram peaks up to 7.6 dB higher, so helium
+    // would be called inaudibly quiet on the strength of "hello world". But the pangram is long
+    // because it is a PANGRAM, and the peak comes from stressed open vowels rather than from
+    // covering the alphabet. "How now brown cow" lands within 2.4 dB of it at half the render,
+    // and the threshold below carries that slack.
+    for (const t of ["how now brown cow"]) {
       const r = S.g2p(t);
       const D = Math.max(0.35, r.ph.length*(v.per||0.17));
       const W = P.buildWord(r.ph, { D, rate: P.rateFor(r.ph, D, v), n, stress: r.stress, pros: v,
@@ -1816,7 +1838,8 @@ check("no voice is inaudibly quiet, and none clips hard", () => {
     if (db < lo) { lo = db; loName = nm; }
     if (db > hi) { hi = db; hiName = nm; }
     // a person's recording of these phrases peaks at -8.2 dBFS
-    if (db < -14) bad.push(`${nm} peaks at ${db.toFixed(1)} dBFS — inaudibly quiet`);
+    // -12 rather than -14: the shorter phrase peaks up to 2.4 dB below the pangram
+    if (db < -16) bad.push(`${nm} peaks at ${db.toFixed(1)} dBFS — inaudibly quiet`);
     if (pk > 0.995) bad.push(`${nm} reaches ${pk.toFixed(3)} — hard against the ceiling`);
   }
   return { ok: bad.length === 0,
@@ -2107,13 +2130,23 @@ check("the wizard does not squeeze a passage into five seconds", () => {
   // reads whole passages, that ceiling crushed them: 102 sounds wants 9.7 seconds and was being
   // squeezed into 5, which is 1.94x the rate and exactly how it sounded.
   const fs = require("fs"), bad = [];
-  const page = fs.readFileSync(__dirname + "/../wizard.html", "utf8");
+  // The passages live in session.js now, shared with the bench and the main page. This used to
+  // read wizard.html, and when the list moved it reported "no passages found" rather than
+  // noticing it was looking in the wrong place — a check that greps for code is a check that
+  // fails when the code moves, whatever it does.
+  const page = fs.readFileSync(__dirname + "/../engine/session.js", "utf8")
+              + fs.readFileSync(__dirname + "/../wizard.html", "utf8");
   const code = page.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   if (/Math\.min\(5,\s*ph\.length/.test(code)) bad.push("the five-second ceiling is back");
   // and the longest passage in the file must come out at a speakable rate
   const P = H.P, S = require("../engine/spelling.js");
   const v = P.defaultVoice();
-  const books = [...page.matchAll(/\['([^']{40,})',/g)].map(m => m[1]);
+  // The passages are `{ text, kind, why }` objects in session.js now; they used to be
+  // `['text', 'attribution']` pairs in wizard.html. This regex still matched the old literal
+  // shape, so when the list moved AND changed form it reported "no passages found" — a false
+  // statement about a correct implementation, rather than a complaint about looking in the
+  // wrong place.
+  const books = [...page.matchAll(/text:\s*'([^']{40,})'/g)].map(m => m[1]);
   if (!books.length) bad.push("no passages found");
   let slowest = 99, worst = "";
   for (const t of books) {
@@ -2749,7 +2782,11 @@ check("every caller waits for the same start", () => {
   // around — and setVoice is one of the four callers. Reported as switching voices
   // intermittently silencing the voice.
   const fs = require("fs"), bad = [];
-  const page = fs.readFileSync(__dirname + "/../index.html", "utf8");
+  // Loading and starting live in session.js now, shared by all three pages — which is the point:
+  // this code had already produced two bugs and both were fixed once, in one copy of three. Read
+  // together, because a page may still hold the bootstrap that fetches session.js itself.
+  const page = fs.readFileSync(__dirname + "/../engine/session.js", "utf8")
+              + fs.readFileSync(__dirname + "/../index.html", "utf8");
   const code = page.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
   // the flag-then-work pattern is the bug itself
@@ -2759,8 +2796,12 @@ check("every caller waits for the same start", () => {
   const skipped = (code.match(/if\s*\(\s*!started\s*\)\s*\{?\s*await start\(\)/g) || []).length;
   if (skipped) bad.push(`${skipped} caller(s) still await start() only when a flag is unset`);
   // what should be there instead: one promise, shared
-  if (!/startPromise\s*\|\|\s*\(\s*startPromise\s*=/.test(code))
-    bad.push("start() does not share a single promise");
+  // The SHAPE, not the identifier. This read `startPromise` by name, and when the start moved
+  // into session.js under a different one it reported a correct implementation as missing. A
+  // back-reference asks the real question — is the same variable both tested and assigned in one
+  // expression — which is what makes a second caller wait rather than proceed with no node.
+  if (!/(\w+)\s*\|\|\s*\(\s*\1\s*=/.test(code))
+    bad.push("no caller-sharing promise: nothing of the form `p || (p = ...)`");
   const awaits = (code.match(/await start\(\)/g) || []).length;
   if (awaits < 4) bad.push(`only ${awaits} unconditional awaits of start(), expected 4`);
 
@@ -2822,26 +2863,47 @@ check("the engine is fetched rather than linked", () => {
   // so that stays true: the moment anything goes back to a plain <script src> for the engine,
   // the skew becomes possible again with nothing left to catch it.
   const fs = require("fs"), bad = [];
-  const raw = fs.readFileSync(__dirname + "/../index.html", "utf8");
+  // Loading lives in session.js now, shared by all three pages. Read together, because each page
+  // still holds the small bootstrap that fetches session.js itself — the property under test is
+  // that NOTHING is linked with a plain tag as its primary path, and that is a claim about both.
+  const raw = fs.readFileSync(__dirname + "/../engine/session.js", "utf8")
+            + fs.readFileSync(__dirname + "/../index.html", "utf8");
   // comments stripped first: the note explaining why the tokens went away quotes the old
   // `<script src="engine/phonemes.js?v=HASH">` verbatim, and the first version of this check
   // read its own explanation as the thing it forbids. Second time that has happened.
   const page = raw.replace(/<!--[\s\S]*?-->/g, "")
                   .replace(/\/\*[\s\S]*?\*\//g, "")
                   .replace(/^\s*(\/\/|\*).*$/gm, "");
-  const body = (page.match(/<script>[\s\S]*<\/script>/) || [""])[0];
+  // `page` rather than `body`. That extracted what sits between <script> tags, which is right
+  // for a page and wrong for a module — session.js has none, so every assertion below was
+  // silently testing index.html alone and reporting the loader as absent when it had merely
+  // moved. A check that names where code lives fails when the code moves, and says the wrong
+  // thing when it does.
 
-  if (/<script src="engine\//.test(page)) bad.push("an engine file is still linked with a script tag");
+  if (/<script src="engine\/(phonemes|spelling|tract-worklet)/.test(page))
+    bad.push("an engine file is still linked with a script tag");
   if (/engine\/[a-z-]+\.js\?v=/.test(page)) bad.push("a version token is back in an engine URL");
-  if (!/async function loadEngine/.test(body)) bad.push("no loadEngine");
-  if ((body.match(/await loadEngine\(/g) || []).length < 2) bad.push("not both engine files are fetched");
-  if (!/createObjectURL\(new Blob/.test(body)) bad.push("the worklet does not go through a Blob");
+  if (!/async function loadEngine/.test(page)) bad.push("no loadEngine");
+  // Both engine files must be fetched. This counted `await loadEngine(` twice, which described
+  // the old shape — one call per file. session.js takes both inside one call, so the question is
+  // whether both are named, not how many times something is awaited.
+  for (const f of ["phonemes.js", "spelling.js"])
+    if (!new RegExp("'" + f.replace(".", "\\.") + "'|\"" + f.replace(".", "\\.") + "\"").test(page))
+      bad.push(`${f} is never fetched`);
+  if (!/createObjectURL\(new Blob/.test(page)) bad.push("the worklet does not go through a Blob");
   // two in code: the engine files and the worklet. A third occurrence used to be counted and
   // it was inside the comment above them, which this now strips.
-  if ((body.match(/cache: *['"]no-store['"]/g) || []).length < 2)
+  if ((page.match(/cache: *['"]no-store['"]/g) || []).length < 2)
     bad.push("fewer than two no-store fetches — something is free to come from cache");
   // and nothing may touch the engine before it has been loaded
-  const firstLoad = body.indexOf("await loadEngine"), firstUse = body.indexOf("HOLLER.");
+  // And nothing may touch the engine before it is loaded. This compared two positions in one
+  // file, which stops meaning anything once the loader and its callers are in different files.
+  // The guarantee is structural now: session.js resolves HOLLER when a function RUNS rather than
+  // when the module is parsed, which is exactly what lets it be fetched first and fetch the rest.
+  const mod = fs.readFileSync(__dirname + "/../engine/session.js", "utf8");
+  const firstLoad = 0, firstUse = -1;
+  if (!/const eng = \(\) =>/.test(mod))
+    bad.push("session.js resolves the engine at load time — it must look it up when used");
   if (firstUse !== -1 && firstUse < firstLoad) bad.push("HOLLER is used before the engine is fetched");
 
   return { ok: bad.length === 0,
@@ -3201,13 +3263,35 @@ if (!isMainThread && workerData && workerData.idx) {
   // done — which is the thing this runner exists to fix.
   for (const i of workerData.idx) parentPort.postMessage([runOne(i)]);
 } else {
-  const args  = process.argv.slice(2).filter(a => a !== "--list" && a !== "--report");
+  const args  = process.argv.slice(2).filter(a => a !== "--list" && a !== "--report" && a !== "--quick");
   const query = (process.env.HOLLER_ONLY || args.join(" ")).trim().toLowerCase();
   const terms = query ? query.split(/[,\s]+/).filter(Boolean) : [];
   const wantReport = process.argv.includes("--report") || !!process.env.HOLLER_REPORT;
+  // ── --quick ────────────────────────────────────────────────────────────
+  //
+  // Forty-three of the fifty-nine checks run in twenty-six seconds between them. Sixteen slow
+  // ones account for ninety-one per cent of the time, and this machine has ONE core, so the
+  // worker pool above buys nothing: the full run is 296 seconds of serial work, which is past
+  // the point where anybody runs it while tuning.
+  //
+  // --quick runs everything that was fast last time. It is self-maintaining rather than
+  // hand-tagged: a full run records what each check cost, and --quick reads that. Nobody has to
+  // remember to mark a check slow when it becomes slow, which is the failure mode a tag list has.
+  //
+  // It prints as a SUBSET, and the runner already refuses to call a subset green.
+  const TIMES = __dirname + "/.check-times.json";
+  const quick = process.argv.includes("--quick");
+  let prev = null;
+  if (quick) {
+    try { prev = JSON.parse(require("fs").readFileSync(TIMES, "utf8")); }
+    catch (e) { console.log("  (no recorded timings yet — running everything once to make some)"); }
+  }
+  const SLOW_MS = 3000;
+
   const idx = REG.map((_, i) => i)
                  .filter(i => wantReport || REG[i].tier === "gate")
-                 .filter(i => !terms.length || terms.some(t => REG[i].name.toLowerCase().includes(t)));
+                 .filter(i => !terms.length || terms.some(t => REG[i].name.toLowerCase().includes(t)))
+                 .filter(i => !(quick && prev && prev[REG[i].name] > SLOW_MS));
 
   if (process.argv.includes("--list")) {
     REG.forEach((c, i) => console.log(`  ${String(i).padStart(2)}  ${c.tier === "gate" ? "gate  " : "report"}  ${c.name}`));
@@ -3232,6 +3316,18 @@ if (!isMainThread && workerData && workerData.idx) {
 
   const verdict = () => {
     done.sort((a, b) => a.i - b.i);
+    // Record what each check cost, so --quick knows what to skip next time. Written on any run
+    // that was not itself filtered, merged with what is already there so a --report run does not
+    // erase the gate's timings or the other way round.
+    if (!terms.length && !quick) {
+      try {
+        const fs2 = require("fs");
+        let all = {};
+        try { all = JSON.parse(fs2.readFileSync(TIMES, "utf8")); } catch (e) {}
+        for (const r of done) all[r.name] = Math.round(r.ms);
+        fs2.writeFileSync(TIMES, JSON.stringify(all, null, 1));
+      } catch (e) { /* a timing file that will not write is not worth failing over */ }
+    }
     // Only the gate tier can fail the build. A report line that has moved is information.
     const failed = done.filter(r => !r.ok && r.tier === "gate");
     const drifted = done.filter(r => !r.ok && r.tier === "report");

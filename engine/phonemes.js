@@ -477,6 +477,11 @@ const VOICE_SPEC=[
   // presses into it and the tissue stops it. off:0 aims exactly at the target, which is what
   // made stops fail to seal above artT=0.02.
   {k:'artPush', lo:0,     hi:1,      d:0.45,  off:0,},
+  // Output level. Every voice peaked between -13 and -24 dBFS where a normal recording peaks
+  // near -8, so about 24 dB of range went unused and the whole thing was quiet at full volume.
+  // Soft-saturated rather than clamped, because the spread between the quietest and loudest
+  // voice is 11 dB and a flat gain with a hard clip cannot serve both.
+  {k:'outGain', lo:0.5,   hi:12,     d:4.0,   off:1,},
   // How far a section has to travel before it is driven at full stiffness. A muscle pulls
   // harder for a longer movement, and keying stiffness on how NARROW a target is instead meant
   // the widest movements in the model got the slowest articulators. off:0 removes the travel
@@ -599,7 +604,7 @@ const VOICE_GROUPS = {
   pitch:  ['f0a','f0b','f0c','pert'],
   stress: ['wkdur','wklev','acc'],
   rhythm: ['per','drawl','glide','stopT','vlen','coda','fnl','poly','stopVc','apw','gcap','onset','wgap'],
-  tract:  ['sect','open','burst','hiss'],
+  tract:  ['sect','open','burst','hiss','outGain'],
   // The articulators themselves — how a consonant is dialled.
   gesture:['artT','artCrit','artStiff','artPush','velT','fricDuck','decl','reset','ask','artFar'],
 };

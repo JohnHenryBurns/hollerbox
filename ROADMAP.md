@@ -48,6 +48,14 @@ seal-and-release. But the word currently comes out, in the project's own field n
 6. **The wizard**, after the phonemes are trustworthy enough that a child's saved seed is worth
    keeping.
 
+**Articulator speed has to match speaking speed.** `artT` is an absolute time constant, chosen
+when the model spoke at about half a real rate. The moment one voice was calibrated to a
+recording and given a real tempo, its articulators could not keep up — John undershot by 0.458
+where every other voice sat near 0.12, because every other voice is still slow. John's is 0.012
+now and it matches the rest at half their duration. **Every voice that gets a real tempo will
+need this**, and a voice's articulators arguably ought to scale with its tract length rather than
+being set by hand.
+
 Open and not queued: **the follower is a critically damped spring, and a muscle is not one.** Its
 acceleration is proportional to the distance remaining, so it slows as it closes. That is not
 what bites on the fricatives — those are stiffened and arrive at 97% — but it is why vowels

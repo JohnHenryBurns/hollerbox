@@ -380,7 +380,11 @@ const VOICE_SPEC=[
   {k:'hiss', lo:0.3,    hi:2.2,     d:1.0},    // how hard fricatives hiss
   {k:'sect', lo:14,     hi:52,      d:44},     // tract length in sections (44 = 17.5 cm)
   {k:'open', lo:0,      hi:1,       d:0.05, off:0,},   // how far a held vowel opens as it is shouted
-  {k:'per',  lo:0.10,   hi:0.80,    d:0.17},   // seconds per sound
+  // SECONDS PER SOUND. The floor was 0.10 while a calibrated voice sits at 0.095 — so John was
+  // below his own declared minimum, and a seed round-trip would have clamped his tempo back up.
+  // Real connected speech averages 70 to 80 milliseconds a sound, so the floor was wrong on its
+  // own terms as well.
+  {k:'per',  lo:0.04,   hi:0.80,    d:0.17},   // seconds per sound
   {k:'folds',lo:0,      hi:1,       d:0, off:0,},      // 0 = LF waveform, 1 = two-mass oscillator
   // ---- the prosody layer, Phase 8 ----
   // These were module constants until now, which meant the one part of the model that most

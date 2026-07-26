@@ -631,11 +631,22 @@ something already known to be broken:
 
 ---
 
-## Build-a-voice wizard  ✅ built
+## Build-a-voice wizard  ✅ built, with a random walk after it
 
 `wizard.html`, linked from the header. Four questions with options you can hear — how big, how
 lively, what the voice is like, how fast — then a name and a seed. Six public-domain passages to
 read, long enough to judge a voice by, which a single phrase is not.
+
+After the four questions there is a walk: two mutations of the current voice, keep the one you
+prefer, walk again from the winner. That is the tournament, with two differences — the thing
+being compared is a voice you already chose rather than an arbitrary point, and nothing asks you
+to track which group is mutating. Choosing a different answer to any question abandons the walk,
+because the answers no longer describe where it got to.
+
+Widening the range is its own toggle rather than part of the walk. The range parameters get a
+much bigger push than the rest when it is on — a walk that only nudges will not cross a gap the
+size of the one below — and they are frozen entirely when it is off, because someone who wants a
+small quiet voice should be able to have one.
 
 The second question exists because of a measurement. Against a recording of a person reading
 the bench phrases:

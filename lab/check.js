@@ -1805,9 +1805,42 @@ check("the voice wizard's options actually differ", () => {
     const flat = { ...base, ...life.opts[0][2] }, wild = { ...base, ...life.opts[life.opts.length-1][2] };
     if (!((wild.acc || 0) > (flat.acc || 0) + 3)) bad.push("the liveliest option is not much livelier");
   }
+  // ---- the random walk that runs after the questions ----
+  // The four answers get you into the right neighbourhood and cannot get further, because each
+  // moves several parameters together in a fixed pattern. The walk goes on from there, and two
+  // things about it have to hold: it must stay inside every parameter's declared bounds, and
+  // the range parameters must be separable — a walk that always widens is no use to someone who
+  // wants a small quiet voice.
+  const walk = (page.match(/const WALK = \[[\s\S]*?const RANGE = \[[^\]]*\];/) || [""])[0];
+  const mut  = (page.match(/function mutate\(v, strength\)\{[\s\S]*?\n\}/) || [""])[0];
+  const prng = (page.match(/let seed = [\s\S]*?\n\};/) || [""])[0];
+  if (!walk || !mut || !prng) bad.push("cannot find the wizard's walk");
+  else {
+    const mk = on => new Function("HOLLER", "document",
+      walk + "\n" + prng + "\n" + mut + "\nreturn mutate;")(P, { getElementById: () => ({ checked: on }) });
+    const base = { ...P.defaultVoice(), ...P.VOICES.john.v };
+    let v = { ...base }, oob = 0;
+    const step = mk(true);
+    for (let i = 0; i < 200; i++) {
+      v = step(v, 1);
+      for (const k of Object.keys(v)) {
+        const sp = P.VOICE_SPEC.find(x => x.k === k);
+        if (sp && (v[k] < sp.lo - 1e-9 || v[k] > sp.hi + 1e-9)) oob++;
+      }
+    }
+    if (oob) bad.push(`${oob} values escaped their bounds in 200 steps`);
+    // with the toggle off, nothing in RANGE may move at all
+    let w = { ...base };
+    const quiet = mk(false);
+    for (let i = 0; i < 200; i++) w = quiet(w, 1);
+    const moved = ["acc","decl","wklev","wkdur"].filter(k => Math.abs((w[k] ?? 0) - (base[k] ?? 0)) > 1e-9);
+    if (moved.length) bad.push(`range parameters moved with the toggle off: ${moved.join(" ")}`);
+  }
+
   return { ok: bad.length === 0,
            note: bad.length ? bad.join("  ")
-               : `${Q.length} questions, ${Q.reduce((a,q) => a + q.opts.length, 0)} options, all live` };
+               : `${Q.length} questions, ${Q.reduce((a,q) => a + q.opts.length, 0)} options, ` +
+                 `walk stays in bounds over 200 steps` };
 });
 
 // ── articulator speed has to match speaking speed ─────────────────────────

@@ -433,7 +433,15 @@ const VOICE_SPEC=[
   {k:'artT',    lo:0,     hi:0.06,   d:0.025, off:0,},   // how much mass the articulators have
   // How narrow a target has to be before it counts as CRITICAL — something the speaker has to
   // hit rather than aim at. off:0 makes nothing critical, so every gesture is equally lazy.
-  {k:'artCrit', lo:0,     hi:1.2,    d:0.6,   off:0,},
+  // How wide a target still counts as a gesture that has to be HIT. At 0.6 only constrictions
+  // qualified, and everything wider took the full slow time constant — so /n/ sealed to within
+  // a thousandth while its pharynx sat 0.8 out. Raising it stiffens the resonator too.
+  //
+  // The vowel formant error it buys is small in absolute terms — 1.6% to 0.6% — because
+  // formants are insensitive to the exact width of a wide section. It is worth having anyway,
+  // and it is worth recording that the DIAMETER distance overstated this badly: 0.426 of
+  // undershoot in the wide parts sounds like a catastrophe and is 1.6% of formant error.
+  {k:'artCrit', lo:0,     hi:4.0,    d:2.0,   off:0,},
   // How much stiffer the most critical gesture is, as a fraction of the base time constant.
   // Lower is crisper: 0.22 means a full closure is tracked four and a half times faster than a
   // vowel. off:1 removes the distinction entirely and is what silenced /z/ the first time.

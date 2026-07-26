@@ -301,4 +301,51 @@ function antiformant(sym, { n = 44, art = null, lo = 300, hi = 4600, step = 20 }
   return best ? best.f : null;
 }
 
-module.exports = { P, SR, sustain, say, plan, setSeed, BASE_SEED, rms, spectrum, peakOf, centroid, bandOf, bandShare, formants, antiformant, outlier, makeProcessor };
+/** The formants of a tract shape AS IT ACTUALLY IS, rather than of a posture's ideal.
+ *
+ *  formants() articulates a symbol and measures that. This takes the live diameter array out of
+ *  a running processor, which is the only way to ask whether a vowel in a phrase lands on the
+ *  formants it has in isolation — the difference between "the model knows what an /ɑ/ is" and
+ *  "the model said one".
+ *
+ *  Deliberately a copy of formants() with one line changed. A first version reimplemented the
+ *  spectrum from scratch — no Hann window, a different peak test — and disagreed with it
+ *  wildly: /ɑ/ read 340/540/1380 against 730/1090/2770 for the same posture. Two instruments
+ *  for one quantity is the mistake this file keeps making. */
+function formantsOfShape(diam, { n = 44, bOpen = 0, nasal = 0 } = {}) {
+  const { Tract } = require("./tract.js");
+  // SIZED TO n. This built a default-length Tract and then wrote n diameters into it, so any
+  // n below the default left stale values in the tail and any n above it threw. Every
+  // measurement taken at a length other than 44 was of a tract that was not that length.
+  const t = new Tract(n);
+  for (let i = 0; i < n; i++) t.diam[i] = diam[i];
+  t.bOpen = bOpen;
+  t.nasal = nasal;
+  t.calcReflections();
+  const L = 8192, ir = new Float64Array(L);
+  ir[0] = t.sample(1); for (let i = 1; i < L; i++) ir[i] = t.sample(0);
+  const pk = []; let a = 0, b = 0;
+  // STEP 40, not 10. The impulse response has to stay 8192 long — at 4096 the peaks of a
+  // high-Q shape smear and /ŋ/ lands 910 Hz out — but the frequency STEP is not what limits
+  // accuracy, and coarsening it is close to free: measured across sixteen postures, 8192/40
+  // disagrees with 8192/10 by at most 20 Hz, which is an order of magnitude inside the
+  // tightest tolerance in consonant-targets.json. 123 ms becomes 34.
+  //
+  // Worth having because this is a search objective now, and 123 ms makes a solver take nine
+  // minutes. The obvious alternative — the LPC in fit-preset.js, fifty times quicker — was
+  // tried and is not usable: it returns NOTHING at n=52 and n=60, and `barry` is 48.
+  for (let f = 180; f <= 3400; f += 40) {
+    let re = 0, im = 0;
+    for (let i = 0; i < L; i++) {
+      const w = 0.5 - 0.5*Math.cos(2*Math.PI*i/L);
+      const q = 2*Math.PI*f*i/SR;
+      re += ir[i]*w*Math.cos(q); im -= ir[i]*w*Math.sin(q);
+    }
+    const m = Math.hypot(re, im);
+    if (b > a && b > m) pk.push(f - 10);
+    a = b; b = m;
+  }
+  return pk.slice(0, 3);
+}
+
+module.exports = { P, SR, sustain, say, plan, setSeed, BASE_SEED, rms, spectrum, peakOf, centroid, bandOf, bandShare, formants, formantsOfShape, antiformant, outlier, makeProcessor };

@@ -1721,6 +1721,49 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── a vowel in a phrase lands on its own formants ─────────────────────────
+check("vowels in a phrase reach the formants they have alone", () => {
+  // The distinction this makes is between "the model knows what an /ɑ/ is" — which
+  // formants-vs-Peterson-&-Barney already checks — and "the model said one". A posture measured
+  // in isolation says nothing about whether the tract ever gets there mid-phrase.
+  //
+  // It exists because a DIAMETER-distance metric badly overstated the problem: the wide parts
+  // of the tract sat 0.43 out of position, which sounds like a catastrophe, and translated to
+  // 1.6% of formant error, because a wide section's exact width barely moves a resonance. The
+  // thing that matters had to be measured directly.
+  const P = H.P, S = require("../engine/spelling.js");
+  const VOW = ["i","ɪ","ɛ","æ","ɑ","ɔ","ʊ","u","ʌ","ɝ"];
+  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  let err = 0, cnt = 0, worst = 0, worstSym = "";
+  for (const t of ["she sells sea shells", "hello world", "banana and a tomato"]) {
+    const r = S.g2p(t);
+    const D = Math.max(0.35, Math.min(5, r.ph.length*(v.per||0.17)));
+    const W = P.buildWord(r.ph, { D, rate: P.rateFor(r.ph, D, v), n, stress: r.stress, pros: v,
+                          glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    const p = H.makeProcessor(n);
+    p.port.onmessage({ data: { type: "voice", v } });
+    p.port.onmessage({ data: { type: "goal",
+      seq: { keys: W.keys, f0: P.buildF0(W.end, v, { stress: r.stress, seg: W.seg }), end: W.end } } });
+    const out = [new Float32Array(128)];
+    for (let b = 0; b < Math.ceil(W.end*H.SR/128); b++) {
+      p.process([], [out]);
+      const tt = b*128/H.SR;
+      const sg = W.seg.find(x => tt >= x.a && tt <= x.b);
+      if (!sg || !VOW.includes(sg.sym) || Math.abs(tt - (sg.a+sg.b)/2) > 0.006) continue;
+      const want = H.formants(sg.sym, { n });
+      const got = H.formantsOfShape(p.diam, { n });
+      if (!want || !got || want.length < 2 || got.length < 2) continue;
+      const e = 100*(Math.abs(got[0]-want[0])/want[0] + Math.abs(got[1]-want[1])/want[1])/2;
+      err += e; cnt++;
+      if (e > worst) { worst = e; worstSym = sg.sym; }
+    }
+  }
+  const mean = cnt ? err/cnt : 99;
+  return { ok: cnt > 4 && mean < 4 && worst < 12,
+           note: cnt ? `${cnt} vowels, mean ${mean.toFixed(2)}% off, worst /${worstSym}/ ${worst.toFixed(1)}%`
+                     : "no vowels measured" };
+});
+
 // ── articulator speed has to match speaking speed ─────────────────────────
 report("undershoot at each voice's own tempo", () => {
   // Raised from listening: the child's voice sounds the most natural, with a bounce that makes

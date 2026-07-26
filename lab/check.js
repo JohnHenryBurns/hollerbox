@@ -1781,6 +1781,41 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── an unstressed vowel is a schwa ────────────────────────────────────────
+check("unstressed vowels reduce", () => {
+  // The largest single rule in English vowel quality, and it was not applied at all. The stress
+  // marking was already correct — every vowel that should reduce was already marked unstressed
+  // — so "travelled" came out /trævɛld/, "ago" /ægoʊ/, "family" /fæmɪli/. Reading a passage
+  // aloud is what made it obvious; single words hide it.
+  const S = require("../engine/spelling.js"), bad = [];
+  const REDUCES = {
+    travelled: "trævəld", ago: "əgoʊ", family: "fæməli", banana: "bənænə",
+    hello: "həloʊ", about: "əbaʊt", again: "əgɛn",
+  };
+  // and the three exceptions, all real
+  const KEEPS = {
+    tomato: "təmeɪtoʊ",   // a diphthong does not reduce
+    happy: "hæpi",        // word-final /i/ from <y> is a full vowel now
+    city: "sɪti",
+    other: "ʌðɝ",         // /ɝ/ is already a reduced vowel; reducing it would delete the r
+    cabin: "kæbɪn",       // /ɪ/ resists in a CLOSED syllable
+    rabbit: "ræbɪt",
+    music: "mjuzɪk",
+  };
+  for (const [w, want] of Object.entries({ ...REDUCES, ...KEEPS })) {
+    const got = S.g2p(w).ph.join("");
+    if (got !== want) bad.push(`${w} /${got}/ want /${want}/`);
+  }
+  // a stressed vowel must never reduce, whatever else happens
+  for (const [w, v] of [["cat","æ"], ["boot","u"], ["bed","ɛ"]]) {
+    const ph = S.g2p(w).ph;
+    if (!ph.includes(v)) bad.push(`${w} lost its stressed /${v}/: /${ph.join("")}/`);
+  }
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.slice(0,4).join("  ")
+               : `${Object.keys(REDUCES).length} reduce, ${Object.keys(KEEPS).length} exceptions hold` };
+});
+
 // ── no voice may fail this gate ───────────────────────────────────────────
 check("no check depends on a tuned preset", () => {
   // A voice is data. Thirty checks here read `VOICES.john.v` and would fail if John were

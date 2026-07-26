@@ -1794,6 +1794,35 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── magic e, and what comes before a rule ─────────────────────────────────
+check("a magic e makes the vowel English actually has", () => {
+  // Every magic-e vowel in the table produced what English has — a gives eɪ, i gives aɪ — except
+  // o, which gave a bare monophthong the language does not use in that position. The rule four
+  // lines below it, for "go" and "no" and "hello", had oʊ right the whole time. So note, hole,
+  // rose, stone and every regular past tense built on one of them came out with a vowel no
+  // English speaker makes, and a whole passage read aloud is what made it audible.
+  const S = require("../engine/spelling.js"), bad = [];
+  const WANT = {
+    // magic e
+    note: "noʊt", stone: "stoʊn", home: "hoʊm", broke: "broʊk", hoped: "hoʊpt",
+    name: "neɪm", time: "taɪm", these: "ðiz",
+    // -le is a syllable after a CONSONANT and not after a vowel
+    little: "lɪtəl", table: "teɪbəl", simple: "sɪmpəl",
+    hole: "hoʊl", pole: "poʊl", mole: "moʊl",
+    // -ose and -ise are /z/; -ase and -use are not
+    rose: "roʊz", nose: "noʊz", chose: "t͡ʃoʊz", wise: "waɪz", rise: "raɪz",
+    case: "keɪs", base: "beɪs", goose: "gus", house: "haʊs",
+  };
+  for (const [w, want] of Object.entries(WANT)) {
+    const got = S.g2p(w).ph.join("");
+    // the affricate is spelled as two symbols in the chain
+    if (got !== want && got !== want.replace("t͡ʃ", "tʃ")) bad.push(`${w} /${got}/ want /${want}/`);
+  }
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.slice(0,4).join("  ")
+               : `${Object.keys(WANT).length} words: magic e, -le after a consonant, -ose and -ise voiced` };
+});
+
 // ── the output uses the range it has ──────────────────────────────────────
 check("no voice is inaudibly quiet, and none clips hard", () => {
   // Reported as the whole thing being quiet with the phone volume all the way up, and it was:

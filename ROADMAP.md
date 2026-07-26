@@ -47,27 +47,39 @@ seal-and-release. But the word currently comes out, in the project's own field n
    Key it on how FAR the articulator has to travel instead. One function, and it should move
    approximants, vowel transitions and the wide-part error together.
 
-2. **The range** — ◐ loudness fixed, pitch still short.
+2. **The range** — ✅ both halves addressed.
 
-   *Loudness.* Every class of sound sat within **2.3 dB** of every other — vowels -36.3,
-   approximants -36.8, fricatives -38.6 — where a real fricative is 10 to 30 dB below a vowel.
-   Nothing stood out, and that flatness is most of what "robotic" means. Fricative gains are at
-   real levels now and the contrast on "she sells sea shells" is **19.0 dB against a person's
-   20.7**, from 12.1.
+   *Loudness.* Every class of sound sat within **2.3 dB** of every other where a real fricative
+   is 10 to 30 dB below a vowel. Fricative gains are at real levels now: contrast on "she sells
+   sea shells" is **19.0 dB against a person's 20.7**, from 12.1.
 
-   The reason they were loud is worth keeping: **the gate required every fricative to reach 22%
-   of a vowel**, which is -13 dB, where a real /ð/ is at -30. Gains were tuned up to satisfy a
-   floor that was wrong in kind as well as degree — a fricative is not audible because it is
-   loud, it is audible because it has high-frequency energy where the vowel beside it has none,
-   and that contrast measures 100 to 600 times.
+   *Pitch.* The shortfall was entirely **upward**. A person's pitch runs 3.7 semitones below its
+   own median and **9.6 above**; the model ran -4.1 and **+2.6**. The downward half was already
+   right — the accents never lifted anything, because `acc` was 3 semitones where a real
+   conversational accent is 5 to 8. Now 7, giving +5.3, and the ceiling is 14 so an expressive
+   voice can reach what an expressive reading does.
 
-   *Pitch is still short*: 6.7 semitones against 13.3, reachable to 12.3 with `acc` and `decl`
-   but not at their defaults. Whether to move the defaults is an ear judgement.
+   *Still open:* /ʒ/ cannot be both quiet and mostly-frication — at a gain low enough for -16 dB
+   it is 82% voice, at one voiced enough to pass the balance check it is -5.6 dB.
 
-   *Still open:* /ʒ/ cannot currently be both quiet and mostly-frication — at a gain low enough
-   to reach -16 dB it is 82% voice, and at one voiced enough to pass the balance check it is
-   -5.6 dB. Set to the latter. The two constraints want different things and something else has
-   to give.
+## Checks that pushed the model the wrong way
+
+Three in one session, and the pattern is the same each time: a check encoded a value or a
+mechanism that was correct when it was written, and then held the model to it after the ground
+moved.
+
+- **The fricative floor** required every fricative to reach 22% of a vowel — -13 dB, where a
+  real /ð/ is at -30. Gains were tuned UP to satisfy it, and the result was a model where every
+  class of sound sat within 2.3 dB of every other. Wrong in kind too: a fricative is audible
+  because of its high-frequency contrast, not its loudness.
+- **The accent excursion** was compared against a hardcoded 3, which was the default when the
+  check was written. Raising the default to a realistic 7 made a correct excursion report as
+  wrong.
+- **The gesture knobs** were asserted load-bearing for sealing a stop, and stayed asserted after
+  a better mechanism — stiffness following travel — took the job over.
+
+None of these were wrong when written. The lesson is narrower: **a check should compare against
+the knob, not against the number the knob happened to hold.**
 
 
 3. **Vowel quality in the speller**, surfaced by reading real prose: "travelled" wants /ə/ and

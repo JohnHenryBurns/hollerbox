@@ -423,7 +423,16 @@ const VOICE_SPEC=[
   {k:'poly', lo:0,      hi:0.3,     d:0.12, off:0, p8:1,},   // shortening per extra syllable
   {k:'stopVc',lo:1,     hi:2,       d:1.5, off:1, p8:1,},    // voiceless/voiced closure ratio
   {k:'apw',  lo:0.15,   hi:0.7,     d:0.34},   // approximant weight against a reference vowel
-  {k:'acc',  lo:0,      hi:8,       d:3, off:0, p8:1,},      // accent excursion on a stressed syllable, semitones
+  // HOW FAR A PITCH ACCENT LIFTS A STRESSED SYLLABLE. It was 3 semitones, and measured against
+  // a person reading the bench phrases the shortfall is entirely upward: their pitch runs 3.7
+  // semitones BELOW its own median and 9.6 ABOVE, and the model ran -4.1 and +2.6. The downward
+  // half was already right; the accents never lifted anything.
+  //
+  // Real conversational accents are 5 to 8 semitones on a stressed syllable and more under
+  // focus. The mechanism was never at fault — with acc at 6 a stressed vowel lifts 5.9 — so
+  // this is only the number. The ceiling goes to 14 so that a deliberately expressive voice can
+  // reach what an expressive reading does.
+  {k:'acc',  lo:0,      hi:14,       d:7.0, off:0, p8:1,},      // accent excursion on a stressed syllable, semitones
   {k:'pert', lo:0,      hi:2,       d:1, off:0, p8:1,},      // consonant perturbation of the following vowel
   // A transition may not outlast this fraction of the shorter segment it joins. `glide` is an
   // absolute time and never scaled with what it connects; 8.1 made unstressed segments short

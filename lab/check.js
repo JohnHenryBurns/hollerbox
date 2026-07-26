@@ -707,12 +707,19 @@ check("pitch moves in semitones and accents land on stressed syllables", () => {
   // It must DECAY. If it did not, it would be an accent rather than microprosody, and the two
   // syllables would not reach the same peak.
   if (Math.abs(vl.peak - vd.peak) > 0.5) bad.push("perturbation does not decay before the accent");
-  // And it must not double-count with the accent that sits on the same vowel. Two ramps meet
-  // at the accent's peak; counting both would give 6 semitones where the knob says 3.
+  // And it must not double-count with the accent that sits on the same vowel. Two ramps meet at
+  // the accent's peak; counting both would give twice what the knob says.
+  //
+  // Compared against the KNOB rather than against a number. This read `exc - 3`, which was the
+  // default at the time — so the moment that default moved to a realistic 7 semitones the check
+  // failed, reporting a correct excursion as wrong. Third time this session a check has
+  // encoded an old value as the right answer.
   const W3 = P.buildWord(["d","ɑ","d"], { D: 0.8, n: 44, stress: [1,1,1], pros: v });
   const exc = 12*Math.log2(Math.max(...P.buildF0(W3.end, v, { stress:[1,1,1], seg:W3.seg }).map(x=>x[1]))
                          / Math.max(...P.buildF0(W3.end, v).map(x=>x[1])));
-  if (Math.abs(exc - 3) > 0.15) bad.push(`accent excursion ${exc.toFixed(2)} st, want 3 (6 = double-counted)`);
+  const want = v.acc === undefined ? 3 : v.acc;
+  if (Math.abs(exc - want) > 0.15)
+    bad.push(`accent excursion ${exc.toFixed(2)} st, want ${want} (${(2*want).toFixed(0)} = double-counted)`);
   if (JSON.stringify(P.buildF0(W3.end, { ...v, pert: 0, acc: 0 }, { stress:[1,1,1], seg:W3.seg }))
       !== JSON.stringify(P.buildF0(W3.end, v)))
     bad.push("pert=0 acc=0 does not return the baseline");
@@ -1740,6 +1747,44 @@ check("voiceless stops are aspirated", () => {
 // the markers alone gives a file that LOOKS right and does not parse: both sides stop at their
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
+
+// ── the pitch goes up as well as down ─────────────────────────────────────
+report("pitch range against the reference recording", () => {
+  // Measured against a person reading the bench phrases, the shortfall in pitch range was
+  // entirely UPWARD. Their pitch runs 3.7 semitones below its own median and 9.6 above; the
+  // model ran -4.1 and +2.6. The downward half was already right — the accents never lifted
+  // anything, because `acc` was 3 semitones where a real conversational accent is 5 to 8.
+  //
+  // Reported rather than gated: one speaker, one reading, and an expressive one. What is
+  // measurable is being a THIRD of a person's upward range, which this catches.
+  const P = H.P, S = require("../engine/spelling.js");
+  const v = { ...P.defaultVoice(), ...P.VOICES.john.v };
+  const all = [];
+  for (const t of ["hello world", "I love my daughter", "she sells sea shells",
+                   "the quick brown fox jumps over the lazy dog"]) {
+    const r = S.g2p(t);
+    const D = Math.max(0.35, r.ph.length*(v.per||0.17));
+    const W = P.buildWord(r.ph, { D, rate: P.rateFor(r.ph, D, v), n: 44, stress: r.stress, pros: v,
+                          glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    const f0 = P.buildF0(W.end, v, { stress: r.stress, seg: W.seg });
+    for (let t2 = 0; t2 < W.end; t2 += 0.01) {
+      let hz = f0[f0.length-1][1];
+      for (let k = 1; k < f0.length; k++) if (t2 <= f0[k][0]) {
+        const [a,b] = f0[k-1], [c,d] = f0[k];
+        hz = c === a ? d : b + (d-b)*(t2-a)/(c-a);
+        break;
+      }
+      all.push(hz);
+    }
+  }
+  all.sort((a,b) => a-b);
+  const pc = q => all[Math.floor(q/100*(all.length-1))], med = pc(50);
+  const up = 12*Math.log2(pc(95)/med), dn = 12*Math.log2(pc(5)/med);
+  // the speaker: +9.6 above, -3.7 below
+  return { ok: up > 4 && dn < -2.5,
+           note: `+${up.toFixed(1)} st above the median and ${dn.toFixed(1)} below ` +
+                 `(the speaker: +9.6 and -3.7)` };
+});
 
 // ── the sounds are not all the same loudness ──────────────────────────────
 report("loudness contrast against the reference recording", () => {

@@ -1627,6 +1627,45 @@ pass. Specific sounds reported wrong and still open:
 | fox | the /ks/ is mangled |
 | how / hello | breathy /h/, and it pops |
 
+## The pops are in the gap after a stop  ❌ open, and narrowed
+
+Six of twelve phrases came back with **pop** in a listening pass. Located precisely, and two
+hypotheses eliminated.
+
+**Where they are.** In "Peter Piper picks a peck", the loudest sample in the entire phrase —
+9.0e-2, louder than any vowel in it — sits in the 45 ms gap between the /k/ and the /s/ of
+"picks". That gap is the stop's release. The same gap exists after every stop, and the same
+excess appears in it.
+
+That gap is also why "x in fox is mangled" was reported separately: /fɑks/ has the same /ks/,
+and both reports are one fault.
+
+**What it is not.**
+
+*Not aspiration.* The keyframes either side of that gap both carry `as=0`. Nothing is being
+aspirated into it.
+
+*Not the burst.* Changing the burst gain by a factor of 27 — 2.2 down to 0.08 — moves the peak
+in that gap by less than 6 dB and not monotonically. Whatever is loud there is not the release
+burst.
+
+*Weakly related to articulator speed.* Dropping `artT` from 0.025 to 0.010 halves it, but 0.05
+and 0.10 are no worse than the default, so it is not simply "the tract moves too fast".
+
+**A NEAR MISS WORTH RECORDING.** Before locating it, a measurement showed stop bursts sitting
+between 5 dB below and 12 dB above the neighbouring vowels, where real ones sit 15 to 25 dB
+below. It correlated well with the listening pass — the phrase whose bursts were 1 dB under its
+vowels was the one reported "ok", the one at +12 was "pop and static". A fix was written and
+scaled the burst against a running speech level.
+
+The fix did not move the measured peak at all, which is how the correlation was found to be
+coincidental. A plausible story, a table that matched the ear, and the wrong cause. It was not
+shipped.
+
+**Also eliminated, earlier in the same pass:** a step-to-rms metric that flagged every fricative,
+because broadband noise IS large sample-to-sample steps. That is the sixth pop metric in this
+project to measure something other than pops.
+
 ## Open faults
 
 Things known to be wrong, so they are not rediscovered as surprises.

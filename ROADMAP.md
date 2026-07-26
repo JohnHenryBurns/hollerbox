@@ -62,6 +62,32 @@ seal-and-release. But the word currently comes out, in the project's own field n
    *Still open:* /ʒ/ cannot be both quiet and mostly-frication — at a gain low enough for -16 dB
    it is 82% voice, at one voiced enough to pass the balance check it is -5.6 dB.
 
+## What the gate is for  ✅ reorganised
+
+**A voice is data. No voice should be able to fail the gate.**
+
+Thirty of the checks read a tuned preset — `{...defaultVoice(), ...VOICES.john.v}` — so retuning
+John could fail the build. That is backwards: a preset is numbers somebody chose by ear, and the
+engine is what is under test. Pointing all thirty at the spec defaults broke **two**, so
+twenty-eight were borrowing for no reason at all.
+
+Three rules, all of them arrived at by being bitten:
+
+1. **Construct the voice you need; do not borrow a preset.** If a check depends on a low pitch or
+   a short tract, say so: `{ ...defaultVoice(), f0a: 88 }`. That states the dependency instead of
+   inheriting whatever a preset holds this week.
+2. **Compare against the knob, not the number it happens to hold.** A check reading `accent === 3`
+   failed the moment 3 became a realistic 7, reporting a correct excursion as wrong.
+3. **Gate invariants, report calibrations.** "A stop must seal", "no sound may be silent", "a seed
+   must round-trip" hold for any voice in the legal space. "A fricative is 22% of a vowel" is a
+   measurement of one tuning — and gating it caused the gains to be tuned UP to satisfy it, which
+   is how every class of sound ended up within 2.3 dB of every other.
+
+One deliberate exception, marked where it sits: the wizard check tests options defined as patches
+over the wizard's own base voice, so testing them against anything else tests nothing.
+
+A check enforces this. 56 gate, 17 report.
+
 ## Checks that pushed the model the wrong way
 
 Three in one session, and the pattern is the same each time: a check encoded a value or a

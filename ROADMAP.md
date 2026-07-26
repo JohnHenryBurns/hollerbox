@@ -1722,6 +1722,44 @@ a real objection rather than an isolation problem.
 travel — while "she sells sea shells" barely moved. Human difficulty in that phrase comes from
 precision between *similar* targets, /s/ against /ʃ/, which a distance-based limit cannot see.
 
+## Every phrase comes out the same length  ❌ diagnosed against a recording, not fixed
+
+A reading of the twelve bench phrases, 30.7 seconds, `lab/ref/john-phrases.m4a`. Segmented by
+energy and compared against the model as the PAGE calls it — `D=2.9`, the slider's default,
+with `rate: rateFor(...)`, which is not the path the gate or any of this session's measurements
+used.
+
+| phrase | model | spoken | ratio |
+|---|---|---|---|
+| Hello World | 2283 | 700 | **3.26** |
+| my wife is great | 2834 | 960 | **2.95** |
+| I love my daughter | 2745 | 1080 | 2.54 |
+| how now brown cow | 3058 | 1340 | 2.28 |
+| my mother and my brother | 2567 | 1240 | 2.07 |
+| she sells sea shells | 3192 | 1820 | 1.75 |
+| the quick brown fox jumps over the lazy dog | 3205 | 2700 | **1.19** |
+
+The spoken phrases run 700 to 2700 ms. The model's run 2180 to 3205. **It is not uniformly
+slow — it makes every utterance about the same length whatever is in it**, which is why the
+short phrases were reported as too slow and the nine-word one was not.
+
+**The cause.** `rateFor(chain, D, v)` returns `base*(D/(chain.length*per))`. Dividing by the
+chain's own length means the rate falls as a phrase gets longer, so length cancels out and D
+behaves as an absolute duration target rather than a tempo.
+
+**The fix works and is not a one-line change.** Making the rate length-independent brings the
+ratios from 1.19-3.26 to 0.78-1.44 — the shape becomes right and what is left is a uniform
+offset, which is exactly what D is for. But it breaks six gate checks, because VOT, glides and
+the slider's own range and default are all calibrated against the old meaning: at the mapping
+that makes D=2.9 natural, the slider's maximum of 5 is still faster than natural, and the goal
+cry could no longer be drawn out. Slider range, default, `rateFor` and those six checks have to
+move together.
+
+**Also recorded:** an earlier note in this file said the rate was fine at 4.3 syllables a
+second. That counted "vowels" by asking whether a symbol had an entry in VDUR, which stopped
+being a vowel test when consonants were given durations. The real figure for that phrase without
+`rate` is 2.2 syllables a second; as the page calls it, 3.4; the recording is 4.1.
+
 ## Open faults
 
 Things known to be wrong, so they are not rediscovered as surprises.

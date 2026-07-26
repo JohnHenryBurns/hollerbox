@@ -108,9 +108,20 @@ None of these were wrong when written. The lesson is narrower: **a check should 
 the knob, not against the number the knob happened to hold.**
 
 
-3. **Vowel quality in the speller**, surfaced by reading real prose: "travelled" wants /ə/ and
-   gets /ɛ/, "hoped" wants /oʊ/ and gets /o/, "books" wants /ʊ/ and gets /u/. Unstressed
-   reduction mostly, and the most audible thing left in a long passage.
+3. **Vowel quality in the speller** — ◐ the big rule is in, three misspellings remain.
+
+   *Unstressed vowels now reduce to schwa*, which is the largest single rule in English vowel
+   quality and was not applied at all. The stress marking was already correct — every vowel that
+   should reduce was already marked unstressed — so "travelled" came out /trævɛld/, "ago"
+   /ægoʊ/, "family" /fæmɪli/. Three real exceptions hold: diphthongs do not reduce (tomato),
+   word-final /i/ from <y> is a full vowel now (happy, city), /ɝ/ is already reduced and sending
+   it to schwa would delete the r (other), and an unstressed /ɪ/ resists in a CLOSED syllable
+   (cabin, rabbit, music) while giving way in an open one (family).
+
+   *Still wrong, and these are spelling rather than reduction:* "hoped" gives /o/ for /oʊ/ — the
+   magic-e rule produces a bare o; "books" gives /u/ for /ʊ/ — <oo> before a stop is short;
+   "sofa" gives /ɑ/ for /oʊ/ in an open first syllable; "camera" drops the r of /kæmərə/.
+
 
 4. **/ð/'s noise peaks at 9500 Hz**, at or past the edge of hearing, so it needs absurd gain to
    register at all. Spectrum, not balance.

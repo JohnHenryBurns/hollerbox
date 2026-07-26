@@ -303,9 +303,54 @@ const WEAK_FIRST=/^(a|be|com|con|de|re|to|pro|per|sur|sup|suc|o[bcf]|ac|ad|al|as
 // Attach the syllable and stress channel to a speller result. One place, so the dictionary
 // path and the rules path cannot drift — which is the same mistake buildWord's near-copy in
 // the harness was, and it is worth not making twice.
+// ── AN UNSTRESSED VOWEL IS A SCHWA ────────────────────────────────────────
+// The largest single rule in English vowel quality, and it was not being applied. The stress
+// marking was already correct — every vowel that should reduce was already marked unstressed —
+// so "travelled" came out /trævɛld/, "ago" /ægoʊ/, "family" /fæmɪli/, "sofa" /sɑfæ/. Reading a
+// passage aloud is what made it obvious; single words hide it.
+//
+// Three exceptions, all real:
+//
+//   Diphthongs do not reduce. "Tomato" ends in an unstressed /oʊ/ and keeps it, which is why
+//   the rule cannot simply be "unstressed becomes schwa".
+//
+//   A word-final /i/ does not reduce — the <y> of "family", "happy", "city". English lost that
+//   reduction centuries ago and the vowel is now a full one.
+//
+//   /ɝ/ does not reduce, because it already IS a reduced vowel: schwa with an r on it. Sending
+//   it to schwa would delete the r.
+const VOWELS = new Set(['i','ɪ','ɛ','æ','ɑ','ɔ','ʊ','u','ʌ','ɝ','ə','o']);
+const DIPH_SET = new Set(['aɪ','aʊ','ɔɪ','eɪ','oʊ']);
+function reduceUnstressed(ph, stress){
+  if(!stress || stress.length !== ph.length) return ph;
+  const out = ph.slice();
+  // the last vowel in the word, for the final-/i/ exception
+  let lastV = -1;
+  for(let i=0;i<out.length;i++) if(VOWELS.has(out[i]) || DIPH_SET.has(out[i])) lastV = i;
+  for(let i=0;i<out.length;i++){
+    if(stress[i] !== 0) continue;                 // stressed, or not a syllable at all
+    const p = out[i];
+    if(!VOWELS.has(p)) continue;                  // consonants and diphthongs alike
+    if(p === 'ə' || p === 'ɝ') continue;          // already reduced
+    if(i === lastV && p === 'i') continue;        // family, happy, city
+    // An unstressed /ɪ/ resists reduction in a CLOSED syllable and gives way in an open one:
+    // "cabin" is /kæbɪn/ and "rabbit" /ræbɪt/, while "family" is /fæməli/ — all three spelled
+    // with an <i>, so this cannot be decided from the letter. Closed here means the vowel is
+    // followed by a consonant that either ends the word or is itself followed by another.
+    if(p === 'ɪ'){
+      const nx = out[i+1], nx2 = out[i+2];
+      const closed = nx && !VOWELS.has(nx) && !DIPH_SET.has(nx) &&
+                     (nx2 === undefined || (!VOWELS.has(nx2) && !DIPH_SET.has(nx2)));
+      if(closed) continue;
+    }
+    out[i] = 'ə';
+  }
+  return out;
+}
+
 function withStress(word, res){
   const m=markStress(word, res.ph);
-  return {...res, syl:m.syl, stress:m.stress, primary:m.primary};
+  return {...res, ph:reduceUnstressed(res.ph, m.stress), syl:m.syl, stress:m.stress, primary:m.primary};
 }
 function g2pWord(word){
   let w=String(word||'').toLowerCase().replace(/[^a-z]/g,'');

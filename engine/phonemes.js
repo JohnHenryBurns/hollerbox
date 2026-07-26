@@ -380,7 +380,11 @@ const VOICE_SPEC=[
   {k:'hiss', lo:0.3,    hi:2.2,     d:1.0},    // how hard fricatives hiss
   {k:'sect', lo:14,     hi:52,      d:44},     // tract length in sections (44 = 17.5 cm)
   {k:'open', lo:0,      hi:1,       d:0.05, off:0,},   // how far a held vowel opens as it is shouted
-  {k:'per',  lo:0.10,   hi:0.80,    d:0.17},   // seconds per sound
+  // SECONDS PER SOUND. The floor was 0.10 while a calibrated voice sits at 0.095 — so John was
+  // below his own declared minimum, and a seed round-trip would have clamped his tempo back up.
+  // Real connected speech averages 70 to 80 milliseconds a sound, so the floor was wrong on its
+  // own terms as well.
+  {k:'per',  lo:0.04,   hi:0.80,    d:0.17},   // seconds per sound
   {k:'folds',lo:0,      hi:1,       d:0, off:0,},      // 0 = LF waveform, 1 = two-mass oscillator
   // ---- the prosody layer, Phase 8 ----
   // These were module constants until now, which meant the one part of the model that most
@@ -433,7 +437,15 @@ const VOICE_SPEC=[
   {k:'artT',    lo:0,     hi:0.06,   d:0.025, off:0,},   // how much mass the articulators have
   // How narrow a target has to be before it counts as CRITICAL — something the speaker has to
   // hit rather than aim at. off:0 makes nothing critical, so every gesture is equally lazy.
-  {k:'artCrit', lo:0,     hi:1.2,    d:0.6,   off:0,},
+  // How wide a target still counts as a gesture that has to be HIT. At 0.6 only constrictions
+  // qualified, and everything wider took the full slow time constant — so /n/ sealed to within
+  // a thousandth while its pharynx sat 0.8 out. Raising it stiffens the resonator too.
+  //
+  // The vowel formant error it buys is small in absolute terms — 1.6% to 0.6% — because
+  // formants are insensitive to the exact width of a wide section. It is worth having anyway,
+  // and it is worth recording that the DIAMETER distance overstated this badly: 0.426 of
+  // undershoot in the wide parts sounds like a catastrophe and is 1.6% of formant error.
+  {k:'artCrit', lo:0,     hi:4.0,    d:2.0,   off:0,},
   // How much stiffer the most critical gesture is, as a fraction of the base time constant.
   // Lower is crisper: 0.22 means a full closure is tracked four and a half times faster than a
   // vowel. off:1 removes the distinction entirely and is what silenced /z/ the first time.

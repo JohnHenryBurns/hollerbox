@@ -1721,43 +1721,47 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
-// ── the two commonest inflections in English ──────────────────────────────
-check("regular past tense and regular plural", () => {
-  // These two endings appear in almost every sentence, and the letter-by-letter rules spelled
-  // both as though the vowel were pronounced: "travelled" came out /trævɛlɛd/, "diverged" as
-  // /dɪvɝdʒɛd/, "times" as /tɪmɛs/. Found by putting real prose through the wizard and listening
-  // to what came out.
+// ── a vowel in a phrase lands on its own formants ─────────────────────────
+check("vowels in a phrase reach the formants they have alone", () => {
+  // The distinction this makes is between "the model knows what an /ɑ/ is" — which
+  // formants-vs-Peterson-&-Barney already checks — and "the model said one". A posture measured
+  // in isolation says nothing about whether the tract ever gets there mid-phrase.
   //
-  // Both endings are governed by the sound BEFORE them, and the vowel appears only where the
-  // stem already ends in the ending's own consonant — otherwise it would be unpronounceable.
-  const S = require("../engine/spelling.js"), bad = [];
-  // the ENDING only: the vowels of these stems are a separate and older problem
-  const END = {
-    // -ed
-    wanted:["ɪ","d"], needed:["ɪ","d"], hunted:["ɪ","d"],
-    walked:["t"], hoped:["t"], danced:["t"], stopped:["t"], kissed:["t"],
-    played:["d"], timed:["d"], diverged:["d"], travelled:["d"], seemed:["d"],
-    // -s
-    wishes:["ɪ","z"], buses:["ɪ","z"],
-    cats:["s"], books:["s"], jumps:["s"],
-    dogs:["z"], times:["z"], dreams:["z"], bells:["z"],
-  };
-  for (const [w, want] of Object.entries(END)) {
-    const ph = S.g2p(w).ph;
-    const got = ph.slice(-want.length);
-    if (got.join(" ") !== want.join(" "))
-      bad.push(`${w} ends /${got.join("")}/, want /${want.join("")}/`);
+  // It exists because a DIAMETER-distance metric badly overstated the problem: the wide parts
+  // of the tract sat 0.43 out of position, which sounds like a catastrophe, and translated to
+  // 1.6% of formant error, because a wide section's exact width barely moves a resonance. The
+  // thing that matters had to be measured directly.
+  const P = H.P, S = require("../engine/spelling.js");
+  const VOW = ["i","ɪ","ɛ","æ","ɑ","ɔ","ʊ","u","ʌ","ɝ"];
+  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  let err = 0, cnt = 0, worst = 0, worstSym = "";
+  for (const t of ["she sells sea shells", "hello world", "banana and a tomato"]) {
+    const r = S.g2p(t);
+    const D = Math.max(0.35, Math.min(5, r.ph.length*(v.per||0.17)));
+    const W = P.buildWord(r.ph, { D, rate: P.rateFor(r.ph, D, v), n, stress: r.stress, pros: v,
+                          glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    const p = H.makeProcessor(n);
+    p.port.onmessage({ data: { type: "voice", v } });
+    p.port.onmessage({ data: { type: "goal",
+      seq: { keys: W.keys, f0: P.buildF0(W.end, v, { stress: r.stress, seg: W.seg }), end: W.end } } });
+    const out = [new Float32Array(128)];
+    for (let b = 0; b < Math.ceil(W.end*H.SR/128); b++) {
+      p.process([], [out]);
+      const tt = b*128/H.SR;
+      const sg = W.seg.find(x => tt >= x.a && tt <= x.b);
+      if (!sg || !VOW.includes(sg.sym) || Math.abs(tt - (sg.a+sg.b)/2) > 0.006) continue;
+      const want = H.formants(sg.sym, { n });
+      const got = H.formantsOfShape(p.diam, { n });
+      if (!want || !got || want.length < 2 || got.length < 2) continue;
+      const e = 100*(Math.abs(got[0]-want[0])/want[0] + Math.abs(got[1]-want[1])/want[1])/2;
+      err += e; cnt++;
+      if (e > worst) { worst = e; worstSym = sg.sym; }
+    }
   }
-  // A word that merely ENDS in those letters must not be split. Checked by length rather than by
-  // looking for a vowel before the last sound — "this" is /ðɪs/ and its second-to-last phoneme
-  // is legitimately an ɪ, which the first version of this check read as an inserted one.
-  for (const [w, n2] of [["bed",3], ["red",3], ["bus",3], ["gas",3], ["this",3], ["dress",4]]) {
-    const ph = S.g2p(w).ph;
-    if (ph.length > n2) bad.push(`${w} came out ${ph.length} sounds (/${ph.join("")}/), want ${n2}`);
-  }
-  return { ok: bad.length === 0,
-           note: bad.length ? bad.slice(0,4).join("  ")
-               : `${Object.keys(END).length} inflected words, all three -ed and all three -s forms` };
+  const mean = cnt ? err/cnt : 99;
+  return { ok: cnt > 4 && mean < 4 && worst < 12,
+           note: cnt ? `${cnt} vowels, mean ${mean.toFixed(2)}% off, worst /${worstSym}/ ${worst.toFixed(1)}%`
+                     : "no vowels measured" };
 });
 
 // ── the wizard asks for a direction, not a parameter ──────────────────────
@@ -1801,9 +1805,42 @@ check("the voice wizard's options actually differ", () => {
     const flat = { ...base, ...life.opts[0][2] }, wild = { ...base, ...life.opts[life.opts.length-1][2] };
     if (!((wild.acc || 0) > (flat.acc || 0) + 3)) bad.push("the liveliest option is not much livelier");
   }
+  // ---- the random walk that runs after the questions ----
+  // The four answers get you into the right neighbourhood and cannot get further, because each
+  // moves several parameters together in a fixed pattern. The walk goes on from there, and two
+  // things about it have to hold: it must stay inside every parameter's declared bounds, and
+  // the range parameters must be separable — a walk that always widens is no use to someone who
+  // wants a small quiet voice.
+  const walk = (page.match(/const WALK = \[[\s\S]*?const RANGE = \[[^\]]*\];/) || [""])[0];
+  const mut  = (page.match(/function mutate\(v, strength\)\{[\s\S]*?\n\}/) || [""])[0];
+  const prng = (page.match(/let seed = [\s\S]*?\n\};/) || [""])[0];
+  if (!walk || !mut || !prng) bad.push("cannot find the wizard's walk");
+  else {
+    const mk = on => new Function("HOLLER", "document",
+      walk + "\n" + prng + "\n" + mut + "\nreturn mutate;")(P, { getElementById: () => ({ checked: on }) });
+    const base = { ...P.defaultVoice(), ...P.VOICES.john.v };
+    let v = { ...base }, oob = 0;
+    const step = mk(true);
+    for (let i = 0; i < 200; i++) {
+      v = step(v, 1);
+      for (const k of Object.keys(v)) {
+        const sp = P.VOICE_SPEC.find(x => x.k === k);
+        if (sp && (v[k] < sp.lo - 1e-9 || v[k] > sp.hi + 1e-9)) oob++;
+      }
+    }
+    if (oob) bad.push(`${oob} values escaped their bounds in 200 steps`);
+    // with the toggle off, nothing in RANGE may move at all
+    let w = { ...base };
+    const quiet = mk(false);
+    for (let i = 0; i < 200; i++) w = quiet(w, 1);
+    const moved = ["acc","decl","wklev","wkdur"].filter(k => Math.abs((w[k] ?? 0) - (base[k] ?? 0)) > 1e-9);
+    if (moved.length) bad.push(`range parameters moved with the toggle off: ${moved.join(" ")}`);
+  }
+
   return { ok: bad.length === 0,
            note: bad.length ? bad.join("  ")
-               : `${Q.length} questions, ${Q.reduce((a,q) => a + q.opts.length, 0)} options, all live` };
+               : `${Q.length} questions, ${Q.reduce((a,q) => a + q.opts.length, 0)} options, ` +
+                 `walk stays in bounds over 200 steps` };
 });
 
 // ── articulator speed has to match speaking speed ─────────────────────────

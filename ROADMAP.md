@@ -631,11 +631,22 @@ something already known to be broken:
 
 ---
 
-## Build-a-voice wizard  ✅ built
+## Build-a-voice wizard  ✅ built, with a random walk after it
 
 `wizard.html`, linked from the header. Four questions with options you can hear — how big, how
 lively, what the voice is like, how fast — then a name and a seed. Six public-domain passages to
 read, long enough to judge a voice by, which a single phrase is not.
+
+After the four questions there is a walk: two mutations of the current voice, keep the one you
+prefer, walk again from the winner. That is the tournament, with two differences — the thing
+being compared is a voice you already chose rather than an arbitrary point, and nothing asks you
+to track which group is mutating. Choosing a different answer to any question abandons the walk,
+because the answers no longer describe where it got to.
+
+Widening the range is its own toggle rather than part of the walk. The range parameters get a
+much bigger push than the rest when it is on — a walk that only nudges will not cross a gap the
+size of the one below — and they are frozen entirely when it is off, because someone who wants a
+small quiet voice should be able to have one.
 
 The second question exists because of a measurement. Against a recording of a person reading
 the bench phrases:
@@ -1838,40 +1849,32 @@ These came from the fitting run, which optimised against formants. A fricative's
 something formants can see, so nothing constrained it — the same shape of error as fitting the
 nasals on F2, and the same fix: the objective has to include what makes the sound.
 
-## The constriction arrives; the rest of the tract does not  ❌ open, measured
+## The constriction arrives; the rest of the tract does not  ◐ true, and it matters less than it looks
 
-Measured at each segment's midpoint, as distance from that phoneme's OWN posture, split by
-whether the section is a narrow constriction or a wide part of the tract:
+Measured at each segment's midpoint, as distance from that phoneme's own posture, split by
+whether a section is a narrow constriction or a wide part of the tract:
 
 | sym | at the constriction | in the wide parts |
 |---|---|---|
-| /n/ | **0.000** | 0.806 |
+| /n/ | 0.000 | 0.806 |
 | /r/ | 0.135 | 0.731 |
-| /w/ | 0.326 | 0.601 |
-| /l/ | 0.631 | 0.700 |
-| /ð/ | 0.484 | **1.164** |
+| /ð/ | 0.484 | 1.164 |
 | /s/ | 0.000 | 0.073 |
-| /i/ | 0.004 | 0.052 |
 
-**The narrow gestures land perfectly and the wide ones are nowhere near.** /n/ seals to within a
-thousandth and its pharynx is 0.8 out.
+The narrow gestures land and the wide ones do not, because the criticality rule keys stiffness on
+how NARROW a target is — right about precision of contact, wrong about precision of shape.
+`artCrit` is 2.0 rather than 0.6 now, which brings the wide parts from 0.43 to 0.25.
 
-The cause is the criticality rule, and it is doing exactly what it was written to do:
-`stiff = target < 0.6 ? max(0.22, target/0.6) : 1`. Stiffness is keyed on how NARROW a section's
-target is, on the reasoning that a sibilant channel is a few millimetres wide and a vowel has no
-surface to press against. That reasoning is right about precision of CONTACT and wrong about
-precision of SHAPE: a vowel's formants depend on the wide parts of the tract exactly as tightly
-as a fricative's noise depends on its groove.
+**BUT THE DIAMETER DISTANCE BADLY OVERSTATES THIS.** 0.43 out of position in the wide parts
+sounds like a catastrophe. Measured where it matters — do vowels in a phrase land on the
+formants they have in isolation — it was **1.6% of error**, and is 0.6% now. A wide section's
+exact width barely moves a resonance.
 
-So the model produces the right manner with the wrong quality — the constriction that decides
-WHAT the sound is arrives, and the resonator that decides what it SOUNDS LIKE does not. That is
-a good description of a synthesiser whose phonemes are identifiable and unnatural.
+So the wide parts arriving is worth having and is **not** where the robot sound lives. Vowels
+were already landing. Whatever is left is in the transitions, the source, or the consonants —
+and it needs measuring before it is guessed at, which is the lesson of the two structural fixes
+that failed this session and the two instruments that turned out to be broken.
 
-**Two structural fixes were tried this session and neither survived measurement.** A third-order
-critically damped follower: worse at a fair comparison, 0.124 against 0.058. Gestural activation
-blending, where overlapping gestures blend by a raised-cosine weight rather than taking turns:
-worse on the meaningful metric, 0.406 to 0.516, because averaging neighbours is coarticulation
-and this model already undershoots. Both are recorded in commits rather than in the tree.
 
 ## The speller could not say a past tense or a plural  ✅ fixed
 

@@ -124,7 +124,11 @@ select{font:inherit;background:#171b1e;color:var(--fg);border:1px solid var(--li
 <!-- Whole utterances rather than one consonant in a frame. The sweep and blind modes test
      whether a sound is the RIGHT sound; this tests whether a sentence sounds like a sentence,
      which is the only thing that can judge the prosody work in Phase 8. Every phrase below is
-     here for a stated reason — the same rule the gate bands follow. -->
+     here for a stated reason — the same rule the gate bands follow.
+
+     Tap what was wrong with each one. The tags are one-handed; the note field is for the
+     reports no tag list anticipates, which are the ones that have found things. `copy the pass`
+     hands the lot over at once, and notes survive a reload. -->
 <section id="panePhrases" class="card hidden">
   <div class="row" style="margin-bottom:8px">
     <input id="phraseIn" class="mini" style="flex:2" placeholder="type anything and press enter">
@@ -467,6 +471,59 @@ async function sayPhrase(text, into){
   if(p.ph.length) await speak(p.ph, p.stress);
 }
 
+/* ── WHAT WAS WRONG WITH IT ────────────────────────────────
+   The phrase tab could play twelve phrases and record nothing about any of them, so a listening
+   pass produced a memory and then a paraphrase of a memory. These are the faults this project
+   has actually hit, in the words they were first reported in — tags rather than free text
+   because this gets used on a phone, one-handed, between phrases, and typing loses the thing
+   you just heard.
+
+   Free text is there as well, because the useful reports have always been the ones no tag list
+   anticipated: "a Kalahari bushman", "an Asian saying l", "static blast then a plucked guitar
+   string". Those found bugs that five metrics missed. */
+const FAULTS = [
+  ['ok',      'sounds right'],
+  ['rhythm',  'timing: too even, too rushed, wrong lengths'],
+  ['stress',  'emphasis on the wrong syllable'],
+  ['pitch',   'melody: flat, wandering, wrong shape'],
+  ['pop',     'clicks or bursts where there should be none'],
+  ['rough',   'static, buzz, grain'],
+  ['muffled', 'dull, swallowed, not enough high end'],
+  ['sound',   'one phoneme is wrong — say which in the note'],
+  ['garbled', 'could not make out the words'],
+];
+
+const NOTES_KEY = 'hollerbox.phraseNotes';
+function loadNotes(){
+  try { return JSON.parse(localStorage.getItem(NOTES_KEY) || '{}'); } catch(e){ return {}; }
+}
+function saveNotes(n){
+  try { localStorage.setItem(NOTES_KEY, JSON.stringify(n)); } catch(e){ /* private mode */ }
+}
+let NOTES = loadNotes();
+
+function noteFor(text){
+  if(!NOTES[text]) NOTES[text] = { tags: [], say: '' };
+  return NOTES[text];
+}
+
+/** Everything recorded, in a form that can be pasted straight into a message. Phrases with
+ *  nothing said about them are listed at the end, so "not yet heard" is distinguishable from
+ *  "heard and fine" — which a bare list of verdicts cannot show. */
+function phraseReport(){
+  const done = [], todo = [];
+  PHRASES.forEach(([text])=>{
+    const n = NOTES[text];
+    if(!n || (!n.tags.length && !n.say.trim())) { todo.push(text); return; }
+    done.push('  ' + text + '  —  ' + (n.tags.join(', ') || '—') + (n.say.trim() ? '  ·  ' + n.say.trim() : ''));
+  });
+  const lines = ['PHRASE PASS  ' + new Date().toISOString().slice(0,16).replace('T',' ')
+                 + '   voice=' + ((VOICE && VOICE.name) || '?')];
+  if(done.length) lines.push('', ...done);
+  if(todo.length) lines.push('', 'not heard yet: ' + todo.join('; '));
+  return lines.join('\n');
+}
+
 function drawPhrases(){
   const host = document.getElementById('phraseList');
   if(!window.HOLLER_SPELL){
@@ -487,7 +544,72 @@ function drawPhrases(){
     t.style.cssText = 'flex:2';
     t.innerHTML = '<div>'+text+'</div><div class="ctx" style="opacity:.7">'+why+'</div>';
     row.appendChild(b); row.appendChild(t); host.appendChild(row);
+
+    // what was wrong with it: tags first, because this gets used one-handed between phrases
+    const n = noteFor(text);
+    const tags = document.createElement('div');
+    tags.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 4px 34px';
+    FAULTS.forEach(([tag, hint])=>{
+      const c = document.createElement('button');
+      c.textContent = tag;
+      c.title = hint;
+      const paint = ()=>{
+        const on = n.tags.includes(tag);
+        c.style.cssText = 'flex:0 0 auto;padding:4px 9px;font-size:12px;border-radius:11px;'
+          + (on ? 'background:#cfe3ff;color:#0b1b2e;border-color:#cfe3ff'
+                : 'opacity:.55');
+      };
+      c.addEventListener('click', ()=>{
+        // "ok" is exclusive: it cannot be simultaneously fine and wrong
+        if(tag === 'ok') n.tags = n.tags.includes('ok') ? [] : ['ok'];
+        else {
+          n.tags = n.tags.filter(x=>x!=='ok');
+          n.tags = n.tags.includes(tag) ? n.tags.filter(x=>x!==tag) : n.tags.concat(tag);
+        }
+        saveNotes(NOTES); drawPhrases();
+      });
+      paint();
+      tags.appendChild(c);
+    });
+    host.appendChild(tags);
+
+    const say = document.createElement('input');
+    say.className = 'mini';
+    say.placeholder = 'in your own words \u2014 the useful reports never fit the tags';
+    say.value = n.say;
+    say.style.cssText = 'margin:0 0 12px 34px;width:calc(100% - 42px)';
+    say.addEventListener('input', ()=>{ n.say = say.value; saveNotes(NOTES); });
+    host.appendChild(say);
   });
+
+  // one button to hand the whole pass over
+  const foot = document.createElement('div');
+  foot.className = 'row';
+  foot.style.cssText = 'gap:8px;margin-top:14px';
+  const copy = document.createElement('button');
+  copy.textContent = 'copy the pass';
+  copy.addEventListener('click', async ()=>{
+    const txt = phraseReport();
+    try { await navigator.clipboard.writeText(txt); copy.textContent = 'copied'; }
+    catch(e){ copy.textContent = 'select below'; }
+    const pre = document.getElementById('phraseOut');
+    pre.textContent = txt; pre.hidden = false;
+    setTimeout(()=>copy.textContent = 'copy the pass', 1400);
+  });
+  const clear = document.createElement('button');
+  clear.textContent = 'clear';
+  clear.addEventListener('click', ()=>{
+    if(!confirm('Clear every note on this pass?')) return;
+    NOTES = {}; saveNotes(NOTES); drawPhrases();
+    const pre = document.getElementById('phraseOut'); pre.hidden = true;
+  });
+  foot.appendChild(copy); foot.appendChild(clear);
+  host.appendChild(foot);
+  const pre = document.createElement('pre');
+  pre.id = 'phraseOut';
+  pre.hidden = true;
+  pre.style.cssText = 'white-space:pre-wrap;font-size:12px;opacity:.85;margin-top:8px';
+  host.appendChild(pre);
 }
 
 document.getElementById('phraseGo').addEventListener('click',

@@ -1714,6 +1714,47 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── the pitch matches a person, roughly ───────────────────────────────────
+report("pitch against the reference recording", () => {
+  // lab/ref/john-phrases.m4a, the twelve bench phrases read once. Pitch tracked by
+  // autocorrelation over 40 ms windows; the four phrases below are the ones whose boundaries
+  // are unambiguous.
+  //
+  // Before calibrating against it the model fell 6.7 to 10.0 semitones across a phrase where
+  // the recording falls 2.7 to 7.5, and reached 54 Hz on a voice whose bottom note is 84 — an
+  // octave under where the recording bottoms out.
+  //
+  // Reports rather than gates: it is four phrases from one speaker on one day, which is enough
+  // to catch being twice as steep and not enough to fail a build over.
+  const P = H.P, S = require("../engine/spelling.js");
+  const v = { ...P.defaultVoice(), ...P.VOICES.man.v }, n = Math.round(v.sect);
+  const SPOKEN = { "Hello World": -4.3, "I love my daughter": -2.7,
+                   "she sells sea shells": -7.5,
+                   "the quick brown fox jumps over the lazy dog": -4.0 };
+  let err = 0, lo = 1e9, rows = 0;
+  for (const [text, want] of Object.entries(SPOKEN)) {
+    const r = S.g2p(text);
+    const rate = P.rateFor(r.ph, 2.9, v);
+    const W = P.buildWord(r.ph, { D: 2.9, rate, n, stress: r.stress, pros: v,
+                          glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    const f0 = P.buildF0(W.end, v, { stress: r.stress, seg: W.seg });
+    const at = x => {
+      for (let k = 1; k < f0.length; k++) if (x <= f0[k][0]) {
+        const [a,b] = f0[k-1], [c,d] = f0[k];
+        return c === a ? d : b + (d-b)*(x-a)/(c-a);
+      }
+      return f0[f0.length-1][1];
+    };
+    err += Math.abs(12*Math.log2(at(W.end*0.90)/at(W.end*0.10)) - want);
+    lo = Math.min(lo, ...f0.map(p => p[1]));
+    rows++;
+  }
+  const mean = err/rows;
+  return { ok: mean < 3 && lo > 65,
+           note: `mean ${mean.toFixed(1)} st from the recording, floor ${lo.toFixed(0)} Hz ` +
+                 `(the speaker bottoms at 79)` };
+});
+
 // ── the pitch drifts down, restarts at a boundary, and rises for a question ─
 check("declination resets at a break, and a question goes up", () => {
   // 8.4 step 4, which was blocked because punctuation did not survive the speller. Two things,

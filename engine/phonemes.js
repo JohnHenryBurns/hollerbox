@@ -450,7 +450,10 @@ const VOICE_SPEC=[
   {k:'velT',    lo:0,     hi:0.06,   d:0.020, off:0,},
   // How fully the pitch comes back up at a phrase boundary, and how far a question rises at
   // the end. Both were unreachable until punctuation survived the speller.
-  {k:'decl',    lo:0,     hi:4,      d:1.80,  off:0,  p8:1,},
+  // Calibrated against a person reading the bench phrases. At 1.8 the model fell 6.7 to 10.0
+  // semitones across a phrase where the recording falls 2.7 to 7.5, and bottomed out at 54 Hz
+  // against a floor of 79. Halving it halves the error.
+  {k:'decl',    lo:0,     hi:4,      d:0.60,  off:0,  p8:1,},
   {k:'reset',   lo:0,     hi:1,      d:0.70,  off:0,  p8:1,},
   {k:'ask',     lo:0,     hi:9,      d:5.0,   off:0,  p8:1,},
   // How much of the voicing a full-strength frication costs. A voiced fricative is much
@@ -1121,7 +1124,12 @@ function buildF0(end, v, opts){
     // exactly where consonant perturbation lives — it fired on nothing. Closed-on-both-sides
     // would double-count at an accent's peak, where one ramp ends and the next begins.
     for(const p of parts) if(t >= p.t0 && t < p.t1) d += p.f(t);
-    return [t, at(t) * Math.pow(2, d/12)];
+    // A FLOOR. Declination and the baseline's own fall compound, and nothing stopped the
+    // result — the model reached 54 Hz on a voice whose bottom note is 84, an octave below
+    // where the recording bottoms out at 79. A speaker runs out of range and levels off; they
+    // do not keep descending until they stop phonating.
+    const hz = at(t) * Math.pow(2, d/12);
+    return [t, Math.max(v.f0c*0.86, hz)];
   });
 }
 

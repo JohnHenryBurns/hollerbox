@@ -969,7 +969,17 @@ function buildWord(chain, opts){
     const b=branchFor(sym), nz=nasalFor(sym), vl=voicelessFor(sym),
           fr=fricFor(sym), as=aspFor(sym);
     const lv=(stress && stress[i]===0) ? wklev : 1;
-    const dur=isStop(sym) ? closureFor(sym,stopHold,stopVc) : pool*vw[k++]/wsum;
+    // A SOUND NEEDS TIME TO BE MADE. At a real speaking rate the approximants were held 43 ms
+    // and, measured, the tract was still 0.52 to 1.00 away from their postures at the midpoint
+    // — three of the five sounds in "world" never formed. The target asks correctly; it is the
+    // tract that does not arrive, so this is time rather than spelling.
+    //
+    // /l/, /r/, /w/ and /j/ are whole-tongue movements and cannot be made in a fricative's
+    // worth of time. Turbulence needs about 45 ms of airflow before it reads as frication at
+    // all, and a nasal needs a comparable stretch of murmur.
+    const floorFor = c => isAp(c) ? 0.070 : FRICATIVE[c] ? 0.045 : c === 'h' ? 0.040 : 0;
+    const dur=Math.max(floorFor(sym),
+                       isStop(sym) ? closureFor(sym,stopHold,stopVc) : pool*vw[k++]/wsum);
     if(i>0) t+=glideFor(i);
     seg.push({sym, a:t, b:t+dur});
     keys.push({t,d,b,nz,vl,fr,as,lv}); art.push({t,A});

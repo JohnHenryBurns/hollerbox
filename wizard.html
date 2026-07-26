@@ -68,6 +68,19 @@ main{max-width:44rem;margin:0 auto;padding:1rem 1rem 4rem}
 
 <main>
   <div class="step">
+    <h2>What should it read?</h2>
+    <div class="say">
+      <select id="book"></select>
+      <button class="btn" id="readIt">▶ read it</button>
+    </div>
+    <div class="say">
+      <input id="own" placeholder="or type your own and press enter">
+      <button class="btn" id="sayOwn">▶ say</button>
+    </div>
+    <div class="note">Every button below plays this. Pick something long enough to judge by.</div>
+  </div>
+
+  <div class="step">
     <h2>1 · How big is it?</h2>
     <div class="why">a longer throat and a lower voice box — a mouse and a giant are the same tube, different sizes</div>
     <div class="opts" id="q1"></div>
@@ -109,18 +122,6 @@ main{max-width:44rem;margin:0 auto;padding:1rem 1rem 4rem}
         <input type="checkbox" id="wideRange" checked> let it widen the range
       </label>
       <span class="sub" id="battleCount" style="flex:1;text-align:right"></span>
-    </div>
-  </div>
-
-  <div class="step">
-    <h2>Try it out</h2>
-    <div class="say">
-      <select id="book"></select>
-      <button class="btn" id="readIt">▶ read</button>
-    </div>
-    <div class="say">
-      <input id="own" placeholder="or type anything and press enter">
-      <button class="btn" id="sayOwn">▶ say</button>
     </div>
   </div>
 
@@ -232,7 +233,11 @@ async function speak(text){
   const ph = r.ph.filter((_,i) => keep[i]);
   const st = (r.stress||null) && r.stress.filter((_,i) => keep[i]);
   if (!ph.length) return;
-  const D = Math.max(0.35, Math.min(5, ph.length*(v.per||0.17)));
+  // NO 5-SECOND CEILING. index.html clamps here because its duration slider stops at 5, and
+  // copying that clamp onto a page that reads whole passages crushed them: "It is a truth
+  // universally acknowledged..." is 102 sounds, which wants 9.7 seconds and was being squeezed
+  // into 5 — spoken at 1.94 times the rate, which is exactly how it sounded.
+  const D = Math.max(0.35, ph.length*(v.per||0.17));
   const W = HOLLER.buildWord(ph, { D, rate: HOLLER.rateFor(ph, D, v), n:N, stress:st, pros:v,
                             glide:v.glide, stopHold:v.stopT, drawl:v.drawl });
   node.port.postMessage({ type:'goal', seq:{ keys:W.keys,
@@ -309,6 +314,12 @@ function startBattle(){
   showSeed();
 }
 
+/** What every button plays: your own text if you typed any, the chosen passage otherwise. */
+function sample(){
+  const own = document.getElementById('own').value.trim();
+  return own || BOOKS[+document.getElementById('book').value][0];
+}
+
 /* ── DRAW ─────────────────────────────────────────────────────────────── */
 function draw(){
   for (const q of Q){
@@ -322,7 +333,7 @@ function draw(){
         chosen[q.id] = i; battle = null; round = 0;
         document.getElementById('battleCount').textContent = '';
         draw(); showSeed();
-        speak(document.getElementById('own').value.trim() || 'hello world');
+        speak(sample());
       });
       host.appendChild(b);
     });
@@ -340,7 +351,6 @@ BOOKS.forEach(([text, who], i) => {
   o.value = i; o.textContent = who;
   bk.appendChild(o);
 });
-const sample = () => document.getElementById('own').value.trim() || BOOKS[+bk.value][0];
 document.getElementById('playA').addEventListener('click', () => {
   if (!battle) startBattle();
   speakAs = battle.A; speak(sample()); speakAs = null;
@@ -362,10 +372,9 @@ document.getElementById('battleOff').addEventListener('click', () => {
 });
 
 document.getElementById('readIt').addEventListener('click', () => speak(BOOKS[+bk.value][0]));
-document.getElementById('sayOwn').addEventListener('click',
-  () => speak(document.getElementById('own').value.trim() || 'hello world'));
+document.getElementById('sayOwn').addEventListener('click', () => speak(sample()));
 document.getElementById('own').addEventListener('keydown',
-  e => { if (e.key === 'Enter') speak(e.target.value.trim() || 'hello world'); });
+  e => { if (e.key === 'Enter') speak(sample()); });
 document.getElementById('vname').addEventListener('input', showSeed);
 document.getElementById('save').addEventListener('click', async () => {
   const b = document.getElementById('save');

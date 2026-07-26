@@ -508,7 +508,11 @@ check("stops hold for as long as their voicing allows", () => {
 // ── Phase 8.3: level ───────────────────────────────────────────────────────
 check("stress makes a syllable quieter as well as shorter", () => {
   const S = require(__dirname + "/../engine/spelling.js");
-  const V = H.P.VOICES.john.v, n = Math.round(V.sect);
+  // A LOW-PITCHED VOICE, DELIBERATELY. This isolates LEVEL from stress, and level tracks pitch:
+  // at the spec defaults, an octave higher, the no-stress path spans 7.2 dB where the effect
+  // being measured is 3. Constructed here rather than borrowed from a preset, so that retuning
+  // a preset cannot move it — which is the rule this file now follows.
+  const V = { ...H.P.defaultVoice(), f0a: 88, f0b: 99, f0c: 78 }, n = Math.round(V.sect);
   const r = S.g2p("banana");
   const lvl = st => {
     const { buf, seg } = H.say(r.ph, { D: 1.1, voice: V, n, stress: st });
@@ -540,7 +544,7 @@ report("open vowels carry more than close ones, from the tube alone", () => {
   // rounded one and the lip section carries that, so the intrinsic loudness of a vowel falls
   // out of its shape. Measured before 8.3 was written, which is why 8.3 did not add a
   // per-vowel gain table: it would have double-counted geometry the model already has.
-  const V = H.P.VOICES.john.v, n = Math.round(V.sect);
+  const V = H.P.defaultVoice(), n = Math.round(V.sect);
   const db = {};
   for (const s of ["ɑ","æ","ɛ","ʌ","ɔ","o","ɝ","ʊ","ɪ","i","u"])
     db[s] = 20*Math.log10(H.rms(H.sustain(s, { n, voice: V, f0: 110, seconds: 1.0 }), 0.35, 0.95) + 1e-12);
@@ -887,7 +891,7 @@ check("no shadowed function declarations, and custom keeps its postures", () => 
 
 // ── the voice does not rise toward Nyquist ─────────────────────────────────
 check("breath noise rolls off instead of climbing", () => {
-  const P = H.P, V = P.VOICES.john.v, n = Math.round(V.sect), bad = [];
+  const P = H.P, V = P.defaultVoice(), n = Math.round(V.sect), bad = [];
   const v = { ...P.defaultVoice(), ...V };
   // Radiation at the lips is a differentiator, +6 dB/oct. A source that does not roll off to
   // compensate makes the whole voice climb toward Nyquist — measured at +4.4 dB/oct on a
@@ -925,7 +929,7 @@ check("breath noise rolls off instead of climbing", () => {
 // ── a nasal is not a stop, however sealed the mouth is ─────────────────────
 check("no stop burst fires behind an open velum", () => {
   const P = H.P, S = require(__dirname + "/../engine/spelling.js"), bad = [];
-  const V = P.VOICES.john.v, n = Math.round(V.sect);
+  const V = P.defaultVoice(), n = Math.round(V.sect);
   const v = { ...P.defaultVoice(), ...V };
   // /m/ seals the lips, /n/ the ridge, /ŋ/ the velum — exactly as /b/, /d/ and /g/ do — so the
   // narrowest-diameter test that drives the burst cannot tell them apart. It charged behind
@@ -1010,7 +1014,7 @@ report("the fitter recovers a known vlen and poly", () => {
 // ── a word does not start from digital silence ─────────────────────────────
 check("phonation eases back in after a pause", () => {
   const P = H.P, S = require(__dirname + "/../engine/spelling.js"), bad = [];
-  const V = P.VOICES.john.v, n = Math.round(V.sect);
+  const V = P.defaultVoice(), n = Math.round(V.sect);
   const r = S.g2p("I love my daughter");
   // Reported as a pop "before the L and D". It is neither a sample-level glitch nor trapped
   // air: the biggest sample jump at those onsets is SMALLER than at a mid-word transition in
@@ -1072,7 +1076,7 @@ check("no keyframe pair asks the tract to move in zero time", () => {
   //
   // Found because "I lovemy daughter" removes the second one — that spelling puts a plain /i/
   // before the boundary instead of a diphthong, so there is nothing to snap back from.
-  const v = { ...P.defaultVoice(), ...P.VOICES.john.v };
+  const v = P.defaultVoice();
   const n = Math.round(v.sect);
   for (const t of ["I love my daughter", "hello world", "how now brown cow",
                    "my wife is great", "the quick brown fox jumps over the lazy dog"]) {
@@ -1096,7 +1100,7 @@ check("no keyframe pair asks the tract to move in zero time", () => {
 const ARTIC = ["jaw","bodyPos","bodyHi","tipPos","tipHi","lip"];
 function articSpeeds() {
   const P = H.P, S = require(__dirname + "/../engine/spelling.js");
-  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  const v = P.defaultVoice(), n = Math.round(v.sect);
   const worst = {}, where = {};
   ARTIC.forEach(k => worst[k] = 0);
   for (const t of ["I love my daughter", "hello world", "how now brown cow", "my wife is great",
@@ -1141,7 +1145,7 @@ check("no articulator is asked to move impossibly fast", () => {
   // That gap is itself the argument for Phase 9: the two representations can disagree because
   // nothing makes them agree.
   const P = H.P, S = require(__dirname + "/../engine/spelling.js");
-  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  const v = P.defaultVoice(), n = Math.round(v.sect);
   let dWorst = 0, dWhere = "";
   for (const t of ["I love my daughter", "hello world", "how now brown cow",
                    "the quick brown fox jumps over the lazy dog"]) {
@@ -1180,7 +1184,7 @@ report("how far the articulators are from real anatomy", () => {
   // genuinely large, 94% of the tongue tip's range in 20 ms.
   const P = H.P, S = require(__dirname + "/../engine/spelling.js");
   const WANT = { jaw: 0.170, bodyPos: 0.170, bodyHi: 0.170, tipPos: 0.100, tipHi: 0.100, lip: 0.120 };
-  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  const v = P.defaultVoice(), n = Math.round(v.sect);
   const worstMove = {};
   for (const t of ["I love my daughter", "hello world", "how now brown cow",
                    "the quick brown fox jumps over the lazy dog", "banana and a tomato"]) {
@@ -1210,7 +1214,7 @@ report("how far the articulators are from real anatomy", () => {
 // ── Phase 9: the articulators can be given mass ────────────────────────────
 check("artT bounds articulator speed and produces undershoot", () => {
   const P = H.P, S = require(__dirname + "/../engine/spelling.js"), bad = [];
-  const V = P.VOICES.john.v, n = Math.round(V.sect);
+  const V = P.defaultVoice(), n = Math.round(V.sect);
   const r = S.g2p("I love my daughter");
   // Shipped OFF. This check exists so the machinery cannot rot while it is off, and so the
   // trade-off it carries stays measured rather than remembered.
@@ -1269,7 +1273,7 @@ check("each gesture knob changes what a consonant actually does", () => {
   //
   // This check is about whether the knobs are load-bearing, so it tests them at the default
   // articulation speed rather than at one voice's override.
-  const V = (({ artT, ...rest }) => rest)(P.VOICES.john.v), n = Math.round(V.sect);
+  const V = (({ artT, ...rest }) => rest)(P.defaultVoice()), n = Math.round(V.sect);
   // These four were hardcoded numbers doing real linguistic work — how narrow a target has to
   // be before the speaker must hit it, how much harder they push at it, and how far past a
   // surface a closure aims. Exposing them is only worth anything if each one is load-bearing,
@@ -1322,7 +1326,7 @@ check("each gesture knob changes what a consonant actually does", () => {
 // ── a word's length comes from what is in it ───────────────────────────────
 check("bad is longer than bat", () => {
   const P = H.P, bad = [];
-  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  const v = P.defaultVoice(), n = Math.round(v.sect);
   // 8.1b, and the single sentence it exists for. With D fixed, a word's total is handed in from
   // outside and the weights only redistribute it — so one weight over itself is 1, an isolated
   // monosyllable cannot lengthen, and *bad* and *bat* came out the same length to the sample.
@@ -1672,7 +1676,7 @@ check("voiceless stops are aspirated", () => {
   // 19 ms, which is squarely in the VOICED range — so a blind listener returned p as b, t as
   // d and k as t, all three. Measured on the OUTPUT by periodicity, because an energy
   // threshold is tripped instantly by a loud broadband burst and reports zero every time.
-  const V = H.P.VOICES.john.v, n = Math.round(V.sect);
+  const V = H.P.defaultVoice(), n = Math.round(V.sect);
   // WINDOW LENGTH. This probe used L=512, which at 44.1 kHz is 11.6 ms — about ONE pitch
   // period of John's 95 Hz voice. A window that short measures where the glottal pulse
   // happens to fall inside it, not how much voice bar there is: swept across a single steady
@@ -1739,6 +1743,35 @@ check("voiceless stops are aspirated", () => {
                : `b${vot.b.toFixed(0)} d${vot.d.toFixed(0)} g${vot.g.toFixed(0)} vs p${vot.p.toFixed(0)} t${vot.t.toFixed(0)} k${vot.k.toFixed(0)} ms` };
 });
 
+// ── WHAT THIS GATE IS FOR ─────────────────────────────────────────────────
+//
+// A VOICE IS DATA. No voice should be able to fail this gate.
+//
+// Thirty of the checks here used to read a tuned preset — `{...defaultVoice(), ...VOICES.john.v}`
+// — which meant retuning John could fail the build. That is backwards. A preset is a set of
+// numbers somebody chose by ear; the engine is the thing under test. Pointing all thirty at the
+// spec defaults broke exactly two of them, so twenty-eight were borrowing a preset for no reason
+// at all.
+//
+// Three rules follow, and all three came from being bitten:
+//
+//   1. CONSTRUCT THE VOICE YOU NEED; do not borrow a preset. If a check depends on a low pitch
+//      or a short tract, say so in the object: `{ ...defaultVoice(), f0a: 88 }`. That states the
+//      dependency instead of inheriting whatever a preset happens to hold this week.
+//
+//   2. COMPARE AGAINST THE KNOB, not against the number the knob happens to hold. A check that
+//      read `accent === 3` failed the moment 3 became a realistic 7 — reporting a correct
+//      excursion as wrong. Read `v.acc`.
+//
+//   3. GATE INVARIANTS, REPORT CALIBRATIONS. "A stop must seal", "no sound may be silent",
+//      "a seed must round-trip" hold for any voice in the legal space and belong in `check`.
+//      "A fricative is 22% of a vowel" is a measurement of one tuning, and when it was gated
+//      the gains were tuned UP to satisfy it — which is how every class of sound ended up
+//      within 2.3 dB of every other. That belongs in `report`.
+//
+// The one deliberate exception is the wizard check, which tests options defined as patches over
+// the wizard's own base voice, and is marked where it sits.
+
 // New checks go at the end of this file. That does not stop two branches colliding here — an
 // earlier version of this comment claimed it did, which was wrong, since two branches appending
 // to one file conflict wherever they append. What stops it is not having two branches open.
@@ -1747,6 +1780,34 @@ check("voiceless stops are aspirated", () => {
 // the markers alone gives a file that LOOKS right and does not parse: both sides stop at their
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
+
+// ── no voice may fail this gate ───────────────────────────────────────────
+check("no check depends on a tuned preset", () => {
+  // A voice is data. Thirty checks here read `VOICES.john.v` and would fail if John were
+  // retuned — which is backwards, since a preset is numbers somebody chose by ear and the
+  // engine is what is under test. Pointing them all at the spec defaults broke two, so
+  // twenty-eight were borrowing for no reason.
+  //
+  // This keeps it that way. A check that genuinely needs a low pitch or a short tract should
+  // CONSTRUCT one and say so, not inherit whatever a preset holds this week.
+  const fs = require("fs"), bad = [];
+  const src = fs.readFileSync(__filename, "utf8")
+                .replace(/\/\*[\s\S]*?\*\//g, "")
+                .replace(/^\s*\/\/.*$/gm, "");
+  const reads = [...src.matchAll(/VOICES\.(\w+)\.v\b/g)];
+  // one exception, and it is named where it sits: the wizard's options are patches over the
+  // wizard's own base, so testing them against anything else tests nothing
+  if (reads.length > 1)
+    bad.push(`${reads.length} checks read a preset: ${[...new Set(reads.map(m => m[1]))].join(" ")}`);
+
+  // and nothing may compare an accent, a duration or a level against a bare literal where a
+  // knob exists to read — the failure mode that made a correct 7-semitone accent report as wrong
+  if (/exc\s*-\s*3\b/.test(src)) bad.push("the accent excursion is compared against a literal 3");
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ")
+               : `${reads.length} preset read (the wizard's own base), everything else on constructed voices` };
+});
 
 // ── the pitch goes up as well as down ─────────────────────────────────────
 report("pitch range against the reference recording", () => {
@@ -1758,7 +1819,7 @@ report("pitch range against the reference recording", () => {
   // Reported rather than gated: one speaker, one reading, and an expressive one. What is
   // measurable is being a THIRD of a person's upward range, which this catches.
   const P = H.P, S = require("../engine/spelling.js");
-  const v = { ...P.defaultVoice(), ...P.VOICES.john.v };
+  const v = P.defaultVoice();
   const all = [];
   for (const t of ["hello world", "I love my daughter", "she sells sea shells",
                    "the quick brown fox jumps over the lazy dog"]) {
@@ -1798,7 +1859,7 @@ report("loudness contrast against the reference recording", () => {
   // right amount of contrast is a listening judgement — what is measurable is being HALF a
   // person's, which this catches.
   const P = H.P, S = require("../engine/spelling.js");
-  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  const v = P.defaultVoice(), n = Math.round(v.sect);
   const span = t => {
     const r = S.g2p(t);
     const D = Math.max(0.35, r.ph.length*(v.per||0.17));
@@ -1841,7 +1902,7 @@ check("stiffness follows how far, not just how narrow", () => {
   // floors that kept helping a little and never enough, because time was never what was short.
   const P = H.P, S = require("../engine/spelling.js"), bad = [];
   const miss = over => {
-    const v = { ...P.defaultVoice(), ...P.VOICES.john.v, ...over }, n = Math.round(v.sect);
+    const v = { ...P.defaultVoice(), ...P.defaultVoice(), ...over }, n = Math.round(v.sect);
     const by = {};
     for (const t of ["hello world", "red leather yellow leather"]) {
       const r = S.g2p(t);
@@ -1902,7 +1963,7 @@ check("vowels in a phrase reach the formants they have alone", () => {
   // thing that matters had to be measured directly.
   const P = H.P, S = require("../engine/spelling.js");
   const VOW = ["i","ɪ","ɛ","æ","ɑ","ɔ","ʊ","u","ʌ","ɝ"];
-  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  const v = P.defaultVoice(), n = Math.round(v.sect);
   let err = 0, cnt = 0, worst = 0, worstSym = "";
   for (const t of ["she sells sea shells", "hello world", "banana and a tomato"]) {
     const r = S.g2p(t);
@@ -1943,7 +2004,7 @@ check("no sound is held too briefly to form", () => {
   // and /l/, /r/, /w/, /j/ and the nasals are whole-tongue movements that cannot be made in a
   // fricative's worth of it.
   const P = H.P, S = require("../engine/spelling.js"), bad = [];
-  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  const v = P.defaultVoice(), n = Math.round(v.sect);
   const MIN = { approximant: 60, fricative: 40, h: 35 };
   for (const t of ["hello world", "she sells sea shells", "red leather yellow leather"]) {
     const r = S.g2p(t);
@@ -1973,7 +2034,7 @@ check("the wizard does not squeeze a passage into five seconds", () => {
   if (/Math\.min\(5,\s*ph\.length/.test(code)) bad.push("the five-second ceiling is back");
   // and the longest passage in the file must come out at a speakable rate
   const P = H.P, S = require("../engine/spelling.js");
-  const v = { ...P.defaultVoice(), ...P.VOICES.john.v };
+  const v = P.defaultVoice();
   const books = [...page.matchAll(/\['([^']{40,})',/g)].map(m => m[1]);
   if (!books.length) bad.push("no passages found");
   let slowest = 99, worst = "";
@@ -2005,7 +2066,7 @@ check("regular past tense and regular plural", () => {
   // thing that matters had to be measured directly.
   const P = H.P, S = require("../engine/spelling.js");
   const VOW = ["i","ɪ","ɛ","æ","ɑ","ɔ","ʊ","u","ʌ","ɝ"];
-  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  const v = P.defaultVoice(), n = Math.round(v.sect);
   let err = 0, cnt = 0, worst = 0, worstSym = "";
   for (const t of ["she sells sea shells", "hello world", "banana and a tomato"]) {
     const r = S.g2p(t);
@@ -2055,7 +2116,10 @@ check("the voice wizard's options actually differ", () => {
   catch (e) { return { ok: false, note: "the wizard's questions do not evaluate: " + e.message } }
 
   if (Q.length < 4) bad.push(`only ${Q.length} questions`);
-  const base = { ...P.defaultVoice(), ...P.VOICES.john.v };
+  // The one legitimate preset read in this file: the wizard's options are patches over the voice
+  // the wizard itself starts from, so testing them against anything else tests nothing. Named
+  // here so it does not look like the borrowing the rule forbids.
+  const base = { ...P.defaultVoice(), ...(P.VOICES.john.v || {}) };
   for (const q of Q) {
     if (q.opts.length < 3) bad.push(`${q.key} offers only ${q.opts.length} options`);
     // exactly one option must be the identity, so there is always an "as it is"
@@ -2090,7 +2154,7 @@ check("the voice wizard's options actually differ", () => {
   else {
     const mk = on => new Function("HOLLER", "document",
       walk + "\n" + prng + "\n" + mut + "\nreturn mutate;")(P, { getElementById: () => ({ checked: on }) });
-    const base = { ...P.defaultVoice(), ...P.VOICES.john.v };
+    const base = P.defaultVoice();
     let v = { ...base }, oob = 0;
     const step = mk(true);
     for (let i = 0; i < 200; i++) {
@@ -2205,7 +2269,7 @@ report("pitch against the reference recording", () => {
   // Reports rather than gates: it is four phrases from one speaker on one day, which is enough
   // to catch being twice as steep and not enough to fail a build over.
   const P = H.P, S = require("../engine/spelling.js");
-  const v = { ...P.defaultVoice(), ...P.VOICES.man.v }, n = Math.round(v.sect);
+  const v = P.defaultVoice(), n = Math.round(v.sect);
   const SPOKEN = { "Hello World": -4.3, "I love my daughter": -2.7,
                    "she sells sea shells": -7.5,
                    "the quick brown fox jumps over the lazy dog": -4.0 };
@@ -2240,7 +2304,7 @@ check("declination resets at a break, and a question goes up", () => {
   // FLAT until 55% of the utterance and then fell, so a break in the first half had nothing to
   // reset. A first attempt at the reset alone measured no effect, correctly.
   const P = H.P, S = require("../engine/spelling.js"), bad = [];
-  const v = { ...P.defaultVoice(), ...P.VOICES.man.v }, n = Math.round(v.sect);
+  const v = P.defaultVoice(), n = Math.round(v.sect);
   const trace = (text, ov) => {
     const vv = { ...v, ...(ov||{}) };
     const r = S.g2p(text);
@@ -2311,7 +2375,7 @@ check("a comma is not a space", () => {
   // baseline falls across an utterance correctly and had nothing to reset at. It also blocked
   // the terminal contour, since a question and a statement differ by a mark that never arrived.
   const P = H.P, S = require("../engine/spelling.js"), bad = [];
-  const v = { ...P.defaultVoice(), ...P.VOICES.man.v }, n = Math.round(v.sect);
+  const v = P.defaultVoice(), n = Math.round(v.sect);
 
   // the marks have to reach the chain at all
   const marks = {
@@ -2356,7 +2420,7 @@ check("fricatives are not held like vowels", () => {
   // the first HELD segment — which in "she sells" is the /ʃ/. It stretched that one fricative
   // to 190 ms against 142 for the same sound later in the phrase.
   const P = H.P, S = require("../engine/spelling.js"), bad = [];
-  const v = { ...P.defaultVoice(), ...P.VOICES.man.v }, n = Math.round(v.sect);
+  const v = P.defaultVoice(), n = Math.round(v.sect);
   const segs = text => {
     const r = S.g2p(text);
     const W = P.buildWord(r.ph, { D: 1, n, stress: r.stress, pros: v,
@@ -2490,7 +2554,7 @@ check("voiced fricatives are frication, not voicing with a trace on top", () => 
   // `fricDuck` is what a real constriction costs the voice: the pressure above the folds rises
   // and the flow across them nearly stops, so the folds keep vibrating but weakly.
   const P = H.P, bad = [];
-  const v = { ...P.defaultVoice(), ...P.VOICES.man.v }, n = Math.round(v.sect);
+  const v = P.defaultVoice(), n = Math.round(v.sect);
   const share = (sym, voice) => {
     const W = P.buildWord(["ɑ", sym, "ɑ"], { D: 1.2, n, pros: voice,
                           glide: voice.glide, stopHold: voice.stopT, drawl: voice.drawl });
@@ -2561,7 +2625,7 @@ check("no fricative is treated as a stop", () => {
   // Exactly the fault the nasals had, one line from where it was fixed for them. `cl` alone
   // cannot tell a seal from a very narrow gap; `fric` already knows.
   const P = H.P, bad = [];
-  const v = { ...P.defaultVoice(), ...P.VOICES.man.v }, n = Math.round(v.sect);
+  const v = P.defaultVoice(), n = Math.round(v.sect);
   const run = sym => {
     const W = P.buildWord(["ɑ", sym, "ɑ"], { D: 0.9, n, pros: v,
                           glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
@@ -2638,7 +2702,7 @@ report("what a nasal costs against the audio deadline", () => {
   // again. Minimum of several runs, not the mean of one, which reported a 25% improvement on a
   // phoneme with no branch open at all.
   const P = H.P;
-  const v = { ...P.defaultVoice(), ...P.VOICES.man.v }, n = Math.round(v.sect);
+  const v = P.defaultVoice(), n = Math.round(v.sect);
   const budget = 128/44100*1000;
   const hold = sym => {
     const p = H.makeProcessor(n);
@@ -2749,7 +2813,7 @@ check("the velum cannot move faster than a velum", () => {
   // articulator there is — a flap of soft tissue with no bone in it and nothing to brace
   // against. It was the last thing in the engine that could still teleport.
   const P = H.P, bad = [];
-  const v = { ...P.defaultVoice(), ...P.VOICES.man.v }, n = Math.round(v.sect);
+  const v = P.defaultVoice(), n = Math.round(v.sect);
   const fastest = (velT) => {
     const vv = { ...v, velT };
     const W = P.buildWord(["ɑ","m","ɑ"], { D: 0.9, n, pros: vv,
@@ -2874,7 +2938,7 @@ check("/h/ takes the shape of the vowel beside it", () => {
   // different sounds. A fixed posture put a mid-front tongue in the middle of every one, and
   // "ah-h-ah" came out with a front excursion that was reported as "hya".
   const P = H.P, bad = [];
-  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  const v = P.defaultVoice(), n = Math.round(v.sect);
   const narrowAt = (a, b) => {
     const W = P.buildWord([a, "h", b], { D: 0.9, n, pros: v,
                           glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
@@ -2910,7 +2974,7 @@ report("how many blocks before the engine keeps up", () => {
   // Reports rather than gates because it times a JIT on shared hardware, and a number that
   // depends on how busy the machine is has no business failing a build.
   const P = H.P;
-  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  const v = P.defaultVoice(), n = Math.round(v.sect);
   const p = H.makeProcessor(n);
   p.port.onmessage({ data: { type: "voice", v } });
   const out = [new Float32Array(128)];

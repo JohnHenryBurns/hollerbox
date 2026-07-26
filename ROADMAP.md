@@ -135,19 +135,29 @@ None of these were wrong when written. The lesson is narrower: **a check should 
 the knob, not against the number the knob happened to hold.**
 
 
-3. **Vowel quality in the speller** — ◐ the big rule is in, three misspellings remain.
+3. **Vowel quality in the speller** — ✅ the systematic faults are fixed.
 
-   *Unstressed vowels now reduce to schwa*, which is the largest single rule in English vowel
-   quality and was not applied at all. The stress marking was already correct — every vowel that
-   should reduce was already marked unstressed — so "travelled" came out /trævɛld/, "ago"
-   /ægoʊ/, "family" /fæmɪli/. Three real exceptions hold: diphthongs do not reduce (tomato),
-   word-final /i/ from <y> is a full vowel now (happy, city), /ɝ/ is already reduced and sending
-   it to schwa would delete the r (other), and an unstressed /ɪ/ resists in a CLOSED syllable
-   (cabin, rabbit, music) while giving way in an open one (family).
+   *Unstressed vowels reduce to schwa*, with four exceptions: diphthongs do not reduce (tomato),
+   word-final /i/ from `<y>` is a full vowel (happy), /ɝ/ is already reduced and sending it to
+   schwa would delete the r (other), and an unstressed /ɪ/ resists in a CLOSED syllable (cabin,
+   rabbit) while giving way in an open one (family).
 
-   *Still wrong, and these are spelling rather than reduction:* "hoped" gives /o/ for /oʊ/ — the
-   magic-e rule produces a bare o; "books" gives /u/ for /ʊ/ — <oo> before a stop is short;
-   "sofa" gives /ɑ/ for /oʊ/ in an open first syllable; "camera" drops the r of /kæmərə/.
+   *A magic e now makes the vowel English actually has.* Every other magic-e vowel in the table
+   produced a diphthong — a gives eɪ, i gives aɪ — and **o alone gave a bare monophthong the
+   language does not use there**, so note, hole, rose, stone and every past tense built on one of
+   them was wrong. The rule four lines below it, for go and no and hello, had /oʊ/ right the
+   whole time.
+
+   *`-le` is a syllable only after a consonant* — little and table, not hole and pole, which were
+   coming out /hoʊəl/. A rule may now test what SOUND came before it, which is what such a rule
+   always meant.
+
+   *`-ose` and `-ise` are voiced* — rose, nose, chose, wise, rise — while `-ase` and `-use` are
+   not: case, base, goose.
+
+   *Still wrong, and individual rather than systematic:* "whole" has a silent w; "apple" reduces
+   its first vowel because WEAK_FIRST matches the "ap"; "sofa" gives /ɑ/ for /oʊ/; "camera" drops
+   the r of /kæmərə/.
 
 
 4. **/ð/'s noise peaks at 9500 Hz**, at or past the edge of hearing, so it needs absurd gain to

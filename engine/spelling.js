@@ -74,11 +74,26 @@ const G2P_RULES = [
   [/^er/,        ['ɝ']],
   [/^ir/,        ['ɝ']],
   [/^ur/,        ['ɝ']],
-  [/^le$/,       ['ə','l']],
+  // `-le` is a syllable of its own — little, table, apple — only after a CONSONANT. After a
+  // vowel it is the magic e doing its job and the l is just an l: hole, pole, mole, whole came
+  // out /hoʊəl/, with a schwa English does not put there. The lookbehind is what the rule always
+  // meant; it simply had no way to say so from the front of the string.
+  [/^le$/,       ['ə','l'], /^[^iɪɛæɑɔʊuʌɝəo]/],   // after a consonant SOUND: little, table
   // magic e: a single consonant then a final e lengthens the vowel
   [/^a(?=[^aeiou]e$)/, ['eɪ']],
   [/^i(?=[^aeiou]e$)/, ['aɪ']],
-  [/^o(?=[^aeiou]e$)/, ['o']],
+  // /oʊ/, not a bare /o/. Every other magic-e vowel in this table produces what English
+  // actually has — a gives eɪ, i gives aɪ — and o alone gave a monophthong the language does not
+  // use in this position. The rule four lines down, for go and no and hello, had it right the
+  // whole time. So note, hole, rose, stone and every regular past tense built on one of them
+  // came out with a vowel no English speaker makes.
+  [/^o(?=[^aeiou]e$)/, ['oʊ']],
+  // `-ose` and `-ise` after a magic e are /z/, not /s/: rose, nose, chose, close, wise, rise.
+  // `-ase` and `-use` are not — case, base, goose — so this is deliberately the two endings and
+  // not a general rule about s between vowels. The final-s assimilation further down handles
+  // s after a CONSONANT and says in its own comment that it stays out of this case; here the
+  // spelling does predict something, but only for these two.
+  [/^se$/,       ['z'], /^(oʊ|aɪ)$/],
   [/^u(?=[^aeiou]e$)/, ['u']],
   [/^e(?=[^aeiou]e$)/, ['i']],
   // soft c and g
@@ -423,9 +438,15 @@ function g2pWord(word){
   }
   while(w.length && guard++<200){
     let hit=null;
-    for(const [re,ph] of G2P_RULES){
+    for(const [re,ph,after] of G2P_RULES){
       const m=w.match(re);
-      if(m){ hit=[m[0].length||1, ph]; break; }
+      if(!m) continue;
+      // A rule may require something of what came BEFORE it. Asked of the last SOUND produced
+      // rather than of the preceding letters, which is what such a rule always means: `-le` is a
+      // syllable of its own after a consonant (little, table) and not after a vowel (hole, pole),
+      // and it is the consonant that makes the schwa, not the letter.
+      if(after && !after.test(out.length ? out[out.length-1] : '')) continue;
+      hit=[m[0].length||1, ph]; break;
     }
     if(!hit){ w=w.slice(1); continue; }           // unknown letter: skip it
     out.push(...hit[1]);

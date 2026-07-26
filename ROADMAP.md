@@ -631,21 +631,33 @@ something already known to be broken:
 
 ---
 
-## Build-a-voice wizard  ❌ not started
+## Build-a-voice wizard  ✅ built
 
-The tournament works but asks the wrong question of a person: it offers A against B with the
-group being mutated chosen from a dropdown, so it is easy to lose track of which dimension is
-even moving.
+`wizard.html`, linked from the header. Four questions with options you can hear — how big, how
+lively, what the voice is like, how fast — then a name and a seed. Six public-domain passages to
+read, long enough to judge a voice by, which a single phrase is not.
 
-Wanted instead: a guided path a **child** can use. Pick a direction — silly, scary, tiny, giant,
-robot — hear a few options, keep going in whichever direction is more fun, then **name it** and
-get a seed back that can be saved and shared. The seed format already does the preserving; what
-is missing is the framing that turns twenty-nine numbers into four or five questions with
-obvious answers.
+The second question exists because of a measurement. Against a recording of a person reading
+the bench phrases:
 
-Depends on the phonemes being dialled first — a wizard that produces reliably silly voices is
-only worth building on top of an engine whose consonants are trustworthy, or every voice a kid
-makes will have the same faults underneath the fun.
+| | pitch range | loudness range |
+|---|---|---|
+| the person | **13.3 semitones** | **22.5 dB** |
+| the model | **6.7** | **12.8** |
+
+**Half the range on both axes**, and the bottom matches almost exactly — 78 Hz against 79. It is
+the top that never arrives. Flat dynamics is what "robotic" means colloquially, so liveliness is
+a first-class question rather than a fine adjustment. The `Wild` option reaches 12.3 semitones,
+which is close to a person; loudness only reaches 18.8 dB against 22.5, so **something other
+than the existing knobs limits the loudness range** and that is worth finding.
+
+## Where the robot sound is  ◐ narrowed
+
+Not the vowels: they land on their own formants to within 0.6% mid-phrase. Not the wide parts of
+the tract, which sit 0.25 out of position and cost 0.6% of formant error. **The range is the best
+candidate found so far** — half a person's on both axes — and after that the consonants, which a
+listening sweep identifies about two in three of.
+
 
 ## Open questions
 

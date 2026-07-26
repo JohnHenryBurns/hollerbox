@@ -1721,6 +1721,52 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── the wizard asks for a direction, not a parameter ──────────────────────
+check("the voice wizard's options actually differ", () => {
+  // The tournament offers A against B while a dropdown decides which of five groups is being
+  // mutated — a bookkeeping task, not a listening one. The wizard asks for a direction instead:
+  // four questions, options you can hear, a name at the end.
+  //
+  // What it must not become is four questions whose answers all sound the same. Each option is
+  // a patch over the base voice, and this evaluates them the way the page does — parsed out of
+  // wizard.html rather than duplicated here, because a check that reimplements the thing it
+  // checks is the mistake this file keeps making.
+  const fs = require("fs"), P = H.P, bad = [];
+  const page = fs.readFileSync(__dirname + "/../wizard.html", "utf8");
+  const m = page.match(/const Q = \[[\s\S]*?\n\];/);
+  if (!m) return { ok: false, note: "cannot find the wizard's questions" };
+  let Q;
+  try { Q = new Function(m[0] + "\nreturn Q;")(); }
+  catch (e) { return { ok: false, note: "the wizard's questions do not evaluate: " + e.message } }
+
+  if (Q.length < 4) bad.push(`only ${Q.length} questions`);
+  const base = { ...P.defaultVoice(), ...P.VOICES.john.v };
+  for (const q of Q) {
+    if (q.opts.length < 3) bad.push(`${q.key} offers only ${q.opts.length} options`);
+    // exactly one option must be the identity, so there is always an "as it is"
+    const empties = q.opts.filter(o => Object.keys(o[2]).length === 0).length;
+    if (empties !== 1) bad.push(`${q.key} has ${empties} do-nothing options, want exactly 1`);
+    // and every other option must move something that exists in the voice spec
+    for (const [label, , patch] of q.opts) {
+      for (const k of Object.keys(patch)) {
+        if (!P.VOICE_SPEC.some(x => x.k === k)) bad.push(`${q.key}/${label} sets ${k}, not a voice parameter`);
+        else if (Math.abs((patch[k] - base[k])/(base[k] || 1)) < 0.02)
+          bad.push(`${q.key}/${label} sets ${k} to what it already is`);
+      }
+    }
+  }
+  // the whole point of question 2: its extremes must differ in RANGE, which is the thing a
+  // recording says the model is short of — 6.7 semitones against a person's 13.3
+  const life = Q.find(q => q.key === "life");
+  if (life) {
+    const flat = { ...base, ...life.opts[0][2] }, wild = { ...base, ...life.opts[life.opts.length-1][2] };
+    if (!((wild.acc || 0) > (flat.acc || 0) + 3)) bad.push("the liveliest option is not much livelier");
+  }
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ")
+               : `${Q.length} questions, ${Q.reduce((a,q) => a + q.opts.length, 0)} options, all live` };
+});
+
 // ── articulator speed has to match speaking speed ─────────────────────────
 report("undershoot at each voice's own tempo", () => {
   // Raised from listening: the child's voice sounds the most natural, with a bounce that makes

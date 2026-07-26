@@ -31,6 +31,16 @@ seal-and-release. But the word currently comes out, in the project's own field n
 
 ---
 
+## Front end: one session, three views  ❌ planned, not started
+
+Three pages hold their own copy of loading the engine, starting the audio, holding a voice and
+turning text into sound — so the same voice saying the same phrase behaves differently depending
+which page you are on. `johnfit`'s 26 fitted postures are never applied in the wizard; the Austen
+passage runs 6.62 s on the main page against 8.77 s on the other two.
+
+Four phases in **FRONTEND.md**: one speak path, one engine and start, the shared voice and phrase
+selector, then state that survives navigation.
+
 ## What is next, in order
 
 1. **Stiffness is keyed on the wrong thing.** `stiff = target < artCrit ? max(floor, target/artCrit) : 1`

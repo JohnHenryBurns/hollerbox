@@ -1710,6 +1710,48 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── punctuation survives the speller ──────────────────────────────────────
+check("a comma is not a space", () => {
+  // Every word went through `.replace(/[^a-z]/g,'')`, so a comma and a space were the same
+  // thing by the time anything downstream saw them. That is what blocked 8.4 step 4: the pitch
+  // baseline falls across an utterance correctly and had nothing to reset at. It also blocked
+  // the terminal contour, since a question and a statement differ by a mark that never arrived.
+  const P = H.P, S = require("../engine/spelling.js"), bad = [];
+  const v = { ...P.defaultVoice(), ...P.VOICES.man.v }, n = Math.round(v.sect);
+
+  // the marks have to reach the chain at all
+  const marks = {
+    "hello, world": "brk,",
+    "one. two":     "brk.",
+    "is it? yes":   "brk?",
+  };
+  for (const [text, want] of Object.entries(marks))
+    if (!S.g2p(text).ph.includes(want)) bad.push(`"${text}" produced no ${want}`);
+  // and a plain phrase must NOT acquire one
+  if (S.g2p("plain words here").ph.some(x => String(x).slice(0,3) === "brk"))
+    bad.push("a phrase with no punctuation got a break anyway");
+
+  // they must hold longer than a word boundary, and in the right order
+  const gapOf = text => {
+    const r = S.g2p(text);
+    const W = P.buildWord(r.ph, { D: 1, n, stress: r.stress, pros: v,
+                          glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    const g = W.seg.find(x => x.sym === " " || String(x.sym).slice(0,3) === "brk");
+    return g ? (g.b - g.a)*1000 : 0;
+  };
+  const word = gapOf("one two"), comma = gapOf("one, two"), stop = gapOf("one. two");
+  if (!(comma > word*1.4)) bad.push(`a comma (${comma.toFixed(0)}ms) is not longer than a word gap (${word.toFixed(0)}ms)`);
+  if (!(stop > comma*1.4)) bad.push(`a full stop (${stop.toFixed(0)}ms) is not longer than a comma (${comma.toFixed(0)}ms)`);
+
+  // and nothing downstream may treat a break as a posture
+  try { P.buildWord(S.g2p("a, b. c?").ph, { D: 1, n, pros: v }); }
+  catch (e) { bad.push("buildWord throws on a punctuated chain: " + e.message); }
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ")
+               : `word ${word.toFixed(0)}ms, comma ${comma.toFixed(0)}ms, stop ${stop.toFixed(0)}ms` };
+});
+
 // ── consonants have their own lengths, and the drawl is a vowel thing ──────
 check("fricatives are not held like vowels", () => {
   // VDUR had vowels and diphthongs only, so all sixteen consonants fell through to a default of

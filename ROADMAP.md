@@ -47,11 +47,28 @@ seal-and-release. But the word currently comes out, in the project's own field n
    Key it on how FAR the articulator has to travel instead. One function, and it should move
    approximants, vowel transitions and the wide-part error together.
 
-2. **The range**, which is the best robot-sound candidate measured. 6.7 semitones of pitch
-   against a person's 13.3 and 12.8 dB of loudness against 22.5, with the bottom matching
-   almost exactly — it is the top that never arrives. `acc` and `decl` reach 12.3 semitones.
-   **Loudness caps at 18.8 dB and something other than the existing knobs is limiting it**,
-   which is worth finding.
+2. **The range** — ◐ loudness fixed, pitch still short.
+
+   *Loudness.* Every class of sound sat within **2.3 dB** of every other — vowels -36.3,
+   approximants -36.8, fricatives -38.6 — where a real fricative is 10 to 30 dB below a vowel.
+   Nothing stood out, and that flatness is most of what "robotic" means. Fricative gains are at
+   real levels now and the contrast on "she sells sea shells" is **19.0 dB against a person's
+   20.7**, from 12.1.
+
+   The reason they were loud is worth keeping: **the gate required every fricative to reach 22%
+   of a vowel**, which is -13 dB, where a real /ð/ is at -30. Gains were tuned up to satisfy a
+   floor that was wrong in kind as well as degree — a fricative is not audible because it is
+   loud, it is audible because it has high-frequency energy where the vowel beside it has none,
+   and that contrast measures 100 to 600 times.
+
+   *Pitch is still short*: 6.7 semitones against 13.3, reachable to 12.3 with `acc` and `decl`
+   but not at their defaults. Whether to move the defaults is an ear judgement.
+
+   *Still open:* /ʒ/ cannot currently be both quiet and mostly-frication — at a gain low enough
+   to reach -16 dB it is 82% voice, and at one voiced enough to pass the balance check it is
+   -5.6 dB. Set to the latter. The two constraints want different things and something else has
+   to give.
+
 
 3. **Vowel quality in the speller**, surfaced by reading real prose: "travelled" wants /ə/ and
    gets /ɛ/, "hoped" wants /oʊ/ and gets /o/, "books" wants /ʊ/ and gets /u/. Unstressed

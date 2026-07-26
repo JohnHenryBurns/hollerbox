@@ -340,7 +340,21 @@ const DIPH={ 'aɪ':['ɑ','i'], 'aʊ':['ɑ','ʊ'], 'ɔɪ':['ɔ','i'], 'eɪ':['ɛ'
 const BRANCHED={ l:1 };                 // /l/ opens the closed pocket at the tongue tip
 const NASAL={ m:1, n:1, 'ŋ':1 };        // the velum opens the nasal tract
 const VOICELESS={ p:1, t:1, k:1, s:1, 'ʃ':1, f:1, h:1, 'θ':1 };   // folds apart
-const FRICATIVE={ 's':0.42, 'z':0.32, 'ʃ':1, 'ʒ':0.34, 'f':0.73, 'v':0.63, 'θ':0.16, 'ð':0.20 };
+// HOW LOUD EACH FRICATIVE IS, and these were all far too loud. Measured against a person
+// reading the bench phrases: every class of sound in the model sat within 2.3 dB of every other
+// — vowels at -36.3, approximants -36.8, fricatives -38.6 — where a real fricative is 10 to 30
+// dB below a vowel. Nothing stood out, and that flatness is most of what "robotic" means.
+//
+// Real levels relative to a stressed vowel (Fant; Stevens): sibilants -10 to -18, the weak
+// fricatives -25 to -30, /h/ around -22. The model was at -1.5 to -8.4.
+//
+// The reason they were pushed up is worth recording: the gate required every fricative to reach
+// 22% of a vowel, which is -13 dB, and a real /ð/ is at -30. That floor was wrong in kind as
+// well as degree — a weak fricative is not audible because it is LOUD, it is audible because it
+// has high-frequency energy where the vowel beside it has none. Measured, that contrast is 126
+// to 632 times, so these can drop twenty decibels and still be unmistakable.
+const FRICATIVE={ 's':0.235, 'z':0.102, 'ʃ':0.40, 'ʒ':0.22,
+                  'f':0.073, 'v':0.050, 'θ':0.013, 'ð':0.010 };
 const ASPIRATE ={ h:1 };                               // turbulence at the glottis instead
 
 const branchFor    = sym => BRANCHED[sym]  || 0;
@@ -477,7 +491,7 @@ const VOICE_SPEC=[
   // quieter than a vowel — the constriction raises the pressure above the folds and the flow
   // across them nearly stops — and `squeeze` alone was not cutting nearly enough, leaving /ð/
   // at 99% voice and /ʒ/ at 83%.
-  {k:'fricDuck',lo:0,     hi:0.95,   d:0.75,  off:0,},
+  {k:'fricDuck',lo:0,     hi:0.95,   d:0.88,  off:0,},
 ];
 // John, rebuilt off `man` rather than off the fit.
 //

@@ -206,7 +206,18 @@ check("every fricative actually sounds", () => {
   const weak = [], notes = [];
   for (const sym of ["s", "ʃ", "z", "ʒ", "f", "v", "θ", "ð", "h"]) {
     const pct = mean(sym) / vowel * 100;
-    if (pct < 22) weak.push(`${sym} ${pct.toFixed(0)}%`);
+    // A WEAK FRICATIVE IS QUIET, and this used to demand every one reach 22% of a vowel —
+    // which is -13 dB, where a real /ð/ sits at -30. Gains were tuned UP to satisfy it, and the
+    // result was a model whose every class of sound sat within 2.3 dB of every other: vowels
+    // -36.3, approximants -36.8, fricatives -38.6. That flatness is most of what "robotic"
+    // means, and this check is why it was there.
+    //
+    // Wrong in kind as well as degree. A fricative is not audible because it is LOUD; it is
+    // audible because it has high-frequency energy where the vowel beside it has none. That
+    // contrast measures 100 to 600 times, so a fricative can be twenty decibels down and still
+    // be unmistakable. The floor is on the CONTRAST now, and the level is only required not to
+    // vanish altogether.
+    if (pct < 1.5) weak.push(`${sym} ${pct.toFixed(1)}% — inaudible`);
     notes.push(`${sym} ${pct.toFixed(0)}`);
   }
   return { ok: weak.length === 0,
@@ -1729,6 +1740,48 @@ check("voiceless stops are aspirated", () => {
 // the markers alone gives a file that LOOKS right and does not parse: both sides stop at their
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
+
+// ── the sounds are not all the same loudness ──────────────────────────────
+report("loudness contrast against the reference recording", () => {
+  // Measured against a person reading the bench phrases, every class of sound in the model sat
+  // within 2.3 dB of every other — vowels -36.3, approximants -36.8, fricatives -38.6 — where a
+  // real fricative is 10 to 30 dB below a vowel. Nothing stood out, and that flatness is most
+  // of what "robotic" means.
+  //
+  // On "she sells sea shells", 20 ms frames: the speaker spans 20.7 dB and the model spanned
+  // 12.1. Reported rather than gated because it is one speaker on one day, and because the
+  // right amount of contrast is a listening judgement — what is measurable is being HALF a
+  // person's, which this catches.
+  const P = H.P, S = require("../engine/spelling.js");
+  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  const span = t => {
+    const r = S.g2p(t);
+    const D = Math.max(0.35, r.ph.length*(v.per||0.17));
+    const W = P.buildWord(r.ph, { D, rate: P.rateFor(r.ph, D, v), n, stress: r.stress, pros: v,
+                          glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    const p = H.makeProcessor(n);
+    p.port.onmessage({ data: { type: "voice", v } });
+    p.port.onmessage({ data: { type: "goal",
+      seq: { keys: W.keys, f0: P.buildF0(W.end, v, { stress: r.stress, seg: W.seg }), end: W.end } } });
+    const out = [new Float32Array(128)], buf = [];
+    for (let b = 0; b < Math.ceil(W.end*H.SR/128); b++) { p.process([], [out]); buf.push(...out[0]); }
+    const B = Float64Array.from(buf), hop = Math.round(0.02*H.SR), lv = [];
+    for (let i = 0; i + hop < B.length; i += hop) {
+      let s2 = 0;
+      for (let k = i; k < i + hop; k++) s2 += B[k]*B[k];
+      const d = 20*Math.log10(Math.max(1e-9, Math.sqrt(s2/hop)));
+      if (d > -60) lv.push(d);
+    }
+    lv.sort((a,b) => a-b);
+    const pc = q => lv[Math.floor(q/100*(lv.length-1))];
+    return pc(90) - pc(10);
+  };
+  const sh = span("she sells sea shells");          // the speaker: 20.7 dB
+  const fox = span("the quick brown fox jumps over the lazy dog");
+  return { ok: sh > 15,
+           note: `"she sells" ${sh.toFixed(1)} dB against the speaker's 20.7; ` +
+                 `the pangram ${fox.toFixed(1)} dB` };
+});
 
 // ── a long movement is driven harder than a short one ─────────────────────
 check("stiffness follows how far, not just how narrow", () => {

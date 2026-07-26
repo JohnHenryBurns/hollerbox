@@ -33,64 +33,41 @@ seal-and-release. But the word currently comes out, in the project's own field n
 
 ## What is next, in order
 
-1. **The fitter cannot see a fricative.** `lab/fit-preset.js` scores postures on formants, and a
-   fricative's channel is not something formants can see — so John's fitted /z/ came out 97%
-   too wide to fricate and his /θ/ came out SEALED, which is a stop. Give the fit a second
-   objective: does this posture actually make its sound. Fixes the class, not two symbols.
-2. **Then re-test the tempo ceiling.** `per` is held at 0.095 only because a fricative goes
-   silent below it, and that silence is those two postures. It may reach 0.075 and land inside
-   15% of the recording.
-3. **/ð/'s noise peaks at 9500 Hz**, at or past the edge of hearing, so it needs absurd gain to
-   be audible at all. Spectrum, not balance.
-4. **The pops**, located to the gap after a stop, two causes eliminated, still unexplained.
+1. **Stiffness is keyed on the wrong thing.** `stiff = target < artCrit ? max(floor, target/artCrit) : 1`
+   asks how NARROW a gesture ends up, which is right about precision of CONTACT — a sibilant
+   groove is millimetres — and wrong about precision of SHAPE. The consequence, named three
+   separate ways from three different symptoms:
+
+   - /l/, /r/ and /w/ get the slowest articulators in the model while needing the largest
+     tongue movements. Still 0.48 out of position with a 90 ms duration floor. This is what
+     "telo norgut" was.
+   - The wide parts of the tract sit 0.25 out, which raising `artCrit` to 2.0 only half fixed.
+   - Duration floors keep helping a little and never enough, because time is not what is short.
+
+   Key it on how FAR the articulator has to travel instead. One function, and it should move
+   approximants, vowel transitions and the wide-part error together.
+
+2. **The range**, which is the best robot-sound candidate measured. 6.7 semitones of pitch
+   against a person's 13.3 and 12.8 dB of loudness against 22.5, with the bottom matching
+   almost exactly — it is the top that never arrives. `acc` and `decl` reach 12.3 semitones.
+   **Loudness caps at 18.8 dB and something other than the existing knobs is limiting it**,
+   which is worth finding.
+
+3. **Vowel quality in the speller**, surfaced by reading real prose: "travelled" wants /ə/ and
+   gets /ɛ/, "hoped" wants /oʊ/ and gets /o/, "books" wants /ʊ/ and gets /u/. Unstressed
+   reduction mostly, and the most audible thing left in a long passage.
+
+4. **/ð/'s noise peaks at 9500 Hz**, at or past the edge of hearing, so it needs absurd gain to
+   register at all. Spectrum, not balance.
+
 5. **The affricate.** "Jump" is *doo-ump*: /dʒ/ is spelled d+ʒ and rendered as two segments
    where a real affricate releases a stop INTO friction, as one gesture.
-6. **The wizard**, after the phonemes are trustworthy enough that a child's saved seed is worth
-   keeping.
 
-**Articulator speed has to match speaking speed.** `artT` is an absolute time constant, chosen
-when the model spoke at about half a real rate. The moment one voice was calibrated to a
-recording and given a real tempo, its articulators could not keep up — John undershot by 0.458
-where every other voice sat near 0.12, because every other voice is still slow. John's is 0.012
-now and it matches the rest at half their duration. **Every voice that gets a real tempo will
-need this**, and a voice's articulators arguably ought to scale with its tract length rather than
-being set by hand.
+**Held deliberately: the pops.** Real, reported by ear from several voices, and seven
+instruments have now failed on them — the last one turned out to be pure noise, varying 4.5x on
+the seed alone. **The first job there is a metric that survives a seed control**, not an eighth
+hypothesis.
 
-**Undershoot and transients: the trade may not exist, and the metric cannot tell.** A sweep of
-the articulator time constant appeared to show a clean one — fast articulators arriving but
-clicking, slow ones smooth and never getting there:
-
-| artT | undershoot | worst isolated transient |
-|---|---|---|
-| 0.012 | 0.134 | 1591 |
-| 0.020 | 0.342 | 574 |
-| 0.025 | 0.469 | 270 |
-
-**It does not survive a control.** Holding every setting fixed and varying only the noise seed,
-the same phrase measures a worst transient anywhere from **975 to 4403 — a 4.5x spread from the
-noise alone**. The differences above are two to five times. There is no signal in that column,
-and this section previously called the trade the highest-value structural fix in the model.
-
-A third-order critically damped follower was built to break it — three equal real poles, so
-position, velocity and acceleration are all continuous, which is what minimum-jerk means. At a
-fair comparison, the same time constant for both, the second-order one is simply better: 0.058
-undershoot against 0.124, which is what a third pole costs. Not shipped. An earlier attempt
-bolted a lag onto the second-order system instead, which is a different thing and rings — it
-took the worst transient from 533 to 3420.
-
-**What survives.** Undershoot is reliable: it varies smoothly and repeatably with the time
-constant, and John undershooting 0.458 where every other voice sat near 0.12 was real and is
-fixed. The pops are real too — reported by ear, repeatedly, from several voices. They are simply
-not measurable by peak-against-median on a single render, which is now the sixth and seventh
-instrument here to fail on them. **A pop metric has to average over seeds before anything can be
-tuned against it.**
-
-
-Open and not queued: **the follower is a critically damped spring, and a muscle is not one.** Its
-acceleration is proportional to the distance remaining, so it slows as it closes. That is not
-what bites on the fricatives — those are stiffened and arrive at 97% — but it is why vowels
-undershoot by 0.24 to 0.50, and a minimum-jerk or force-limited profile would be more honest.
-A Phase 9 revision rather than a tweak.
 
 ## Where it stands
 

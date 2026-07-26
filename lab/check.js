@@ -1734,38 +1734,68 @@ check("the Mouth view defines its geometry once", () => {
     if (!new RegExp("const " + f + "\\b").test(code)) bad.push(`no shared ${f}`);
 
   // and the shapes must not intersect, which is what the duplication caused
-  // CONTINUITY, not just ordering — and against the PAGE'S OWN FUNCTIONS, not a copy of them.
-  //
-  // The first version of this asked only whether one curve sat above another, and passed while
-  // the nasal floor jumped 0.46 at the hinge and ran within 0.012 of the palate at the back.
-  // The second version tested continuity but against its own reimplementation of the geometry —
-  // so an ablation that broke the page left the check green. A check that duplicates the thing
-  // it checks is the same fault the check exists to catch, one level up.
-  //
-  // The declarations are lifted out of index.html and evaluated, so this measures what ships.
-  // the whole block, by its boundaries — picking declarations out one at a time cut them mid
-  // expression, since several span several lines
+  // Evaluated against the PAGE'S OWN declarations, not a copy — a check that reimplements the
+  // thing it checks is the fault it exists to catch, and an earlier version of this did exactly
+  // that and stayed green while the page broke.
   const decls = (code.match(/const V_HINGE[\s\S]*?(?=function drawMouth)/) || [""])[0];
-  if (!/VELUM_AT/.test(decls) || !/TONGUE_AT/.test(decls)) bad.push("cannot find the page's geometry to evaluate");
+  if (!/VELUM_AT/.test(decls) || !/TONGUE_AT/.test(decls)) bad.push("cannot find the page's geometry");
   else {
     let G;
     try {
-      G = new Function(decls + "\nreturn {V_HINGE,NASO_BK,ROOF,NASAL_ROOF,VELUM_TIP,VELUM_AT};")();
+      G = new Function(decls +
+        "\nreturn {V_HINGE,V_TIP,NASO_BK,PHARYNX,PALATE,NASAL_ROOF,VELUM_TIP,VELUM_AT,ROOF,NASAL_FLOOR};")();
     } catch (e) { bad.push("the page's geometry does not evaluate: " + e.message); }
     if (G) for (const open of [0, 0.5, 1]) {
-      const under = u => u < G.V_HINGE ? G.VELUM_AT(open, u) : G.ROOF(u);
-      const port = Math.max(G.NASO_BK + 0.02, G.VELUM_TIP(open).u - 0.05);
-      let step = 0, outside = 0, flat = 0, prev = null;
+      // THE FIXED PARTS MUST NOT ENTER THE NASAL CAVITY. The roof used to be one fixed line from
+      // 0 to 1, and the stretch between 0.30 and 0.62 of it IS the soft palate — the same tissue
+      // as the velum, drawn separately in yellow. So a red line sat inside the red cavity at 42
+      // points whenever the velum opened. Only the pharyngeal wall and the hard palate are fixed.
+      // THE SOFT PALATE MUST MOVE. This is the whole fault stated directly: the stretch of roof
+      // between the velum's free edge and the hard palate IS the velum, so asking for it at two
+      // different openings must give two different answers. When it was a fixed line it gave
+      // one, and that line then sat inside the nasal cavity whenever the velum opened.
+      //
+      // Checking the component functions instead — that PHARYNX and PALATE stay out of the
+      // cavity — cannot see this, because both of those are innocent. It is what ROOF returns
+      // BETWEEN them that was wrong.
+      if (open === 0) {
+        const mid = (G.V_TIP + G.V_HINGE)/2;
+        if (Math.abs(G.ROOF(0, mid) - G.ROOF(1, mid)) < 0.05)
+          bad.push("the soft palate does not move with the velum — it is being drawn as fixed");
+      }
+      let through = 0;
+      for (let u = G.NASO_BK; u < 0.99; u += 0.01) {
+        const floor = G.NASAL_FLOOR(open, u), roof = G.NASAL_ROOF(u);
+        if (u < G.V_TIP && G.PHARYNX(u) > roof && G.PHARYNX(u) < floor) through++;
+        if (u >= G.V_HINGE && G.PALATE(u) > roof && G.PALATE(u) < floor) through++;
+      }
+      if (through) bad.push(`a fixed line runs through the nasal cavity at ${through} points, velum ${open}`);
+
+      // the cavity must have height, and the air inside it must be continuous
+      let flat = 0, step = 0, outside = 0, prev = null;
+      const port = Math.max(G.NASO_BK + 0.02, G.VELUM_TIP(open).u - 0.04);
       for (let u = port; u <= 0.99; u += 0.01) {
-        const y = (G.NASAL_ROOF(u) + under(u))/2;
+        const floor = G.NASAL_FLOOR(open, u), roof = G.NASAL_ROOF(u);
+        if (roof >= floor) flat++;
+        const y = (roof + floor)/2;
         if (prev !== null) step = Math.max(step, Math.abs(y - prev));
-        if (y < G.NASAL_ROOF(u) || y > under(u)) outside++;
-        if (G.NASAL_ROOF(u) >= under(u)) flat++;
+        if (y < roof || y > floor) outside++;
         prev = y;
       }
+      if (flat) bad.push(`the cavity has no height at ${flat} points, velum ${open}`);
       if (step > 0.05) bad.push(`the air jumps ${step.toFixed(2)} at velum ${open}`);
       if (outside) bad.push(`the air leaves the cavity at ${outside} points, velum ${open}`);
-      if (flat) bad.push(`the cavity has no height at ${flat} points, velum ${open}`);
+
+      // The velum and the hard palate are ONE piece of tissue, so the roof must be continuous
+      // where they meet. It must NOT be continuous at the other end: the velum's free edge and
+      // the pharyngeal wall are separate surfaces and the gap between them is the port. An
+      // earlier version of this checked continuity across both and flagged the port as a fault.
+      const j = Math.abs(G.ROOF(open, G.V_HINGE + 0.005) - G.ROOF(open, G.V_HINGE - 0.005));
+      if (j > 0.06) bad.push(`the velum and the palate do not meet, gap ${j.toFixed(2)}, velum ${open}`);
+      let oral = 0;
+      for (let u = G.V_TIP + 0.02; u <= 0.98; u += 0.01)
+        if (Math.abs(G.ROOF(open, u) - G.ROOF(open, u - 0.01)) > 0.06) oral++;
+      if (oral) bad.push(`the roof jumps within the palate at ${oral} points, velum ${open}`);
     }
   }
 

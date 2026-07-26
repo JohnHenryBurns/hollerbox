@@ -1764,6 +1764,85 @@ check("vowels in a phrase reach the formants they have alone", () => {
                      : "no vowels measured" };
 });
 
+// ── the wizard asks for a direction, not a parameter ──────────────────────
+check("the voice wizard's options actually differ", () => {
+  // The tournament offers A against B while a dropdown decides which of five groups is being
+  // mutated — a bookkeeping task, not a listening one. The wizard asks for a direction instead:
+  // four questions, options you can hear, a name at the end.
+  //
+  // What it must not become is four questions whose answers all sound the same. Each option is
+  // a patch over the base voice, and this evaluates them the way the page does — parsed out of
+  // wizard.html rather than duplicated here, because a check that reimplements the thing it
+  // checks is the mistake this file keeps making.
+  const fs = require("fs"), P = H.P, bad = [];
+  const page = fs.readFileSync(__dirname + "/../wizard.html", "utf8");
+  const m = page.match(/const Q = \[[\s\S]*?\n\];/);
+  if (!m) return { ok: false, note: "cannot find the wizard's questions" };
+  let Q;
+  try { Q = new Function(m[0] + "\nreturn Q;")(); }
+  catch (e) { return { ok: false, note: "the wizard's questions do not evaluate: " + e.message } }
+
+  if (Q.length < 4) bad.push(`only ${Q.length} questions`);
+  const base = { ...P.defaultVoice(), ...P.VOICES.john.v };
+  for (const q of Q) {
+    if (q.opts.length < 3) bad.push(`${q.key} offers only ${q.opts.length} options`);
+    // exactly one option must be the identity, so there is always an "as it is"
+    const empties = q.opts.filter(o => Object.keys(o[2]).length === 0).length;
+    if (empties !== 1) bad.push(`${q.key} has ${empties} do-nothing options, want exactly 1`);
+    // and every other option must move something that exists in the voice spec
+    for (const [label, , patch] of q.opts) {
+      for (const k of Object.keys(patch)) {
+        if (!P.VOICE_SPEC.some(x => x.k === k)) bad.push(`${q.key}/${label} sets ${k}, not a voice parameter`);
+        else if (Math.abs((patch[k] - base[k])/(base[k] || 1)) < 0.02)
+          bad.push(`${q.key}/${label} sets ${k} to what it already is`);
+      }
+    }
+  }
+  // the whole point of question 2: its extremes must differ in RANGE, which is the thing a
+  // recording says the model is short of — 6.7 semitones against a person's 13.3
+  const life = Q.find(q => q.key === "life");
+  if (life) {
+    const flat = { ...base, ...life.opts[0][2] }, wild = { ...base, ...life.opts[life.opts.length-1][2] };
+    if (!((wild.acc || 0) > (flat.acc || 0) + 3)) bad.push("the liveliest option is not much livelier");
+  }
+  // ---- the random walk that runs after the questions ----
+  // The four answers get you into the right neighbourhood and cannot get further, because each
+  // moves several parameters together in a fixed pattern. The walk goes on from there, and two
+  // things about it have to hold: it must stay inside every parameter's declared bounds, and
+  // the range parameters must be separable — a walk that always widens is no use to someone who
+  // wants a small quiet voice.
+  const walk = (page.match(/const WALK = \[[\s\S]*?const RANGE = \[[^\]]*\];/) || [""])[0];
+  const mut  = (page.match(/function mutate\(v, strength\)\{[\s\S]*?\n\}/) || [""])[0];
+  const prng = (page.match(/let seed = [\s\S]*?\n\};/) || [""])[0];
+  if (!walk || !mut || !prng) bad.push("cannot find the wizard's walk");
+  else {
+    const mk = on => new Function("HOLLER", "document",
+      walk + "\n" + prng + "\n" + mut + "\nreturn mutate;")(P, { getElementById: () => ({ checked: on }) });
+    const base = { ...P.defaultVoice(), ...P.VOICES.john.v };
+    let v = { ...base }, oob = 0;
+    const step = mk(true);
+    for (let i = 0; i < 200; i++) {
+      v = step(v, 1);
+      for (const k of Object.keys(v)) {
+        const sp = P.VOICE_SPEC.find(x => x.k === k);
+        if (sp && (v[k] < sp.lo - 1e-9 || v[k] > sp.hi + 1e-9)) oob++;
+      }
+    }
+    if (oob) bad.push(`${oob} values escaped their bounds in 200 steps`);
+    // with the toggle off, nothing in RANGE may move at all
+    let w = { ...base };
+    const quiet = mk(false);
+    for (let i = 0; i < 200; i++) w = quiet(w, 1);
+    const moved = ["acc","decl","wklev","wkdur"].filter(k => Math.abs((w[k] ?? 0) - (base[k] ?? 0)) > 1e-9);
+    if (moved.length) bad.push(`range parameters moved with the toggle off: ${moved.join(" ")}`);
+  }
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ")
+               : `${Q.length} questions, ${Q.reduce((a,q) => a + q.opts.length, 0)} options, ` +
+                 `walk stays in bounds over 200 steps` };
+});
+
 // ── articulator speed has to match speaking speed ─────────────────────────
 report("undershoot at each voice's own tempo", () => {
   // Raised from listening: the child's voice sounds the most natural, with a bounce that makes

@@ -1,0 +1,380 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Hollerbox · make a voice</title>
+
+<!-- ── MAKE A VOICE ────────────────────────────────────────────────────────────
+     The tournament works and asks the wrong question of a person: it offers A against B while
+     a dropdown decides which of five groups is being mutated, so it is easy to lose track of
+     what is even moving. That is a bookkeeping task, not a listening one.
+
+     This asks for a DIRECTION instead. Four questions, each with a handful of options you can
+     hear, and a name at the end. The seed format already preserves; what was missing is the
+     framing that turns forty numbers into four choices with obvious answers.
+
+     The second question is there because of a measurement. Against a recording of a person
+     reading the bench phrases, the model has HALF the range on both axes — 6.7 semitones of
+     pitch against 13.3, and 12.8 dB of loudness against 22.5. The bottom matches almost
+     exactly; it is the top that never arrives. Flat dynamics is what "robotic" means
+     colloquially, so "how lively" is a first-class question rather than a fine adjustment.
+────────────────────────────────────────────────────────────────────────────── -->
+
+<style>
+:root{
+  --bg:#0f1316; --panel:#171c20; --panel2:#212930; --rule:#2f373d;
+  --ink:#f1f5f7; --dim:#aeb9bf; --line:#4c575e; --pick:#cfe3ff;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
+header{display:flex;align-items:center;gap:.75rem;padding:.6rem 1rem;border-bottom:1px solid var(--rule)}
+h1{font-weight:600;font-size:1.1rem;margin:0;letter-spacing:-.01em}
+.sub{font-family:var(--mono);font-size:.78rem;color:var(--dim)}
+.spacer{flex:1}
+.btn{font-family:var(--sans);font-weight:500;font-size:.9rem;border-radius:6px;cursor:pointer;
+  padding:.45rem .8rem;background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:hover{border-color:var(--ink)}
+a.btn{text-decoration:none;display:inline-block}
+.btn.solid{background:var(--ink);color:#0d1013;border-color:var(--ink);font-weight:600}
+
+main{max-width:44rem;margin:0 auto;padding:1rem 1rem 4rem}
+.step{border:1px solid var(--rule);border-radius:10px;background:var(--panel);
+  padding:.9rem 1rem;margin-bottom:.9rem}
+.step h2{font-size:1rem;margin:0 0 .15rem}
+.step .why{font-family:var(--mono);font-size:.75rem;color:var(--dim);margin-bottom:.7rem}
+.opts{display:flex;flex-wrap:wrap;gap:.5rem}
+.opt{flex:1 1 8rem;border:1px solid var(--line);border-radius:8px;background:var(--panel2);
+  color:var(--ink);padding:.6rem .5rem;cursor:pointer;font-size:.92rem;text-align:center}
+.opt:hover{border-color:var(--ink)}
+.opt.on{background:var(--pick);color:#0b1b2e;border-color:var(--pick);font-weight:600}
+.opt small{display:block;font-family:var(--mono);font-size:.68rem;opacity:.75;margin-top:.15rem}
+
+.say{display:flex;gap:.5rem;align-items:center;margin-top:.8rem;flex-wrap:wrap}
+.say input,.say select{flex:1 1 12rem;background:var(--panel2);color:var(--ink);
+  border:1px solid var(--line);border-radius:6px;padding:.45rem .55rem;font-family:var(--mono);font-size:.85rem}
+#seed{width:100%;font-family:var(--mono);font-size:.75rem;word-break:break-all;color:var(--dim);
+  background:var(--panel2);border:1px solid var(--rule);border-radius:6px;padding:.5rem;margin-top:.5rem}
+.note{font-family:var(--mono);font-size:.72rem;color:var(--dim);margin-top:.5rem;line-height:1.5}
+</style>
+
+<header>
+  <h1>Hollerbox</h1><span class="sub">make a voice</span>
+  <span class="spacer"></span>
+  <a class="btn" href="index.html">Back</a>
+  <a class="btn" href="lab/bench.html">Bench</a>
+</header>
+
+<main>
+  <div class="step">
+    <h2>1 · How big is it?</h2>
+    <div class="why">a longer throat and a lower voice box — a mouse and a giant are the same tube, different sizes</div>
+    <div class="opts" id="q1"></div>
+  </div>
+
+  <div class="step">
+    <h2>2 · How lively is it?</h2>
+    <div class="why">how far the pitch and the loudness move. flat is what a robot sounds like</div>
+    <div class="opts" id="q2"></div>
+  </div>
+
+  <div class="step">
+    <h2>3 · What is the voice like?</h2>
+    <div class="why">breathy, clear, rough or pressed — how the vocal folds themselves behave</div>
+    <div class="opts" id="q3"></div>
+  </div>
+
+  <div class="step">
+    <h2>4 · How fast does it talk?</h2>
+    <div class="why">seconds per sound. real speech is about 70 to 80 milliseconds</div>
+    <div class="opts" id="q4"></div>
+  </div>
+
+  <div class="step" id="battleStep">
+    <h2>5 · Two at a time</h2>
+    <div class="why">the four answers get you close; this walks from there. play both, keep the
+      one you like, and it walks again from the winner</div>
+    <div class="opts">
+      <button class="opt" id="playA">▶ A</button>
+      <button class="opt" id="playB">▶ B</button>
+    </div>
+    <div class="opts" style="margin-top:.5rem">
+      <button class="opt" id="keepA">keep A</button>
+      <button class="opt" id="keepB">keep B</button>
+      <button class="opt" id="battleOff">back to my answers</button>
+    </div>
+    <div class="say">
+      <label style="font-family:var(--mono);font-size:.78rem;color:var(--dim);flex:0 0 auto">
+        <input type="checkbox" id="wideRange" checked> let it widen the range
+      </label>
+      <span class="sub" id="battleCount" style="flex:1;text-align:right"></span>
+    </div>
+  </div>
+
+  <div class="step">
+    <h2>Try it out</h2>
+    <div class="say">
+      <select id="book"></select>
+      <button class="btn" id="readIt">▶ read</button>
+    </div>
+    <div class="say">
+      <input id="own" placeholder="or type anything and press enter">
+      <button class="btn" id="sayOwn">▶ say</button>
+    </div>
+  </div>
+
+  <div class="step">
+    <h2>Keep it</h2>
+    <div class="say">
+      <input id="vname" placeholder="give it a name">
+      <button class="btn solid" id="save">copy the seed</button>
+    </div>
+    <div id="seed"></div>
+    <div class="note">A seed is the whole voice — throat length, pitch, liveliness, texture, speed.
+      Paste it into the Lab to keep tuning, or send it to someone.</div>
+  </div>
+</main>
+
+<script>
+(async () => {
+// The engine is fetched, not linked, for the same reason index.html does it: all of it at once,
+// no version tokens to keep in step.
+async function loadEngine(name){
+  const url = 'engine/' + name;
+  try {
+    const r = await fetch(url, { cache: 'no-store' });
+    if (r.ok) { new Function(await r.text())(); return; }
+  } catch (e) { /* file://, offline */ }
+  await new Promise((res, rej) => {
+    const t = document.createElement('script');
+    t.src = url; t.onload = res; t.onerror = rej; document.head.appendChild(t);
+  });
+}
+await loadEngine('phonemes.js');
+await loadEngine('spelling.js');
+
+const HOLLER = window.HOLLER, SPELL = window.HOLLER_SPELL;
+
+/* ── THE FOUR QUESTIONS ───────────────────────────────────────────────────
+   Each option is a patch over the base voice. They are deliberately coarse: the point is that
+   a child can hear the difference between two of them without being told what changed. */
+const BASE = { ...HOLLER.defaultVoice(), ...(HOLLER.VOICES.john.v || {}) };
+
+const Q = [
+  { id:'q1', key:'size', opts:[
+    ['Tiny',    'a mouse',   { sect:26, f0a:300, f0b:340, f0c:250 }],
+    ['A kid',   'small',     { sect:33, f0a:210, f0b:240, f0c:180 }],
+    ['Grown up','normal',    {}],
+    ['A giant', 'huge',      { sect:54, f0a:70,  f0b:80,  f0c:60  }],
+  ]},
+  { id:'q2', key:'life', opts:[
+    ['Robot',   'no range',  { acc:0,   decl:0,   wklev:1.0  }],
+    ['Calm',    'a little',  { acc:2,   decl:0.4, wklev:0.8  }],
+    ['Normal',  'as it is',  {}],
+    ['Bouncy',  'lots',      { acc:6,   decl:1.2, wklev:0.45 }],
+    ['Wild',    'all of it', { acc:8,   decl:1.8, wklev:0.35 }],
+  ]},
+  { id:'q3', key:'tone', opts:[
+    ['Breathy', 'whispery',  { rd:1.9,  brth:0.55, press:0.1 }],
+    ['Clear',   'plain',     {}],
+    ['Rough',   'gravelly',  { jit:3.2, brth:0.30, press:0.7 }],
+    ['Pressed', 'strained',  { rd:0.45, press:0.95, brth:0.05 }],
+  ]},
+  { id:'q4', key:'pace', opts:[
+    ['Slow',    'drawn out', { per:0.17 }],
+    ['Normal',  'as it is',  {}],
+    ['Quick',   'brisk',     { per:0.075 }],
+  ]},
+];
+const chosen = { q1:2, q2:2, q3:1, q4:1 };          // the "as it is" option in each
+
+function voice(){
+  let v = { ...BASE };
+  for (const q of Q) v = { ...v, ...q.opts[chosen[q.id]][2] };
+  return v;
+}
+/** What actually gets spoken: a contender while a battle is running, the answers otherwise. */
+function current(){ return battle ? battle.keep : voice(); }
+
+/* ── AUDIO ────────────────────────────────────────────────────────────────
+   One shared start promise, because four things can trigger it and a flag-then-work guard lets
+   the second caller through with no node — which is a bug this project has already had. */
+let ctx=null, node=null, N=44, startP=null;
+const start = () => startP || (startP = reallyStart());
+async function reallyStart(){
+  ctx = new (window.AudioContext||window.webkitAudioContext)();
+  N = Math.max(24, Math.round(ctx.sampleRate*2*0.175/350));
+  let url = new URL('engine/tract-worklet.js', document.baseURI).href;
+  try {
+    const r = await fetch(url, { cache:'no-store' });
+    if (r.ok) url = URL.createObjectURL(new Blob([await r.text()], { type:'text/javascript' }));
+  } catch(e) {}
+  await ctx.audioWorklet.addModule(url);
+  node = new AudioWorkletNode(ctx, 'tract', { processorOptions:{ n:N, velar:HOLLER.VELAR } });
+  node.connect(ctx.destination);
+  await new Promise(r => setTimeout(r, 300));       // let it warm up before the first word
+}
+
+let speakAs = null;
+async function speak(text){
+  await start();
+  if (!node) return;
+  if (ctx.state === 'suspended') await ctx.resume();
+  const v = speakAs || current();
+  const want = Math.round(v.sect || 44);
+  if (want !== N) { N = want; node.port.postMessage({ type:'tract', n:N,
+                    diam: HOLLER.articulate(HOLLER.ART['ə'], N) }); }
+  node.port.postMessage({ type:'voice', v });
+  const r = SPELL.g2p(text);
+  const known = new Set([...Object.keys(HOLLER.ART), ...Object.keys(HOLLER.DIPH), ' ']);
+  const keep = r.ph.map(x => known.has(x) || String(x).slice(0,3) === 'brk');
+  const ph = r.ph.filter((_,i) => keep[i]);
+  const st = (r.stress||null) && r.stress.filter((_,i) => keep[i]);
+  if (!ph.length) return;
+  const D = Math.max(0.35, Math.min(5, ph.length*(v.per||0.17)));
+  const W = HOLLER.buildWord(ph, { D, rate: HOLLER.rateFor(ph, D, v), n:N, stress:st, pros:v,
+                            glide:v.glide, stopHold:v.stopT, drawl:v.drawl });
+  node.port.postMessage({ type:'goal', seq:{ keys:W.keys,
+    f0: HOLLER.buildF0(W.end, v, { stress:st, seg:W.seg }), end:W.end } });
+}
+
+/* ── PASSAGES ─────────────────────────────────────────────────────────────
+   Public domain, and chosen to be worth hearing rather than merely legal: each one is short,
+   rhythmic, and made of common words the speller handles well. Long enough to judge a voice by,
+   which a single phrase is not. */
+const BOOKS = [
+  ['It was the best of times, it was the worst of times.',
+   'Dickens · A Tale of Two Cities, 1859'],
+  ['Call me Ishmael. Some years ago, never mind how long precisely, I thought I would sail about a little.',
+   'Melville · Moby-Dick, 1851'],
+  ['It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.',
+   'Austen · Pride and Prejudice, 1813'],
+  ['I have spread my dreams under your feet. Tread softly because you tread on my dreams.',
+   'Yeats · He Wishes for the Cloths of Heaven, 1899'],
+  ['Two roads diverged in a wood, and I took the one less travelled by, and that has made all the difference.',
+   'Frost · The Road Not Taken, 1916'],
+  ['The quick brown fox jumps over the lazy dog. How now, brown cow?',
+   'every letter, and two vowels worth hearing'],
+];
+
+/* ── TWO AT A TIME ────────────────────────────────────────────────────────
+   The four questions get you into the right neighbourhood and cannot get you further, because
+   each one moves several parameters together in a fixed pattern. This walks from wherever they
+   left you: two mutations of the current voice, keep the one you like, walk again from that.
+   Which is the tournament — but the thing being compared is now a voice you already chose
+   rather than an arbitrary point, and nothing asks you to track which group is mutating.
+
+   `RANGE` is separated out and its own toggle, because a recording says the model has half a
+   person's range on both axes — 6.7 semitones of pitch against 13.3, and 12.8 dB of loudness
+   against 22.5 — and the bottom already matches. A walk that only ever nudges is unlikely to
+   cross that on its own, so it is allowed to push, and it is allowed to be switched off when
+   what you want is a small voice rather than a lively one. */
+const WALK = ['sect','f0a','f0b','f0c','rd','press','brth','jit','per','drawl','open'];
+const RANGE = ['acc','decl','wklev','wkdur'];
+
+let battle = null, round = 0;
+let seed = (Date.now() ^ 0x9e3779b9) >>> 0;
+const rnd = () => {
+  seed ^= seed << 13; seed >>>= 0;
+  seed ^= seed >> 17;
+  seed ^= seed << 5;  seed >>>= 0;
+  return seed / 4294967296;
+};
+
+function mutate(v, strength){
+  const out = { ...v };
+  const wide = document.getElementById('wideRange').checked;
+  const keys = wide ? WALK.concat(RANGE) : WALK;
+  // move a handful at once. One at a time is too slow to hear and too slow to converge.
+  const howMany = 3 + Math.floor(rnd()*3);
+  for (let i = 0; i < howMany; i++){
+    const k = keys[Math.floor(rnd()*keys.length)];
+    const spec = HOLLER.VOICE_SPEC.find(x => x.k === k);
+    if (!spec) continue;
+    const span = spec.hi - spec.lo;
+    // range parameters get a bigger push, because nudging will not cross a gap this size
+    const kick = (RANGE.includes(k) ? 0.42 : 0.18) * strength;
+    let val = (out[k] === undefined ? spec.d : out[k]) + (rnd()*2 - 1)*span*kick;
+    out[k] = Math.max(spec.lo, Math.min(spec.hi, val));
+  }
+  return out;
+}
+
+function startBattle(){
+  const from = battle ? battle.keep : voice();
+  battle = { keep: from, A: mutate(from, 1), B: mutate(from, 1) };
+  round++;
+  document.getElementById('battleCount').textContent = 'round ' + round;
+  showSeed();
+}
+
+/* ── DRAW ─────────────────────────────────────────────────────────────── */
+function draw(){
+  for (const q of Q){
+    const host = document.getElementById(q.id);
+    host.innerHTML = '';
+    q.opts.forEach(([label, hint], i) => {
+      const b = document.createElement('button');
+      b.className = 'opt' + (chosen[q.id] === i ? ' on' : '');
+      b.innerHTML = label + '<small>' + hint + '</small>';
+      b.addEventListener('click', () => {
+        chosen[q.id] = i; battle = null; round = 0;
+        document.getElementById('battleCount').textContent = '';
+        draw(); showSeed();
+        speak(document.getElementById('own').value.trim() || 'hello world');
+      });
+      host.appendChild(b);
+    });
+  }
+}
+function showSeed(){
+  const v = current();
+  const name = (document.getElementById('vname').value || '').trim();
+  document.getElementById('seed').textContent = (name ? name + ' · ' : '') + HOLLER.encodeVoice(v);
+}
+
+const bk = document.getElementById('book');
+BOOKS.forEach(([text, who], i) => {
+  const o = document.createElement('option');
+  o.value = i; o.textContent = who;
+  bk.appendChild(o);
+});
+const sample = () => document.getElementById('own').value.trim() || BOOKS[+bk.value][0];
+document.getElementById('playA').addEventListener('click', () => {
+  if (!battle) startBattle();
+  speakAs = battle.A; speak(sample()); speakAs = null;
+});
+document.getElementById('playB').addEventListener('click', () => {
+  if (!battle) startBattle();
+  speakAs = battle.B; speak(sample()); speakAs = null;
+});
+document.getElementById('keepA').addEventListener('click', () => {
+  if (!battle) return; battle.keep = battle.A; startBattle(); speak(sample());
+});
+document.getElementById('keepB').addEventListener('click', () => {
+  if (!battle) return; battle.keep = battle.B; startBattle(); speak(sample());
+});
+document.getElementById('battleOff').addEventListener('click', () => {
+  battle = null; round = 0;
+  document.getElementById('battleCount').textContent = '';
+  showSeed(); speak(sample());
+});
+
+document.getElementById('readIt').addEventListener('click', () => speak(BOOKS[+bk.value][0]));
+document.getElementById('sayOwn').addEventListener('click',
+  () => speak(document.getElementById('own').value.trim() || 'hello world'));
+document.getElementById('own').addEventListener('keydown',
+  e => { if (e.key === 'Enter') speak(e.target.value.trim() || 'hello world'); });
+document.getElementById('vname').addEventListener('input', showSeed);
+document.getElementById('save').addEventListener('click', async () => {
+  const b = document.getElementById('save');
+  try { await navigator.clipboard.writeText(document.getElementById('seed').textContent);
+        b.textContent = 'copied'; }
+  catch(e){ b.textContent = 'select it below'; }
+  setTimeout(() => b.textContent = 'copy the seed', 1400);
+});
+
+draw(); showSeed();
+})();
+</script>

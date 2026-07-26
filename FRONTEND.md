@@ -39,7 +39,7 @@ projects, and each one is shippable on its own.
 
 ---
 
-## Phase 1 — one speak path
+## Phase 1 — one speak path  ✅ built
 
 **The single highest-value step, and the smallest.**
 
@@ -55,7 +55,7 @@ look like.
 
 *Done when:* the same voice and phrase produce a bit-identical word on all three pages.
 
-## Phase 2 — one engine, one start
+## Phase 2 — one engine, one start  ✅ built
 
 Extract loading and audio start. Currently three implementations: `loadEngine` + Blob worklet in
 index, a near-copy in the wizard, and `findSource` with URL fallbacks in the bench.
@@ -68,8 +68,15 @@ construction.
 *Risk:* low-moderate. The bench's fallback URL search is doing real work for the `?src=` query
 parameter and has to survive.
 
-*Done when:* one `startAudio()` exists, and the ablation for the start race fails from all three
-pages.
+*Done.* `HOLLER_SESSION.loadEngine` and `HOLLER_SESSION.startAudio`; each page keeps an
+eight-line bootstrap that fetches session.js and nothing else. The `?src=` search survives, since
+that is how the bench compares two checkouts.
+
+**And it found a fourth divergence nobody had named: the bench had no warm-up.** index.html and
+the wizard idle 300 ms before the first word, because the engine is interpreted before it is
+compiled and cold it is twice as slow as real time — the first word dropped samples, which sounds
+exactly like a click. That was diagnosed and fixed on the main page some time ago. Nobody carried
+it to the bench, and the bench has been popping on its first play ever since.
 
 ## Phase 3 — the shared selector
 

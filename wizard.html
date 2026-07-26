@@ -141,20 +141,16 @@ main{max-width:44rem;margin:0 auto;padding:1rem 1rem 4rem}
 (async () => {
 // The engine is fetched, not linked, for the same reason index.html does it: all of it at once,
 // no version tokens to keep in step.
-async function loadEngine(name){
-  const url = 'engine/' + name;
-  try {
-    const r = await fetch(url, { cache: 'no-store' });
-    if (r.ok) { new Function(await r.text())(); return; }
-  } catch (e) { /* file://, offline */ }
-  await new Promise((res, rej) => {
-    const t = document.createElement('script');
-    t.src = url; t.onload = res; t.onerror = rej; document.head.appendChild(t);
-  });
-}
-await loadEngine('phonemes.js');
-await loadEngine('spelling.js');
-await loadEngine('session.js');
+// ONE BOOTSTRAP. Everything else — finding the engine, fetching it, starting the audio, warming
+// it up — lives in session.js, which the other two pages load the same way. This page used to
+// carry a near-copy of index.html's loader, written by copying it, and the two had already begun
+// to drift.
+await new Promise((res, rej) => {
+  const t = document.createElement('script');
+  t.src = 'engine/session.js'; t.onload = res; t.onerror = rej;
+  document.head.appendChild(t);
+});
+await window.HOLLER_SESSION.loadEngine();
 
 const HOLLER = window.HOLLER, SPELL = window.HOLLER_SPELL, SESSION = window.HOLLER_SESSION;
 
@@ -202,21 +198,12 @@ function current(){ return battle ? battle.keep : voice(); }
 /* ── AUDIO ────────────────────────────────────────────────────────────────
    One shared start promise, because four things can trigger it and a flag-then-work guard lets
    the second caller through with no node — which is a bug this project has already had. */
-let ctx=null, node=null, N=44, startP=null;
-const start = () => startP || (startP = reallyStart());
-async function reallyStart(){
-  ctx = new (window.AudioContext||window.webkitAudioContext)();
-  N = Math.max(24, Math.round(ctx.sampleRate*2*0.175/350));
-  let url = new URL('engine/tract-worklet.js', document.baseURI).href;
-  try {
-    const r = await fetch(url, { cache:'no-store' });
-    if (r.ok) url = URL.createObjectURL(new Blob([await r.text()], { type:'text/javascript' }));
-  } catch(e) {}
-  await ctx.audioWorklet.addModule(url);
-  node = new AudioWorkletNode(ctx, 'tract', { processorOptions:{ n:N, velar:HOLLER.VELAR } });
-  node.connect(ctx.destination);
-  await new Promise(r => setTimeout(r, 300));       // let it warm up before the first word
-}
+let ctx=null, node=null, N=44;
+const start = async () => {
+  if (node) return;
+  const a = await SESSION.startAudio();
+  ctx = a.ctx; node = a.node; N = a.n;
+};
 
 let speakAs = null;
 async function speak(text){

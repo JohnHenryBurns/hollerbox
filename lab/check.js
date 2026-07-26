@@ -1240,7 +1240,14 @@ check("artT bounds articulator speed and produces undershoot", () => {
 // ── the gestural score is reachable ────────────────────────────────────────
 check("each gesture knob changes what a consonant actually does", () => {
   const P = H.P, bad = [];
-  const V = P.VOICES.john.v, n = Math.round(V.sect);
+  // John's own articulators are fast — artT 0.012, because that voice speaks at a real rate and
+  // at 25 ms it undershot by 0.458 where every other voice sits near 0.12. That makes the
+  // stiffening knobs inert FOR HIM: everything arrives whatever they are set to, which is the
+  // point of having fast articulators and not a fault in the knobs.
+  //
+  // This check is about whether the knobs are load-bearing, so it tests them at the default
+  // articulation speed rather than at one voice's override.
+  const V = (({ artT, ...rest }) => rest)(P.VOICES.john.v), n = Math.round(V.sect);
   // These four were hardcoded numbers doing real linguistic work — how narrow a target has to
   // be before the speaker must hit it, how much harder they push at it, and how far past a
   // surface a closure aims. Exposing them is only worth anything if each one is load-bearing,
@@ -1713,6 +1720,52 @@ check("voiceless stops are aspirated", () => {
 // the markers alone gives a file that LOOKS right and does not parse: both sides stop at their
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
+
+// ── articulator speed has to match speaking speed ─────────────────────────
+report("undershoot at each voice's own tempo", () => {
+  // Raised from listening: the child's voice sounds the most natural, with a bounce that makes
+  // the phonemes come out more clearly. It does — and the reason is not the child.
+  //
+  // artT is an absolute time constant, chosen when the model spoke at about half a real rate.
+  // Once one voice was calibrated to a recording and given a real tempo, its articulators could
+  // no longer keep up: John undershot by 0.458 where every other voice sat near 0.12, because
+  // every other voice is still slow. The child sounded clearer for the same reason a slow
+  // talker is easier to understand.
+  //
+  // Reports rather than gates: what counts as too much undershoot is a listening judgement, and
+  // the useful thing here is the SPREAD across voices — one voice far out of line with the rest
+  // is the signal.
+  const P = H.P, S = require("../engine/spelling.js");
+  const rows = [];
+  for (const nm of ["child", "woman", "john", "man", "barry"]) {
+    const v = { ...P.defaultVoice(), ...P.VOICES[nm].v }, n = Math.round(v.sect);
+    const r = S.g2p("she sells sea shells");
+    const D = Math.max(0.35, Math.min(5, r.ph.length*(v.per || 0.17)));
+    const W = P.buildWord(r.ph, { D, rate: P.rateFor(r.ph, D, v), n, stress: r.stress, pros: v,
+                          glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    const p = H.makeProcessor(n);
+    p.port.onmessage({ data: { type: "voice", v } });
+    p.port.onmessage({ data: { type: "goal",
+      seq: { keys: W.keys, f0: P.buildF0(W.end, v, { stress: r.stress, seg: W.seg }), end: W.end } } });
+    const out = [new Float32Array(128)];
+    let sum = 0, c = 0;
+    for (let b = 0; b < Math.ceil(W.end*H.SR/128); b++) {
+      p.process([], [out]);
+      const t = b*128/H.SR;
+      const sg = W.seg.find(x => t >= x.a && t <= x.b);
+      if (!sg || sg.sym === " " || String(sg.sym).slice(0,3) === "brk") continue;
+      if (Math.abs(t - (sg.a+sg.b)/2) > 0.006) continue;
+      let e = 0;
+      for (let i = 1; i < n-1; i++) e = Math.max(e, Math.abs(p.diam[i] - p.tgt[i]));
+      sum += e; c++;
+    }
+    rows.push({ nm, miss: sum/(c||1) });
+  }
+  const worst = rows.reduce((a,b) => a.miss > b.miss ? a : b);
+  const med = rows.map(r => r.miss).sort((a,b) => a-b)[Math.floor(rows.length/2)];
+  return { ok: worst.miss < med*2,
+           note: rows.map(r => `${r.nm} ${r.miss.toFixed(2)}`).join("  ") };
+});
 
 // ── a fricative aims narrower than its ideal channel ──────────────────────
 check("fricative channels survive being undershot", () => {

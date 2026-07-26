@@ -19,7 +19,7 @@ class TractProcessor extends AudioWorkletProcessor {
     // at a degenerate keyframe pair, cross it in none at all.
     this.tgt=new Float64Array(CAP).fill(1.5);
     this.dv=new Float64Array(CAP);
-    this.artTau=0;
+    this.artTau=0; this.artFar=1.4;
     this.A=new Float64Array(CAP);
     this.R=new Float64Array(CAP); this.L=new Float64Array(CAP);
     this.Rin=new Float64Array(CAP); this.Lin=new Float64Array(CAP);
@@ -126,6 +126,7 @@ class TractProcessor extends AudioWorkletProcessor {
         if(v.artCrit !==undefined) this.artCrit=v.artCrit;
         if(v.artStiff!==undefined) this.artStiff=v.artStiff;
         if(v.artPush !==undefined) this.artPush=v.artPush;
+        if(v.artFar  !==undefined) this.artFar=v.artFar;
         if(v.velT !==undefined) this.velT=v.velT;
         if(v.fricDuck!==undefined) this.fricDuck=v.fricDuck;
       }
@@ -422,7 +423,30 @@ class TractProcessor extends AudioWorkletProcessor {
           const tt=this.tgt[i];
           const crit = this.artCrit===undefined ? 0.6 : this.artCrit;
           const flr  = this.artStiff===undefined ? 0.22 : this.artStiff;
-          const stiff = (crit>0 && tt<crit) ? Math.max(flr, tt/crit) : 1;
+          // ---- STIFFNESS FOLLOWS HOW FAR, NOT HOW NARROW ----
+          //
+          // This asked how narrow a section's target is. That is right about precision of
+          // CONTACT — a sibilant groove is a few millimetres and has to be hit — and wrong
+          // about precision of SHAPE, and it is applied per SECTION, so a section whose target
+          // is wide got no stiffening at all whatever it had to do to get there.
+          //
+          // The consequence showed up three separate ways before it was recognised as one
+          // fault: /l/, /r/ and /w/ getting the slowest articulators in the model while needing
+          // the largest tongue movements, still 0.48 out of position with a 90 ms duration
+          // floor; the wide parts of the tract sitting 0.25 out; and duration floors that kept
+          // helping a little and never enough, because time was never what was short.
+          //
+          // A muscle pulls harder for a longer movement. `travel` is how far this section still
+          // has to go, and stiffness now falls with it — a big move is driven hard, a small one
+          // is left alone. The narrowness term is kept and multiplied in, because a closure
+          // still has to be hit precisely even when it is a short move.
+          // Measured to the TARGET rather than to the aim-past goal, which is computed a few
+          // lines down: the physical distance the tissue moves is to where the sound wants the
+          // tract, not to the overshoot that contact will clamp.
+          const travel = Math.abs(this.tgt[i] - this.diam[i]);
+          const byNarrow = (crit>0 && tt<crit) ? Math.max(flr, tt/crit) : 1;
+          const byFar = this.artFar > 0 ? Math.max(flr, 1 - travel/this.artFar) : 1;
+          const stiff = Math.max(flr, byNarrow*byFar);
           const w=1/(this.artTau*stiff), kk=w*w, cc=2*w;
           // A tongue does not AIM at the palate, it aims past it and the palate stops it. That
           // is why a stop closes even in fast speech while a vowel is free to fall short: the

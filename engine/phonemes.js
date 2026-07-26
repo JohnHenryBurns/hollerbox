@@ -454,6 +454,11 @@ const VOICE_SPEC=[
   // presses into it and the tissue stops it. off:0 aims exactly at the target, which is what
   // made stops fail to seal above artT=0.02.
   {k:'artPush', lo:0,     hi:1,      d:0.45,  off:0,},
+  // How far a section has to travel before it is driven at full stiffness. A muscle pulls
+  // harder for a longer movement, and keying stiffness on how NARROW a target is instead meant
+  // the widest movements in the model got the slowest articulators. off:0 removes the travel
+  // term and restores the narrowness-only rule.
+  {k:'artFar',  lo:0,     hi:3,      d:1.4,   off:0,},
   // The velum's own time constant. It was the last thing in the engine that could still
   // teleport — Phase 9 gave every part of the tract mass and left this tracking its keyframes
   // exactly, so it swung fully open in 26 ms. A real one takes about a hundred and is the
@@ -573,7 +578,7 @@ const VOICE_GROUPS = {
   rhythm: ['per','drawl','glide','stopT','vlen','coda','fnl','poly','stopVc','apw','gcap','onset','wgap'],
   tract:  ['sect','open','burst','hiss'],
   // The articulators themselves — how a consonant is dialled.
-  gesture:['artT','artCrit','artStiff','artPush','velT','fricDuck','decl','reset','ask'],
+  gesture:['artT','artCrit','artStiff','artPush','velT','fricDuck','decl','reset','ask','artFar'],
 };
 
 // seed = each parameter as two base-36 digits of its position in range

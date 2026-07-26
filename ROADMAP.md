@@ -56,6 +56,26 @@ now and it matches the rest at half their duration. **Every voice that gets a re
 need this**, and a voice's articulators arguably ought to scale with its tract length rather than
 being set by hand.
 
+**Undershoot and transients trade directly, and that is the follower's fault.** Measured on John
+at a fixed tempo, sweeping only the articulator time constant:
+
+| artT | undershoot | worst isolated transient |
+|---|---|---|
+| 0.012 | 0.134 | 1591 |
+| 0.020 | 0.342 | 574 |
+| 0.025 | 0.469 | 270 |
+
+There is no value that gives both. Fast articulators arrive but jerk the waveguide; slow ones are
+smooth and never get there. Reported from listening as "significant artifacts, mostly dropouts
+and pops" at artT 0.012.
+
+A critically damped spring driven by a moving target has a velocity discontinuity wherever the
+target's velocity changes, and that discontinuity IS the transient. A real articulator has
+bounded jerk as well as bounded acceleration, which is what a minimum-jerk trajectory means and
+why real speech does not click. **This is now the highest-value structural fix in the model** —
+it is the ceiling on speaking rate, the source of the pops, and the reason vowels undershoot,
+all at once.
+
 Open and not queued: **the follower is a critically damped spring, and a muscle is not one.** Its
 acceleration is proportional to the distance remaining, so it slows as it closes. That is not
 what bites on the fricatives — those are stiffened and arrive at 97% — but it is why vowels

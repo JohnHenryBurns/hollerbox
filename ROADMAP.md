@@ -1682,6 +1682,46 @@ shipped.
 because broadband noise IS large sample-to-sample steps. That is the sixth pop metric in this
 project to measure something other than pops.
 
+## It should take as long as it takes  ❌ designed, measured, not built
+
+Phase 9 gave the articulators mass, so when there is not enough time they **undershoot** — the
+tongue sets off, gets most of the way, and the next sound starts anyway. That half is right and
+it is most of what makes connected speech sound connected.
+
+The other half is missing. A real speaker faced with a hard sequence does not slur through it on
+schedule; they **slow down**. The schedule should yield to the muscles. Raised from listening:
+*"I'm limited on pacing by the effort to move my muscles into position for the next sound.
+Perhaps a target time that can be exceeded as needed for positioning."*
+
+**How far short the tract currently stops**, measured at the middle of each segment, on
+diameters that run about 0 to 3:
+
+| phrase | mean miss | worst |
+|---|---|---|
+| she sells sea shells | 0.24 | /l/ 0.79 |
+| hello world | 0.27 | /l/ 0.65 |
+| my mother and my brother | 0.50 | /ð/ 1.14 |
+| bad bat bed bet | 0.54 | /d/ 0.97 |
+
+**A first attempt**, as an articulator speed limit that widens any transition asking to move
+faster than the tract can. It works — worst miss 1.14 → 0.89 for 11% more time — and it was
+reverted for two reasons worth keeping.
+
+*It stretches the transitions and not the holds*, so the share of each segment spent AT its
+target fell from over half to 42%. Slowing down for a hard sequence should lengthen both; this
+made speech proportionally more transit, which is the opposite of arriving.
+
+*And it broke five existing checks*, all of which assert that word length is set by the weight
+schedule. They are right to: making duration respond to articulation is an architectural change,
+not a knob. Four of them can legitimately null the new knob to isolate what they measure, but
+that is four checks bent around one feature, and the fifth is the at-target one above, which is
+a real objection rather than an isolation problem.
+
+**Also found and not fixed:** which phrase stretches most does not match which is hard to say.
+"Bad bat bed bet" stretched most because it has eight stop closures — genuinely a lot of tongue
+travel — while "she sells sea shells" barely moved. Human difficulty in that phrase comes from
+precision between *similar* targets, /s/ against /ʃ/, which a distance-based limit cannot see.
+
 ## Open faults
 
 Things known to be wrong, so they are not rediscovered as surprises.

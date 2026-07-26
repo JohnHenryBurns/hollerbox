@@ -78,7 +78,7 @@ compiled and cold it is twice as slow as real time — the first word dropped sa
 exactly like a click. That was diagnosed and fixed on the main page some time ago. Nobody carried
 it to the bench, and the bench has been popping on its first play ever since.
 
-## Phase 3 — the shared selector
+## Phase 3 — the shared selector  ✅ built
 
 **What was actually asked for.** A voice picker and a phrase picker, the same component in all
 three pages.
@@ -90,7 +90,21 @@ three pages.
 *Risk:* moderate. It is UI, and the three pages have different layouts and different amounts of
 room. The component has to be small enough to sit in a header.
 
-*Done when:* picking a voice or a phrase looks and behaves the same everywhere.
+*Done.* `HOLLER_SESSION.PHRASES` is one list of seventeen — the bench's twelve probes and the
+wizard's five passages — each carrying **why it exists**, because half of them were added after
+finding a bug and a phrase whose purpose is forgotten gets quietly dropped the next time somebody
+tidies the list.
+
+`mountSelector` renders it into whatever element a page hands over, deliberately unstyled beyond
+inheriting: three pages, three palettes, and a component that imposed its own look would be
+fought rather than used. **It owns no state** — the page holds the current voice and phrase and
+passes them in — so there is still exactly one answer to "what is the current voice", and it is
+not in the selector.
+
+Each page takes the half it needs. The wizard uses the phrase list only, because its four
+questions *are* its voice picker. index.html uses the phrase list only, because it already has a
+voice dropdown wired into the preset machinery. The bench takes the list itself and renders it
+its own way, since its phrase panel shows each phrase's chain beneath it.
 
 ## Phase 4 — state that survives the trip
 

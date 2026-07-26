@@ -447,21 +447,14 @@ async function speak(chain, stress){
 /* ── PHRASES ──────────────────────────────────────────────
    Each one is here for a reason, and the reason is written down. A list of phrases somebody
    liked the sound of would drift into a list of phrases that happen to pass. */
-const PHRASES = [
-  ['Hello World',                 'the smallest sanity check'],
-  ['I love my daughter',          'the words that found the final-y and final-e bugs'],
-  ['my wife is great',            'three lexical exceptions in four words: my, is, great'],
-  ['hello Jupiter and Maximus',   'dictionary names, and the /d\u0292/ and /ks/ clusters'],
-  ['she sells sea shells',        '/s/ against /\u0283/ \u2014 the pair the report tier measures'],
-  ['Peter Piper picks a peck',    'voiceless stops back to back: VOT and aspiration'],
-  ['bad bat bed bet',             "8.1's coda-voicing pairs, heard rather than measured"],
-  ['banana and a tomato',         'stress placement, and the schwas either side of it'],
-  ['red leather yellow leather',  '/l/ and /r/ \u2014 what the side branch exists for'],
-  ['how now brown cow',           'the /a\u028a/ diphthong, four times'],
-  ['my mother and my brother',    'nasals, and the /\u00f0/ that Open Faults says still hisses'],
-  ['the quick brown fox jumps over the lazy dog',
-                                  'long enough to hear phrase rhythm rather than word rhythm'],
-];
+// The list lives in session.js now, shared with the wizard and the main page. It arrives as
+// objects and is flattened to the [text, why] pairs this file already renders, so the sweep, the
+// tournament and the phrase panel are untouched.
+//
+// The wizard's five passages come with it. There was never a reason a probe could not be read
+// there or a passage swept here — they were separate only because they were written on different
+// days in different files, and a passage is the better test of phrase rhythm.
+const PHRASES = (window.HOLLER_SESSION.PHRASES || []).map(p => [p.text, p.why]);
 
 function spellPhrase(text){
   const S = window.HOLLER_SPELL;

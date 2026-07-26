@@ -155,7 +155,125 @@
     return { ctx, node, n };
   }
 
-  root.HOLLER_SESSION = { planWord, planSpeech, chainFor, loadEngine, startAudio };
+  // ── ONE LIBRARY OF THINGS TO SAY ────────────────────────────────────────
+  //
+  // The bench had twelve probes, each chosen because it found something and carrying a note
+  // about what. The wizard had six passages, long enough to judge a voice by. There was never a
+  // reason a probe could not be read in the wizard or a passage swept in the bench — they were
+  // separate because they were written on different days in different files.
+  //
+  // `why` is not decoration. Half of these exist because they broke something, and a phrase
+  // whose purpose is forgotten gets quietly dropped the next time the list is tidied.
+  const PHRASES = [
+    { text: 'Hello World',                kind: 'probe', why: 'the smallest sanity check' },
+    { text: 'I love my daughter',         kind: 'probe', why: 'the words that found the final-y and final-e bugs' },
+    { text: 'my wife is great',           kind: 'probe', why: 'three lexical exceptions in four words: my, is, great' },
+    { text: 'hello Jupiter and Maximus',  kind: 'probe', why: 'dictionary names, and the /d\u0292/ and /ks/ clusters' },
+    { text: 'she sells sea shells',       kind: 'probe', why: '/s/ against /\u0283/ \u2014 the pair the report tier measures' },
+    { text: 'Peter Piper picks a peck',   kind: 'probe', why: 'voiceless stops back to back: VOT and aspiration' },
+    { text: 'bad bat bed bet',            kind: 'probe', why: "8.1's coda-voicing pairs, heard rather than measured" },
+    { text: 'banana and a tomato',        kind: 'probe', why: 'stress placement, and the schwas either side of it' },
+    { text: 'red leather yellow leather', kind: 'probe', why: '/l/ and /r/ \u2014 what the side branch exists for' },
+    { text: 'how now brown cow',          kind: 'probe', why: 'the /a\u028a/ diphthong, four times' },
+    { text: 'my mother and my brother',   kind: 'probe', why: 'nasals, and the /\u00f0/ that still hisses' },
+    { text: 'the quick brown fox jumps over the lazy dog',
+                                          kind: 'probe', why: 'long enough to hear phrase rhythm rather than word rhythm' },
+
+    { text: 'It was the best of times, it was the worst of times.',
+      kind: 'passage', why: 'Dickens \u00b7 A Tale of Two Cities, 1859' },
+    { text: 'Call me Ishmael. Some years ago, never mind how long precisely, I thought I would sail about a little.',
+      kind: 'passage', why: 'Melville \u00b7 Moby-Dick, 1851' },
+    { text: 'It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.',
+      kind: 'passage', why: 'Austen \u00b7 Pride and Prejudice, 1813' },
+    { text: 'I have spread my dreams under your feet. Tread softly because you tread on my dreams.',
+      kind: 'passage', why: 'Yeats \u00b7 He Wishes for the Cloths of Heaven, 1899' },
+    { text: 'Two roads diverged in a wood, and I took the one less travelled by, and that has made all the difference.',
+      kind: 'passage', why: 'Frost \u00b7 The Road Not Taken, 1916' },
+  ];
+
+  // ── THE SHARED SELECTOR ─────────────────────────────────────────────────
+  //
+  // Two dropdowns and a text box, mounted into whatever element a page gives it. Deliberately
+  // unstyled beyond inheriting: the three pages have different palettes and different amounts of
+  // room, and a component that imposes its own look would be fought rather than used.
+  //
+  // It owns no state. The page holds the current voice and phrase and passes them in; the
+  // selector reports changes back. That way there is still exactly one answer to "what is the
+  // current voice", and it is not in here.
+  function mountSelector(el, opts) {
+    const o = opts || {};
+    const P = eng();
+    const host = typeof el === 'string' ? document.getElementById(el) : el;
+    if (!host) return null;
+
+    const vSel = document.createElement('select');
+    vSel.setAttribute('aria-label', 'Voice');
+    for (const k of Object.keys(P.VOICES)) {
+      if (o.voices && !o.voices.includes(k)) continue;
+      const opt = document.createElement('option');
+      opt.value = k; opt.textContent = (P.VOICES[k].label || k);
+      vSel.appendChild(opt);
+    }
+    const seedOpt = document.createElement('option');
+    seedOpt.value = '__seed'; seedOpt.textContent = 'paste a seed\u2026';
+    vSel.appendChild(seedOpt);
+
+    const pSel = document.createElement('select');
+    pSel.setAttribute('aria-label', 'Phrase');
+    let last = '';
+    for (const ph of PHRASES) {
+      if (o.kinds && !o.kinds.includes(ph.kind)) continue;
+      if (ph.kind !== last) {
+        const g = document.createElement('option');
+        g.disabled = true;
+        g.textContent = ph.kind === 'probe' ? '\u2014 test phrases \u2014' : '\u2014 passages \u2014';
+        pSel.appendChild(g);
+        last = ph.kind;
+      }
+      const opt = document.createElement('option');
+      opt.value = ph.text;
+      opt.textContent = ph.kind === 'probe' ? ph.text : ph.why;
+      opt.title = ph.why;
+      pSel.appendChild(opt);
+    }
+
+    const own = document.createElement('input');
+    own.placeholder = 'or type your own';
+
+    host.appendChild(vSel); host.appendChild(pSel); host.appendChild(own);
+
+    vSel.addEventListener('change', () => {
+      if (vSel.value === '__seed') {
+        const s = prompt('Paste a voice seed');
+        vSel.value = o.voiceName || Object.keys(P.VOICES)[0];
+        if (s && o.onVoice) {
+          try { o.onVoice(P.decodeVoice(s.trim()), 'seed'); }
+          catch (e) { /* a bad seed changes nothing, which is better than a broken voice */ }
+        }
+        return;
+      }
+      if (o.onVoice) {
+        const k = vSel.value;
+        o.onVoice({ ...P.defaultVoice(), ...(P.VOICES[k].v || {}),
+                    art: P.VOICES[k].art || null, name: k }, k);
+      }
+    });
+    const say = () => { if (o.onPhrase) o.onPhrase(own.value.trim() || pSel.value); };
+    pSel.addEventListener('change', () => { own.value = ''; say(); });
+    own.addEventListener('keydown', e => { if (e.key === 'Enter') say(); });
+
+    return {
+      el: host, voiceSel: vSel, phraseSel: pSel, input: own,
+      /** what the page should say now: typed text wins over the dropdown */
+      phrase: () => own.value.trim() || pSel.value,
+      setVoice: k => { if (k && [...vSel.options].some(x => x.value === k)) vSel.value = k; },
+      setPhrase: t => { own.value = ''; if ([...pSel.options].some(x => x.value === t)) pSel.value = t;
+                        else own.value = t; },
+    };
+  }
+
+  root.HOLLER_SESSION = { planWord, planSpeech, chainFor, loadEngine, startAudio,
+                          PHRASES, mountSelector };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
 if (typeof module !== 'undefined' && module.exports) {

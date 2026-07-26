@@ -69,14 +69,8 @@ main{max-width:44rem;margin:0 auto;padding:1rem 1rem 4rem}
 <main>
   <div class="step">
     <h2>What should it read?</h2>
-    <div class="say">
-      <select id="book"></select>
-      <button class="btn" id="readIt">▶ read it</button>
-    </div>
-    <div class="say">
-      <input id="own" placeholder="or type your own and press enter">
-      <button class="btn" id="sayOwn">▶ say</button>
-    </div>
+    <div class="say" id="picker"></div>
+    <div class="say"><button class="btn" id="readIt">▶ read it</button></div>
     <div class="note">Every button below plays this. Pick something long enough to judge by.</div>
   </div>
 
@@ -223,24 +217,10 @@ async function speak(text){
   node.port.postMessage({ type: 'goal', seq: SESSION.planSpeech(ph, v, { n: N, stress: st }) });
 }
 
-/* ── PASSAGES ─────────────────────────────────────────────────────────────
-   Public domain, and chosen to be worth hearing rather than merely legal: each one is short,
-   rhythmic, and made of common words the speller handles well. Long enough to judge a voice by,
-   which a single phrase is not. */
-const BOOKS = [
-  ['It was the best of times, it was the worst of times.',
-   'Dickens · A Tale of Two Cities, 1859'],
-  ['Call me Ishmael. Some years ago, never mind how long precisely, I thought I would sail about a little.',
-   'Melville · Moby-Dick, 1851'],
-  ['It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.',
-   'Austen · Pride and Prejudice, 1813'],
-  ['I have spread my dreams under your feet. Tread softly because you tread on my dreams.',
-   'Yeats · He Wishes for the Cloths of Heaven, 1899'],
-  ['Two roads diverged in a wood, and I took the one less travelled by, and that has made all the difference.',
-   'Frost · The Road Not Taken, 1916'],
-  ['The quick brown fox jumps over the lazy dog. How now, brown cow?',
-   'every letter, and two vowels worth hearing'],
-];
+/* ── WHAT TO SAY ──────────────────────────────────────────────────────────
+   The passages used to live here and the bench's twelve probes lived in the bench. They are one
+   list in session.js now: there was never a reason a probe could not be read here or a passage
+   swept there, and they were separate only because they were written on different days. */
 
 /* ── TWO AT A TIME ────────────────────────────────────────────────────────
    The four questions get you into the right neighbourhood and cannot get you further, because
@@ -293,11 +273,6 @@ function startBattle(){
   showSeed();
 }
 
-/** What every button plays: your own text if you typed any, the chosen passage otherwise. */
-function sample(){
-  const own = document.getElementById('own').value.trim();
-  return own || BOOKS[+document.getElementById('book').value][0];
-}
 
 /* ── DRAW ─────────────────────────────────────────────────────────────── */
 function draw(){
@@ -324,36 +299,16 @@ function showSeed(){
   document.getElementById('seed').textContent = (name ? name + ' · ' : '') + HOLLER.encodeVoice(v);
 }
 
-const bk = document.getElementById('book');
-BOOKS.forEach(([text, who], i) => {
-  const o = document.createElement('option');
-  o.value = i; o.textContent = who;
-  bk.appendChild(o);
+// The shared selector, mounted. Only the phrase half is used here: the four questions ARE this
+// page's voice picker, and offering a second one beside them would be two answers to one
+// question. Passages first, since a voice is judged on something long.
+const picker = SESSION.mountSelector('picker', {
+  kinds: ['passage', 'probe'],
+  onPhrase: t => speak(t),
 });
-document.getElementById('playA').addEventListener('click', () => {
-  if (!battle) startBattle();
-  speakAs = battle.A; speak(sample()); speakAs = null;
-});
-document.getElementById('playB').addEventListener('click', () => {
-  if (!battle) startBattle();
-  speakAs = battle.B; speak(sample()); speakAs = null;
-});
-document.getElementById('keepA').addEventListener('click', () => {
-  if (!battle) return; battle.keep = battle.A; startBattle(); speak(sample());
-});
-document.getElementById('keepB').addEventListener('click', () => {
-  if (!battle) return; battle.keep = battle.B; startBattle(); speak(sample());
-});
-document.getElementById('battleOff').addEventListener('click', () => {
-  battle = null; round = 0;
-  document.getElementById('battleCount').textContent = '';
-  showSeed(); speak(sample());
-});
-
-document.getElementById('readIt').addEventListener('click', () => speak(BOOKS[+bk.value][0]));
-document.getElementById('sayOwn').addEventListener('click', () => speak(sample()));
-document.getElementById('own').addEventListener('keydown',
-  e => { if (e.key === 'Enter') speak(sample()); });
+/** What every button on this page plays: whatever the shared selector currently holds. */
+const sample = () => picker.phrase();
+document.getElementById('readIt').addEventListener('click', () => speak(sample()));
 document.getElementById('vname').addEventListener('input', showSeed);
 document.getElementById('save').addEventListener('click', async () => {
   const b = document.getElementById('save');

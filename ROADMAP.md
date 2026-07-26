@@ -56,8 +56,9 @@ now and it matches the rest at half their duration. **Every voice that gets a re
 need this**, and a voice's articulators arguably ought to scale with its tract length rather than
 being set by hand.
 
-**Undershoot and transients trade directly, and that is the follower's fault.** Measured on John
-at a fixed tempo, sweeping only the articulator time constant:
+**Undershoot and transients: the trade may not exist, and the metric cannot tell.** A sweep of
+the articulator time constant appeared to show a clean one — fast articulators arriving but
+clicking, slow ones smooth and never getting there:
 
 | artT | undershoot | worst isolated transient |
 |---|---|---|
@@ -65,16 +66,25 @@ at a fixed tempo, sweeping only the articulator time constant:
 | 0.020 | 0.342 | 574 |
 | 0.025 | 0.469 | 270 |
 
-There is no value that gives both. Fast articulators arrive but jerk the waveguide; slow ones are
-smooth and never get there. Reported from listening as "significant artifacts, mostly dropouts
-and pops" at artT 0.012.
+**It does not survive a control.** Holding every setting fixed and varying only the noise seed,
+the same phrase measures a worst transient anywhere from **975 to 4403 — a 4.5x spread from the
+noise alone**. The differences above are two to five times. There is no signal in that column,
+and this section previously called the trade the highest-value structural fix in the model.
 
-A critically damped spring driven by a moving target has a velocity discontinuity wherever the
-target's velocity changes, and that discontinuity IS the transient. A real articulator has
-bounded jerk as well as bounded acceleration, which is what a minimum-jerk trajectory means and
-why real speech does not click. **This is now the highest-value structural fix in the model** —
-it is the ceiling on speaking rate, the source of the pops, and the reason vowels undershoot,
-all at once.
+A third-order critically damped follower was built to break it — three equal real poles, so
+position, velocity and acceleration are all continuous, which is what minimum-jerk means. At a
+fair comparison, the same time constant for both, the second-order one is simply better: 0.058
+undershoot against 0.124, which is what a third pole costs. Not shipped. An earlier attempt
+bolted a lag onto the second-order system instead, which is a different thing and rings — it
+took the worst transient from 533 to 3420.
+
+**What survives.** Undershoot is reliable: it varies smoothly and repeatably with the time
+constant, and John undershooting 0.458 where every other voice sat near 0.12 was real and is
+fixed. The pops are real too — reported by ear, repeatedly, from several voices. They are simply
+not measurable by peak-against-median on a single render, which is now the sixth and seventh
+instrument here to fail on them. **A pop metric has to average over seeds before anything can be
+tuned against it.**
+
 
 Open and not queued: **the follower is a critically damped spring, and a muscle is not one.** Its
 acceleration is proportional to the distance remaining, so it slows as it closes. That is not

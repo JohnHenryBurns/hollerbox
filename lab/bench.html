@@ -326,6 +326,13 @@ async function boot(src){
 
   // The engine sits beside the phoneme layer, whatever origin that came from.
   const engineUrl = ENGSRC.replace(/phonemes\.js(\?.*)?$/, 'tract-worklet.js');
+  // session.js sits beside phonemes.js and is fetched the same way, so a bench pointed at a
+  // different checkout with ?src= gets that checkout's speak path rather than this one's
+  try {
+    const su = ENGSRC.replace(/phonemes\.js(\?.*)?$/, 'session.js');
+    const sr = await fetch(su, { cache: 'no-store' });
+    if (sr.ok) new Function(await sr.text())();
+  } catch (e) { /* falls back to whatever is already loaded */ }
 
   // buildWord now takes its parameters explicitly, so there is nothing to inject: the bench
   // passes the section count and the voice's postures the same way the page does.
@@ -413,11 +420,11 @@ function syncTract(){
 
 /* ── one token → the same keyframes the app builds ───────── */
 function planFor(chain, stress){
-  const D = Math.max(0.45, chain.length*(VOICE.per||0.17));
-  const W = ENG.buildWord(chain, D, stress);
-  const end = W.end;
-  const f0 = ENG.buildF0(end, VOICE, {stress, seg:W.seg});
-  return {keys:W.keys, f0, end};
+  // One speak path, shared with index.html and the wizard. It was three copies written at
+  // different times: this one and index's agreed, and the wizard's applied neither a voice's
+  // fitted postures nor its `open` — so a fitted voice was spoken there with somebody else's
+  // tongue. A view decides what to say and who says it; what a voice MEANS is not its business.
+  return window.HOLLER_SESSION.planSpeech(chain, VOICE, { n: N, stress, art: VOICE.art || null });
 }
 function chainFor(c, mode){
   return mode==='VCV' ? ['ɑ',c,'ɑ'] : mode==='CV' ? [c,'ɑ'] : mode==='CVi' ? [c,'i'] : [c];

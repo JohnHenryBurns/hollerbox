@@ -382,7 +382,7 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
           <div class="group">
         <div class="glabel">Timing</div>
         <div class="row"><span>Length</span><span class="v" id="vDur">2.9 s</span></div>
-        <input type="range" id="sDur" min="0.4" max="5" step="0.1" value="2.9">
+        <input type="range" id="sDur" min="0.4" max="2.5" step="0.05" value="1">
         <div class="row"><span>Drawl</span><span class="v" id="vHold">0.55</span></div>
         <input type="range" id="sHold" min="0" max="1" step="0.01" value="0.55">
         <div class="row"><span>Vowel opening</span><span class="v" id="vOpen">0.62</span></div>
@@ -733,6 +733,7 @@ async function loadEngine(name){
 }
 await loadEngine('phonemes.js');
 await loadEngine('spelling.js');
+await loadEngine('session.js');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The tract shapes, solved offline by searching tube geometry until the
@@ -935,7 +936,7 @@ sBr.addEventListener('input',()=>{
   node&&node.port.postMessage({type:'breath', value:+sBr.value});
 });
 sDur.addEventListener('input',()=>{
-  document.getElementById('vDur').textContent=(+sDur.value).toFixed(1)+' s';
+  document.getElementById('vDur').textContent=(+sDur.value).toFixed(2)+'\u00d7';
   goCustom(); champion.per=(+sDur.value)/Math.max(1,chain.length);
 });
 sHold.addEventListener('input',()=>{
@@ -1122,12 +1123,14 @@ async function speakWith(v){
   await start();
   if(!node){ engineDown(); return; }    // audio never came up — say so rather than nothing
   applyVoice(v);
-  const D=+sDur.value;
-  const W=buildWord(chain, D, v.drawl, v.glide, v.stopT, v.open||0, v);
-  const {keys,end}=W;
-  const f0=HOLLER.buildF0(end, v, {stress:chainStress, seg:W.seg});
-  node.port.postMessage({type:'goal', seq:{keys, f0, end}});
-  artTrack={t0:performance.now(), keys:W.art, end};
+  // One speak path, shared with the bench and the wizard. The slider is a STRETCH now rather
+  // than a target duration in seconds — which is what it should always have been, and is why
+  // the five-second ceiling existed: an absolute target has to be clamped to the slider's own
+  // range, and that clamp then crushed any passage longer than the slider could express. The
+  // Austen line ran 6.62 s here against 8.77 s on the other two pages for exactly that reason.
+  const seq = HOLLER_SESSION.planSpeech(chain, v, { n: N, stress: chainStress, stretch: +sDur.value });
+  node.port.postMessage({ type:'goal', seq });
+  artTrack={t0:performance.now(), keys:seq.word.art, end:seq.end};
   playSeg={t0:performance.now(), seg:W.seg};         // the word follows the same clock   // the picture follows the same plan
   sequencing=true; paintBtn();
 }
@@ -1365,8 +1368,11 @@ function goCustom(){
   setVoice('custom');
 }
 function setTiming(dur,drawl){
-  sDur.value=dur.toFixed(1); sHold.value=drawl.toFixed(2);
-  document.getElementById('vDur').textContent=(+sDur.value).toFixed(1)+' s';
+  // `dur` is a stretch now, not a length: 1 means the phrase takes as long as its own sounds
+  // need. A voice that wants to be drawn out says so through `per`, which is where a voice's
+  // tempo belongs, rather than through a slider position the next phrase will overwrite.
+  sDur.value=(1).toFixed(2); sHold.value=drawl.toFixed(2);
+  document.getElementById('vDur').textContent=(+sDur.value).toFixed(2)+'\u00d7';
   document.getElementById('vHold').textContent=(+sHold.value).toFixed(2);
 }
 const GOAL_WORD=['g','o','l'];   // one gliding vowel, not two — the opening does the rest
@@ -1393,26 +1399,18 @@ const DIPH = HOLLER.DIPH;
 const isDiph=sym=>!!DIPH[sym];
 // Delegates to the shared layer. The app's call sites are unchanged; what used to be
 // closed-over state (N, and the voice's own postures) is passed explicitly.
-function buildWord(chain, D, drawl, glide, stopHold, open, pros){
-  // 8.1b: the weights set the length and D stretches the rate. The slider still means
-  // "make this longer", it just no longer squeezes a word's internal proportions to hit a total.
-  return HOLLER.buildWord(chain, {D, rate:HOLLER.rateFor(chain, D, pros), drawl, glide, stopHold,
-                                  open, n:N, art:voiceArt(), stress: chainStress, pros});
-}
 async function playWord(){
   if(!chain.length) return;
   await start();
   if(!node) return;
-  const D=+sDur.value, drawl=+sHold.value;
-  const W=buildWord(chain, D, drawl, champion.glide, champion.stopT, champion.open||0, champion);
-  const {keys,end}=W;
-  // The voice owns the pitch. These were hardcoded, so every preset — man, child, Barry —
-  // spoke at the announcer's 208-248 Hz and none of them sounded like themselves.
-  const v=champion;
-  const f0=HOLLER.buildF0(end, v, {stress:chainStress, seg:W.seg});
-  node.port.postMessage({type:'goal', seq:{keys, f0, end}});
-  artTrack={t0:performance.now(), keys:W.art, end};
-  playSeg={t0:performance.now(), seg:W.seg};         // the word follows the same clock   // the picture follows the same plan
+  // The voice owns the pitch, and now the shared path owns everything else. The drawl slider
+  // still applies, through the voice rather than as a loose argument — which is the drift this
+  // was: three call sites each choosing which of buildWord's options to pass.
+  const v = { ...champion, drawl: +sHold.value };
+  const seq = HOLLER_SESSION.planSpeech(chain, v, { n: N, stress: chainStress, stretch: +sDur.value });
+  node.port.postMessage({ type:'goal', seq });
+  artTrack={t0:performance.now(), keys:seq.word.art, end:seq.end};
+  playSeg={t0:performance.now(), seg:seq.seg};       // the picture follows the same plan
   sequencing=true; paintBtn();          // respond immediately, the engine confirms in a few ms
 }
 playBtn.addEventListener('click', ()=>{

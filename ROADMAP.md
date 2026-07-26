@@ -1611,6 +1611,22 @@ case for finer resolution, and it is about fricatives, not about the model being
 
 ---
 
+## What the phrase pass said  (2026-07-26, voice=man)
+
+Twelve phrases, tagged and noted. The recurring words were **too slow**, **slurred**, and
+**pop** — five phrases, four phrases and six phrases respectively.
+
+Two of those are addressed by consonant duration, below. The pops are not: they appear on
+/h/, /d/, /g/, /l/, /c/ and a vowel, which is too scattered to be one fault and wants its own
+pass. Specific sounds reported wrong and still open:
+
+| phrase | heard as |
+|---|---|
+| world | "rurled" |
+| jupiter | "d-thoo-piter" — the affricate, already filed |
+| fox | the /ks/ is mangled |
+| how / hello | breathy /h/, and it pops |
+
 ## Open faults
 
 Things known to be wrong, so they are not rediscovered as surprises.

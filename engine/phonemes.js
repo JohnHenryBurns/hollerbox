@@ -623,10 +623,35 @@ function openedShape(sym, amt, n, art){
 // Peterson & Lehiste (1960), JASA 32(6):693-703, measured English vowel and diphthong
 // durations. Normalised so that a lax vowel is about 1. Tense vowels and diphthongs run
 // notably longer than lax ones, and schwa is shorter than anything.
+// which symbols are vowels — needed in more than one place now, and worth stating once rather
+// than inferring from "is it in VDUR", which stopped being a vowel test the moment consonants
+// were added to that table
+const VOWELS = new Set(['i','ɪ','ɛ','æ','ɑ','ɔ','ʊ','u','ʌ','ɝ','ə','o',
+                        'aɪ','aʊ','ɔɪ','eɪ','oʊ']);
+
 const VDUR = {
   i:1.20, 'ɪ':0.90, 'ɛ':0.95, 'æ':1.15, 'ɑ':1.25, 'ɔ':1.40,
   'ʊ':0.95, u:1.20, 'ʌ':0.95, 'ɝ':1.30, 'ə':0.65, o:1.30,
   'aɪ':1.40, 'aʊ':1.50, 'ɔɪ':1.55, 'eɪ':1.30, 'oʊ':1.30,
+
+  // CONSONANTS HAVE INTRINSIC LENGTHS TOO, and until now this table had none, so all sixteen
+  // fell through to a default of 1 — the length of a mid vowel. A nasal ran as long as the /ɛ/
+  // beside it. Every listening pass since has said the same thing in different words: "too
+  // slow", "a little slurred", and, of a fricative, "drawn out".
+  //
+  // Umeda (1977) and Klatt (1976), intervocalic, normal rate, against the same reference this
+  // table already used — 1.0 is about 100 ms, which is where /ɛ/ at 0.95 sits.
+  //
+  // The voiceless/voiced asymmetry is the large one and it runs the same way as it does in
+  // vowels: a voiceless fricative is held much longer than its voiced partner. /f/ against /v/
+  // is nearly two to one.
+  s:1.05, 'ʃ':1.10, f:0.85, 'θ':0.85,          // voiceless fricatives, the longest consonants
+  z:0.75, 'ʒ':0.85, v:0.55, 'ð':0.50,          // voiced: much shorter
+  h:0.60,
+  // NO NASALS HERE, deliberately. /m n ŋ/ never reach this table — isAp() routes them through
+  // the flat approximant weight, which puts them at about 110 ms, and that is roughly right.
+  // Entries for them were written and measured as dead code: the weight changed and nothing
+  // moved.
 };
 // House & Fairbanks (1953); Peterson & Lehiste (1960). A vowel before a VOICED consonant runs
 // about half again as long as the same vowel before a voiceless one — the difference between
@@ -818,7 +843,11 @@ function buildWord(chain, opts){
           * poly[i];                               // how long the word is
     if(stress && stress[i]===0) w *= wkdur;
     if(i===lastHeld)            w *= fnl;
-    if(first){ w *= 1+drawl*2.6; first=false; }    // the drawl, unchanged
+    // THE DRAWL BELONGS ON THE FIRST VOWEL, which is what it was described as and not what it
+    // did: it landed on the first HELD segment, and in "she sells" that is the /ʃ/. At the
+    // default drawl it stretched that one fricative to 190 ms against 142 for the same sound
+    // later in the phrase — reported, exactly, as "sh is staticy and drawn out".
+    if(first && VOWELS.has(c)){ w *= 1+drawl*2.6; first=false; }
     vw.push(w);
   });
   const wsum=vw.reduce((a,b)=>a+b,0)||1;

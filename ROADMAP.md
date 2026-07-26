@@ -88,6 +88,23 @@ over the wizard's own base voice, so testing them against anything else tests no
 
 A check enforces this. 56 gate, 17 report.
 
+## The output was 24 dB quiet  ✅ fixed
+
+Reported as the whole thing being faint with the phone volume all the way up, and it was. Every
+voice peaked between **-13 and -24 dBFS** where a normal recording peaks near -8, so roughly
+24 dB of range went simply unused.
+
+**Nothing recent caused it.** Reverting every change of the previous few sessions — the fricative
+levels, the voicing duck, the accents, the stiffening — recovers under 2 dB between them. The
+model had always been quiet and no one had measured it against anything.
+
+A flat gain with a hard clamp cannot both lift the quiet voices and protect the loud ones,
+because the spread between them is 11 dB. Soft saturation can: linear where the signal already
+lives, bending smoothly rather than squaring off a peak. Hard clipping a waveguide sounds like a
+fault; saturation sounds like a loud voice. Under 0.01% of samples reach the bend.
+
+Every voice now sits between -10.5 and -2.2 dBFS. A person reading the same phrases peaks at -8.2.
+
 ## Checks that pushed the model the wrong way
 
 Three in one session, and the pattern is the same each time: a check encoded a value or a

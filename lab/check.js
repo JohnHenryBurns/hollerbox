@@ -1781,6 +1781,49 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── the output uses the range it has ──────────────────────────────────────
+check("no voice is inaudibly quiet, and none clips hard", () => {
+  // Reported as the whole thing being quiet with the phone volume all the way up, and it was:
+  // every voice peaked between -13 and -24 dBFS where a normal recording peaks near -8, so
+  // roughly 24 dB of range went simply unused. Nothing recent caused it — reverting every
+  // change of the previous few sessions recovers under 2 dB.
+  //
+  // A flat gain with a hard clamp cannot both lift the quiet voices and protect the loud ones,
+  // because the spread between them is 11 dB. Soft saturation can: linear where the signal
+  // already lives, bending smoothly rather than squaring off a peak. Hard clipping a waveguide
+  // sounds like a fault; saturation sounds like a loud voice.
+  const P = H.P, S = require("../engine/spelling.js"), bad = [];
+  let lo = 99, hi = -99, loName = "", hiName = "";
+  for (const nm of Object.keys(P.VOICES)) {
+    const v = { ...P.defaultVoice(), ...(P.VOICES[nm].v || {}) }, n = Math.round(v.sect);
+    let pk = 0;
+    for (const t of ["hello world", "the quick brown fox jumps over the lazy dog"]) {
+      const r = S.g2p(t);
+      const D = Math.max(0.35, r.ph.length*(v.per||0.17));
+      const W = P.buildWord(r.ph, { D, rate: P.rateFor(r.ph, D, v), n, stress: r.stress, pros: v,
+                            glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+      const p = H.makeProcessor(n);
+      p.port.onmessage({ data: { type: "voice", v } });
+      p.port.onmessage({ data: { type: "goal",
+        seq: { keys: W.keys, f0: P.buildF0(W.end, v, { stress: r.stress, seg: W.seg }), end: W.end } } });
+      const out = [new Float32Array(128)];
+      for (let b = 0; b < Math.ceil(W.end*H.SR/128); b++) {
+        p.process([], [out]);
+        for (let i = 0; i < 128; i++) pk = Math.max(pk, Math.abs(out[0][i]));
+      }
+    }
+    const db = 20*Math.log10(pk);
+    if (db < lo) { lo = db; loName = nm; }
+    if (db > hi) { hi = db; hiName = nm; }
+    // a person's recording of these phrases peaks at -8.2 dBFS
+    if (db < -14) bad.push(`${nm} peaks at ${db.toFixed(1)} dBFS — inaudibly quiet`);
+    if (pk > 0.995) bad.push(`${nm} reaches ${pk.toFixed(3)} — hard against the ceiling`);
+  }
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.slice(0,3).join("  ")
+               : `${lo.toFixed(1)} (${loName}) to ${hi.toFixed(1)} (${hiName}) dBFS; a person reads these at -8.2` };
+});
+
 // ── an unstressed vowel is a schwa ────────────────────────────────────────
 check("unstressed vowels reduce", () => {
   // The largest single rule in English vowel quality, and it was not applied at all. The stress

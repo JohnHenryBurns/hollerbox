@@ -126,6 +126,7 @@ class TractProcessor extends AudioWorkletProcessor {
         if(v.artCrit !==undefined) this.artCrit=v.artCrit;
         if(v.artStiff!==undefined) this.artStiff=v.artStiff;
         if(v.artPush !==undefined) this.artPush=v.artPush;
+        if(v.outGain !==undefined) this.outGain=v.outGain;
         if(v.artFar  !==undefined) this.artFar=v.artFar;
         if(v.velT !==undefined) this.velT=v.velT;
         if(v.fricDuck!==undefined) this.fricDuck=v.fricDuck;
@@ -866,7 +867,18 @@ class TractProcessor extends AudioWorkletProcessor {
       // DC block
       const yy = y - this.dcX + 0.995*this.dcY;
       this.dcX=y; this.dcY=yy;
-      out[s]=Math.max(-1,Math.min(1,yy*0.8));
+      // ---- USE THE HEADROOM ----
+      // Every voice in the set peaked between -13 and -24 dBFS, where a normal recording peaks
+      // around -8 to -3. Reported as the whole thing being quiet with the phone volume all the
+      // way up, and it was: about 24 dB of range simply unused, and nothing recent — reverting
+      // every change of the last few sessions recovers under 2 dB of it.
+      //
+      // A flat gain and a hard clamp cannot both raise the quiet voices and protect the loud
+      // ones, since the spread between them is 11 dB. tanh is the cheapest honest answer: linear
+      // where the signal already lives, and bending smoothly instead of squaring off a peak.
+      // Hard clipping a waveguide sounds like a fault; soft saturation sounds like a loud voice.
+      const og = this.outGain===undefined ? 4.0 : this.outGain;
+      out[s]=Math.tanh(yy*og);
 
       // ---- energy readout for the visualiser ----
       if((this.tick & 63)===0){

@@ -636,7 +636,11 @@ check("pitch moves in semitones and accents land on stressed syllables", () => {
   //    asserted that every point in the contour sat inside a stressed nucleus, which stopped
   //    being true the moment perturbation started adding its own breakpoints on unstressed
   //    ones — the assertion was stale, not the code.
-  const v = P.defaultVoice(), noP = { ...v, pert: 0 };
+  // DECLINATION IS NULLED HERE. This check measures how far an accent lifts a syllable, and
+  // declination adds a steady downward drift on top — so with both running it reports an accent
+  // as smaller the later it falls in the utterance, and fails for a reason that has nothing to
+  // do with accents. One effect at a time; the drift has its own check.
+  const v = { ...P.defaultVoice(), decl: 0 }, noP = { ...v, pert: 0 };
   const r = S.g2p("banana and a tomato");
   const W = P.buildWord(r.ph, { D: 1.6, n: 44, stress: r.stress, pros: v });
   const base = P.buildF0(W.end, noP);
@@ -1709,6 +1713,77 @@ check("voiceless stops are aspirated", () => {
 // the markers alone gives a file that LOOKS right and does not parse: both sides stop at their
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
+
+// ── the pitch drifts down, restarts at a boundary, and rises for a question ─
+check("declination resets at a break, and a question goes up", () => {
+  // 8.4 step 4, which was blocked because punctuation did not survive the speller. Two things,
+  // and the first has to exist for the second to mean anything: the baseline this rides on was
+  // FLAT until 55% of the utterance and then fell, so a break in the first half had nothing to
+  // reset. A first attempt at the reset alone measured no effect, correctly.
+  const P = H.P, S = require("../engine/spelling.js"), bad = [];
+  const v = { ...P.defaultVoice(), ...P.VOICES.man.v }, n = Math.round(v.sect);
+  const trace = (text, ov) => {
+    const vv = { ...v, ...(ov||{}) };
+    const r = S.g2p(text);
+    const W = P.buildWord(r.ph, { D: 1, n, stress: r.stress, pros: vv,
+                          glide: vv.glide, stopHold: vv.stopT, drawl: vv.drawl });
+    const f0 = P.buildF0(W.end, vv, { stress: r.stress, seg: W.seg });
+    const at = x => {
+      for (let k = 1; k < f0.length; k++) if (x <= f0[k][0]) {
+        const [a,b] = f0[k-1], [c,d] = f0[k];
+        return c === a ? d : b + (d-b)*(x-a)/(c-a);
+      }
+      return f0[f0.length-1][1];
+    };
+    return { end: W.end, at };
+  };
+
+  // it must fall across a long utterance with no punctuation in it
+  const flat = trace("one two three four five six");
+  const drop = 12*Math.log2(flat.at(flat.end*0.1) / flat.at(flat.end*0.85));
+  if (drop < 3) bad.push(`only ${drop.toFixed(1)} semitones of declination across six words`);
+
+  // and punctuating it must hold the pitch UP, because each clause restarts
+  const broken = trace("one two. three four. five six");
+  const bDrop = 12*Math.log2(broken.at(broken.end*0.1) / broken.at(broken.end*0.85));
+  if (!(bDrop < drop - 1))
+    bad.push(`punctuated falls ${bDrop.toFixed(1)} st against ${drop.toFixed(1)} unpunctuated — no reset`);
+
+  // A question rises ACROSS ITS LAST VOWEL, which is where the contour lives — measuring at a
+  // fixed fraction of the utterance samples the silent pause after the mark instead, and
+  // reported a 0.6 st rise on a contour that actually moves 1.8.
+  const lastVowelRise = text => {
+    const vv = { ...v };
+    const r = S.g2p(text);
+    const W = P.buildWord(r.ph, { D: 1, n, stress: r.stress, pros: vv,
+                          glide: vv.glide, stopHold: vv.stopT, drawl: vv.drawl });
+    const f0 = P.buildF0(W.end, vv, { stress: r.stress, seg: W.seg });
+    const at = x => {
+      for (let k = 1; k < f0.length; k++) if (x <= f0[k][0]) {
+        const [a,b] = f0[k-1], [c,d] = f0[k];
+        return c === a ? d : b + (d-b)*(x-a)/(c-a);
+      }
+      return f0[f0.length-1][1];
+    };
+    const VOW = ["i","ɪ","ɛ","æ","ɑ","ɔ","ʊ","u","ʌ","ɝ","ə","aɪ","aʊ","ɔɪ","eɪ","oʊ"];
+    const lv = [...W.seg].reverse().find(x => VOW.includes(x.sym));
+    return lv ? 12*Math.log2(at(lv.b)/at(lv.a)) : 0;
+  };
+  const aEnd = lastVowelRise("is it true?"), tEnd = lastVowelRise("is it true");
+  if (aEnd < 1.2) bad.push(`a question only rises ${aEnd.toFixed(1)} st across its last vowel`);
+  if (tEnd > -0.5) bad.push(`a statement does not fall at the end (${tEnd.toFixed(1)} st)`);
+
+  // Nulling declination must remove the DRIFT — not the baseline's own shape, which falls about
+  // three semitones on its own and is meant to. That is the goal cry this all rides on.
+  const off = trace("one two. three four. five six", { decl: 0 });
+  const oDrop = 12*Math.log2(off.at(off.end*0.1) / off.at(off.end*0.85));
+  if (!(oDrop < drop - 0.5)) bad.push(`decl=0 falls ${oDrop.toFixed(1)} st, as much as decl on`);
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ")
+               : `plain -${drop.toFixed(1)} st, punctuated -${bDrop.toFixed(1)}, ` +
+                 `question +${aEnd.toFixed(1)} against a statement's ${tEnd.toFixed(1)}` };
+});
 
 // ── punctuation survives the speller ──────────────────────────────────────
 check("a comma is not a space", () => {

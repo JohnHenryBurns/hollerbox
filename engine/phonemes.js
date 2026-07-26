@@ -448,6 +448,11 @@ const VOICE_SPEC=[
   // SLOWEST articulator there is: a flap of soft tissue with no bone in it and nothing to brace
   // against. The lateral pocket is the sides of the tongue parting, so it runs at half this.
   {k:'velT',    lo:0,     hi:0.06,   d:0.020, off:0,},
+  // How fully the pitch comes back up at a phrase boundary, and how far a question rises at
+  // the end. Both were unreachable until punctuation survived the speller.
+  {k:'decl',    lo:0,     hi:4,      d:1.80,  off:0,  p8:1,},
+  {k:'reset',   lo:0,     hi:1,      d:0.70,  off:0,  p8:1,},
+  {k:'ask',     lo:0,     hi:9,      d:5.0,   off:0,  p8:1,},
   // How much of the voicing a full-strength frication costs. A voiced fricative is much
   // quieter than a vowel — the constriction raises the pressure above the folds and the flow
   // across them nearly stops — and `squeeze` alone was not cutting nearly enough, leaving /ð/
@@ -553,7 +558,7 @@ const VOICE_GROUPS = {
   rhythm: ['per','drawl','glide','stopT','vlen','coda','fnl','poly','stopVc','apw','gcap','onset','wgap'],
   tract:  ['sect','open','burst','hiss'],
   // The articulators themselves — how a consonant is dialled.
-  gesture:['artT','artCrit','artStiff','artPush','velT','fricDuck'],
+  gesture:['artT','artCrit','artStiff','artPush','velT','fricDuck','decl','reset','ask'],
 };
 
 // seed = each parameter as two base-36 digits of its position in range
@@ -934,7 +939,11 @@ function buildWord(chain, opts){
       const pA=prev?endOf(prev):base('ə');
       const nA=nextSym?base(nextSym):pA;
       keys.push({t,d:pd,b:0,nz:0,vl:quiet,fr:0,as:0,sil:quiet,lv:1}); art.push({t,A:pA});
-      seg.push({sym:' ', a:t, b:t+gap});
+      // KEEP WHICH BOUNDARY THIS IS. Every boundary was pushed as a plain space, so a full
+      // stop and a word gap were indistinguishable by the time buildF0 read the segments —
+      // which is the same information loss the speller used to do, reintroduced one layer
+      // down. The pitch reset and the question contour both look for these.
+      seg.push({sym:sym, a:t, b:t+gap});
       t+=gap;
       keys.push({t,d:nd,b:0,nz:0,vl:quiet,fr:0,as:0,sil:quiet,lv:1}); art.push({t,A:nA});
       return;
@@ -1020,7 +1029,12 @@ function buildF0(end, v, opts){
   const ramp = (t0, t1, v0, v1) => ({ t0, t1,
     f: t => t<=t0 ? v0 : t>=t1 ? v1 : v0 + (v1-v0)*(t-t0)/(t1-t0) });
 
-  const isNuc = sym => VDUR[sym] !== undefined || DIPH[sym] !== undefined;
+  // A NUCLEUS IS A VOWEL. This asked whether the symbol had an entry in VDUR, which was a
+  // sound vowel test right up until consonants were given intrinsic durations — after which
+  // eight fricatives became syllable nuclei and could take a pitch accent. The same mistake as
+  // the measurement in that commit, made in the same commit, caught in the measurement and not
+  // in the engine.
+  const isNuc = sym => VOWELS.has(sym) || DIPH[sym] !== undefined;
   const nuclei = [];
   seg.forEach((sg, i) => { if(sg.sym !== ' ' && isNuc(sg.sym)) nuclei.push([sg, i]); });
 
@@ -1047,6 +1061,54 @@ function buildF0(end, v, opts){
     const back = Math.min(0.06, (sg.b - sg.a) * 0.6);   // never longer than the vowel it marks
     parts.push(ramp(sg.a, sg.a + back, st, 0));
   }
+
+  // ---- DECLINATION RESETS AT A PHRASE BOUNDARY ----
+  // The baseline already falls across an utterance, which is right: pitch drifts down as the
+  // breath goes. What it never did is come back up, because a phrase boundary is punctuation
+  // and punctuation did not survive the speller until now. So a long sentence sank to the
+  // bottom of the range and stayed there.
+  //
+  // A speaker resets at each boundary — not all the way, and less each time, which is why a
+  // paragraph still descends overall while every clause inside it starts fresh. Implemented as
+  // a step that undoes the fall accumulated so far, scaled by `reset`.
+  // DECLINATION IS THE DRIFT, RESET IS WHERE IT RESTARTS, and the first has to exist for the
+  // second to mean anything. The baseline this sits on is flat until 55% of the utterance and
+  // then falls — a good goal cry, and not how a sentence behaves. A break in the first half had
+  // nothing to reset, which is exactly what a first attempt at the reset measured: no effect.
+  //
+  // Real declination is a steady drift downward from the beginning, a little under two
+  // semitones a second, and it restarts at every phrase boundary. Implemented as one offset:
+  // the fall runs from the start of the current phrase, so resetting is simply where the clock
+  // goes back to zero. Each phrase resets a little less completely than the last, which is why
+  // a paragraph descends overall while every clause inside it starts fresh.
+  const decl = (v.decl  === undefined ? 1.8 : v.decl);   // semitones per second
+  const rst  = (v.reset === undefined ? 0.7 : v.reset);
+  const breaks = [];
+  if(seg) seg.forEach(sg => { if(String(sg.sym).slice(0,3) === 'brk') breaks.push(sg); });
+  if(decl > 0.01){
+    const starts = [0, ...breaks.map(b => b.b)];
+    const ends   = [...breaks.map(b => b.a), end + 0.2];
+    starts.forEach((t0, k) => {
+      const t1 = ends[k];
+      if(t1 <= t0) return;
+      // how much of the previous phrase's fall is carried into this one
+      const carry = k === 0 ? 0 : -decl*(ends[k-1] - starts[k-1])*(1 - rst)*Math.pow(0.8, k-1);
+      parts.push({ t0, t1: t1 + 1e-6,
+                   f: t => carry - decl*Math.max(0, t - t0) });
+    });
+  }
+
+  // ---- A QUESTION ENDS BY GOING UP ----
+  // The one contour English speakers hear as grammar rather than as style. It rides on the last
+  // stretch before the mark, and only for `brk?` — a statement and a question differ by a
+  // symbol that, until punctuation survived the speller, never arrived.
+  const ask = (v.ask === undefined ? 5 : v.ask);
+  if(ask > 0.01) breaks.forEach(br => {
+    if(br.sym !== 'brk?') return;
+    const from = Math.max(0, br.a - 0.28);
+    parts.push(ramp(from, br.a, 0, ask));
+    parts.push({ t0: br.a, t1: end + 0.2, f: () => ask });   // held through the pause
+  });
 
   if(!parts.length) return pts;
   // Sample where anything changes, and nowhere else.

@@ -1033,11 +1033,21 @@ Four changes, smallest first:
    **Known gap, from the first run:** the speller marks every monosyllable as stressed, so the
    article *a* in "banana and a tomato" takes an accent. Real phrases destress function words.
    That is phrase-level stress and it wants its own step; it is not an accent-placement bug.
-4. **Declination and reset.**  ◐ **unblocked; the pitch work itself is not done.**
-   Punctuation now survives the speller as break tokens — `brk,` `brk.` `brk?` — which ride in
-   the chain beside the phonemes and hold 2.2x and 4x a word gap. So there is a boundary to
-   reset at, and a question is distinguishable from a statement. What remains is the F0 work
-   itself: reset the baseline at a break, and give `brk?` a rising terminal.
+4. **Declination and reset.**  ✅ built, with the terminal contour
+   Punctuation survives the speller as `brk,` `brk.` `brk?`, so there is a boundary to work at.
+   Three things now happen that could not before:
+
+   **The pitch drifts down.** 1.8 semitones a second from the start of each phrase. The baseline
+   it rides on is flat until 55% of the utterance and then falls — a good goal cry, and not how
+   a sentence behaves. A first attempt at the reset alone measured no effect, correctly: there
+   was nothing to reset.
+
+   **It restarts at a boundary**, less completely each time, so a paragraph descends while every
+   clause inside it starts fresh. Six words unpunctuated fall 7.0 semitones; the same six with
+   two full stops fall 4.0.
+
+   **A question goes up.** `brk?` puts a 5-semitone rise on the last 280 ms. "Is it true?" rises
+   1.8 semitones across its final vowel where "is it true" falls 1.6.
 
    *The original note, kept because it names what was in the way:*  ❌ **blocked, and worth naming why.** The baseline already falls
    across the utterance. What is missing is the *reset* at a phrase boundary — and a phrase

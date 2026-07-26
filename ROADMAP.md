@@ -1760,6 +1760,30 @@ second. That counted "vowels" by asking whether a symbol had an entry in VDUR, w
 being a vowel test when consonants were given durations. The real figure for that phrase without
 `rate` is 2.2 syllables a second; as the page calls it, 3.4; the recording is 4.1.
 
+## John's own voice, calibrated  ◐ tempo done, postures open
+
+One voice at a time, and this is the one there is a recording of.
+
+**Tempo.** `per` was 0.13 — 130 ms a sound, where connected speech averages 70 to 80. Against
+the recording the model ran a mean 1.7x the speaker's duration on every phrase. Now 0.095, mean
+1.38. The other voices are untouched on purpose.
+
+**It cannot go faster yet, and the reason is not the muscles.** Below about 0.095 an unstressed
+fricative stops sounding. Traced: the articulator follower reaches 97% of its travel inside a
+55 ms /s/, at an effective time constant of 10 ms. It arrives. What it arrives at is too wide.
+
+**Two of the fitted postures are wrong**, and the old tempo had enough margin to hide it:
+
+| | john | generic | |
+|---|---|---|---|
+| /z/ | 0.246 | 0.125 | **97% too wide — cannot fricate** |
+| /θ/ | 0.020 | 0.190 | **sealed — that is a stop, not a fricative** |
+| /ð/ | 0.241 | 0.204 | 18% wide |
+
+These came from the fitting run, which optimised against formants. A fricative's channel is not
+something formants can see, so nothing constrained it — the same shape of error as fitting the
+nasals on F2, and the same fix: the objective has to include what makes the sound.
+
 ## Open faults
 
 Things known to be wrong, so they are not rediscovered as surprises.

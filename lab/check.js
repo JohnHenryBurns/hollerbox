@@ -1197,7 +1197,11 @@ check("artT bounds articulator speed and produces undershoot", () => {
   // Shipped OFF. This check exists so the machinery cannot rot while it is off, and so the
   // trade-off it carries stays measured rather than remembered.
   const run = tau => {
-    const v = { ...P.defaultVoice(), ...V, artT: tau };
+    // artFar and artCrit nulled: this measures what the TIME CONSTANT does, and both of those
+    // scale it per section — with the travel term running, artT 0.025 becomes an effective 5
+    // to 17 ms and its leverage on peak speed drops from halving it to a fifth. That is the
+    // travel term working, not artT failing. One effect at a time.
+    const v = { ...P.defaultVoice(), ...V, artT: tau, artFar: 0, artCrit: 0 };
     const W = P.buildWord(r.ph, { D: Math.max(0.8, r.ph.length*v.per), n, stress: r.stress,
                                   pros: v, glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
     const p = H.makeProcessor(n);
@@ -1282,7 +1286,12 @@ check("each gesture knob changes what a consonant actually does", () => {
 
   // Turn the distinction off and the closures fail. If they do not, the stiffening is not doing
   // anything and the knob is decoration.
-  if (!(narrowest({ artCrit: 0, artPush: 0 }, "d") > 0.14))
+  // artFar joins the null. Stiffness now falls with how FAR a section has to travel as well as
+  // with how narrow its target is, and a closure is a long movement — so the travel term seals
+  // /d/ on its own, without the criticality rule and without aiming past the palate. That is
+  // better physics than either, and it means this assertion has to null all three to still be
+  // asking whether the gesture machinery is load-bearing.
+  if (!(narrowest({ artCrit: 0, artPush: 0, artFar: 0 }, "d") > 0.14))
     bad.push("artCrit=0 still seals /d/ — the criticality distinction is inert");
   if (!(narrowest({ artStiff: 1 }, "d") > 0.14))
     bad.push("artStiff=1 still seals /d/ — the stiffening is inert");
@@ -1720,6 +1729,68 @@ check("voiceless stops are aspirated", () => {
 // the markers alone gives a file that LOOKS right and does not parse: both sides stop at their
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
+
+// ── a long movement is driven harder than a short one ─────────────────────
+check("stiffness follows how far, not just how narrow", () => {
+  // Stiffness asked how NARROW a section's target is. That is right about precision of CONTACT
+  // — a sibilant groove is a few millimetres and has to be hit — and wrong about precision of
+  // SHAPE, and it is applied per SECTION, so a section whose target was wide got no stiffening
+  // at all whatever it had to do to get there.
+  //
+  // The consequence showed up three separate ways before it was recognised as one fault:
+  // /l/, /r/ and /w/ getting the slowest articulators in the model while needing the largest
+  // tongue movements; the wide parts of the tract sitting 0.25 out of position; and duration
+  // floors that kept helping a little and never enough, because time was never what was short.
+  const P = H.P, S = require("../engine/spelling.js"), bad = [];
+  const miss = over => {
+    const v = { ...P.defaultVoice(), ...P.VOICES.john.v, ...over }, n = Math.round(v.sect);
+    const by = {};
+    for (const t of ["hello world", "red leather yellow leather"]) {
+      const r = S.g2p(t);
+      const D = Math.max(0.35, r.ph.length*(v.per||0.17));
+      const W = P.buildWord(r.ph, { D, rate: P.rateFor(r.ph, D, v), n, stress: r.stress, pros: v,
+                            glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+      const p = H.makeProcessor(n);
+      p.port.onmessage({ data: { type: "voice", v } });
+      p.port.onmessage({ data: { type: "goal",
+        seq: { keys: W.keys, f0: P.buildF0(W.end, v, { stress: r.stress, seg: W.seg }), end: W.end } } });
+      const out = [new Float32Array(128)];
+      for (let b = 0; b < Math.ceil(W.end*H.SR/128); b++) {
+        p.process([], [out]);
+        const tt = b*128/H.SR;
+        const sg = W.seg.find(x => tt >= x.a && tt <= x.b);
+        if (!sg || sg.sym === " " || Math.abs(tt - (sg.a+sg.b)/2) > 0.006) continue;
+        const ideal = P.ART[sg.sym] || P.ART[(P.DIPH[sg.sym]||[])[0]];
+        if (!ideal) continue;
+        const want = P.articulate(ideal, n);
+        let e = 0;
+        for (let i = 1; i < n-1; i++) e = Math.max(e, Math.abs(p.diam[i] - want[i]));
+        (by[sg.sym] = by[sg.sym] || []).push(e);
+      }
+    }
+    const avg = a => a.reduce((x,y) => x+y, 0)/a.length;
+    return Object.fromEntries(Object.entries(by).map(([k,v2]) => [k, avg(v2)]));
+  };
+  const off = miss({ artFar: 0 }), on = miss({});
+
+  // the approximants are what this is for: they have the widest targets and the longest travel
+  for (const k of ["l", "r", "w"]) {
+    if (off[k] === undefined || on[k] === undefined) continue;
+    if (!(on[k] < off[k]*0.7)) bad.push(`/${k}/ ${off[k].toFixed(2)} -> ${on[k].toFixed(2)}, not much better`);
+    if (on[k] > 0.30) bad.push(`/${k}/ still ${on[k].toFixed(2)} out of position`);
+  }
+  // and nothing may get worse for it
+  for (const k of Object.keys(on))
+    if (off[k] !== undefined && on[k] > off[k] + 0.05)
+      bad.push(`/${k}/ got worse, ${off[k].toFixed(2)} -> ${on[k].toFixed(2)}`);
+
+  const keys = Object.keys(on).filter(k => off[k] !== undefined);
+  const mOn = keys.reduce((a,k) => a + on[k], 0)/keys.length;
+  const mOff = keys.reduce((a,k) => a + off[k], 0)/keys.length;
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.slice(0,3).join("  ")
+               : `mean ${mOff.toFixed(2)} -> ${mOn.toFixed(2)}; /l/ ${on.l.toFixed(2)}, /r/ ${on.r.toFixed(2)}, /w/ ${(on.w||0).toFixed(2)}` };
+});
 
 // ── a vowel in a phrase lands on its own formants ─────────────────────────
 check("vowels in a phrase reach the formants they have alone", () => {

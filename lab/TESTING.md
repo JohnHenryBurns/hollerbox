@@ -156,12 +156,16 @@ several phrases, is the whole question, and it is one button.
 
 ## Running it
 
-    node lab/check.js --quick     39 checks, 23 seconds
-    node lab/check.js             all 59, 241 seconds
-    node lab/check.js "nasal"     anything matching a word
+    node lab/check.js             39 checks, 23 seconds
+    node lab/check.js --full      all 59, 232 seconds
+    node lab/check.js "nasal"     anything matching a word, however slow
 
-**`--quick` while you work; the full gate before you push.** It refuses to call a subset green
-and says so, so there is no way to mistake one for the other.
+**The fast one is the default; the thorough one is asked for.** A gate nobody runs is worse than
+no gate — it still fails at the end, when the change is large enough to be painful to unpick — so
+the common case is the one that takes no flag.
+
+Nothing is weakened by that. The default still prints as a SUBSET, still refuses to call itself
+green, and now names how many checks it skipped and what to type for the rest.
 
 The split is self-maintaining. A full run records what each check cost in `lab/.check-times.json`
 and `--quick` skips anything that took over three seconds last time. Nobody has to remember to

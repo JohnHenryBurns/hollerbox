@@ -3263,7 +3263,7 @@ if (!isMainThread && workerData && workerData.idx) {
   // done — which is the thing this runner exists to fix.
   for (const i of workerData.idx) parentPort.postMessage([runOne(i)]);
 } else {
-  const args  = process.argv.slice(2).filter(a => a !== "--list" && a !== "--report" && a !== "--quick");
+  const args  = process.argv.slice(2).filter(a => !["--list","--report","--quick","--full","--all"].includes(a));
   const query = (process.env.HOLLER_ONLY || args.join(" ")).trim().toLowerCase();
   const terms = query ? query.split(/[,\s]+/).filter(Boolean) : [];
   const wantReport = process.argv.includes("--report") || !!process.env.HOLLER_REPORT;
@@ -3280,7 +3280,17 @@ if (!isMainThread && workerData && workerData.idx) {
   //
   // It prints as a SUBSET, and the runner already refuses to call a subset green.
   const TIMES = __dirname + "/.check-times.json";
-  const quick = process.argv.includes("--quick");
+  // QUICK BY DEFAULT. The full run is four minutes of serial work on one core, which is past the
+  // point where anybody runs it while tuning — and a gate nobody runs is worse than no gate,
+  // because it still fails at the end, when the change is large enough to be painful to unpick.
+  //
+  // So the common case is the fast one and the thorough one is asked for. Nothing is quietly
+  // weakened: it still prints as a SUBSET and still refuses to call itself green. What changed is
+  // only which of the two takes a flag.
+  //
+  // A name filter turns it off, because somebody who asked for a check by name meant that check
+  // whatever it costs.
+  const quick = !process.argv.includes("--full") && !process.argv.includes("--all") && !terms.length;
   let prev = null;
   if (quick) {
     try { prev = JSON.parse(require("fs").readFileSync(TIMES, "utf8")); }
@@ -3338,7 +3348,11 @@ if (!isMainThread && workerData && workerData.idx) {
     console.log(failed.length
       ? `\n🔴 ${failed.length} failing   (${((Date.now()-t0)/1000).toFixed(0)}s)\n`
       : partial
-        ? `\n🟡 ${done.length} passed, but this was a SUBSET — not a green gate. Run the full gate before pushing.   (${((Date.now()-t0)/1000).toFixed(0)}s)\n`
+        ? `\n🟡 ${done.length} passed — a SUBSET, not a green gate.` +
+          `${quick ? ` ${REG.filter(c => c.tier === "gate").length - done.length} slower checks skipped;` +
+                     ` run \`node lab/check.js --full\` before pushing.`
+                   : " Run the full gate before pushing."}` +
+          `   (${((Date.now()-t0)/1000).toFixed(0)}s)\n`
         : `\n🟢 all clear   (${((Date.now()-t0)/1000).toFixed(0)}s)\n`);
     process.exit(failed.length ? 1 : 0);
   };

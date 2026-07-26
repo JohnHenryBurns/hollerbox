@@ -1714,6 +1714,37 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── a fricative aims narrower than its ideal channel ──────────────────────
+check("fricative channels survive being undershot", () => {
+  // The jet that makes turbulence peaks at a channel of about 0.19 and is gone by 0.48. A
+  // posture that sits exactly at the ideal is therefore only correct when the tongue ARRIVES —
+  // and it never quite does, because undershoot always WIDENS a channel. /s/ sat at 0.246, and
+  // at a real speaking rate it went silent.
+  //
+  // The same rule the stops already follow: a tongue does not aim AT the palate, it aims past
+  // it. A fricative should aim narrower than the channel it wants, so that falling short lands
+  // on the target rather than past it.
+  const P = H.P, bad = [];
+  const UNDER = 0.033;                  // the undershoot measured at a real rate
+  for (const sym of ["s", "z", "ʒ", "f", "v", "θ", "ð"]) {
+    const d = P.articulate(P.ART[sym], 44);
+    let mn = 9;
+    for (let i = 1; i < 43; i++) mn = Math.min(mn, d[i]);
+    const jet = Math.max(0, 1 - Math.abs(mn + UNDER - 0.19)/0.28);
+    if (jet < 0.75) bad.push(`/${sym}/ channel ${mn.toFixed(3)} leaves jet ${jet.toFixed(2)} once undershot`);
+  }
+  // /ʃ/ is exempt and it is worth saying why: its channel is naturally the widest of the set,
+  // it carries the highest frication gain to compensate, and it measures the LOUDEST fricative
+  // in the gate. Narrowing it to satisfy this rule would break a sound that works.
+  const d = P.articulate(P.ART["ʃ"], 44);
+  let sh = 9;
+  for (let i = 1; i < 43; i++) sh = Math.min(sh, d[i]);
+  if (sh < 0.24) bad.push(`/ʃ/ narrowed to ${sh.toFixed(3)} — it is meant to be the wide one`);
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ") : `seven channels hold their jet at ${UNDER} undershoot; /ʃ/ stays wide at ${sh.toFixed(2)}` };
+});
+
 // ── the pitch matches a person, roughly ───────────────────────────────────
 report("pitch against the reference recording", () => {
   // lab/ref/john-phrases.m4a, the twelve bench phrases read once. Pitch tracked by

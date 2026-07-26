@@ -1710,6 +1710,48 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── consonants have their own lengths, and the drawl is a vowel thing ──────
+check("fricatives are not held like vowels", () => {
+  // VDUR had vowels and diphthongs only, so all sixteen consonants fell through to a default of
+  // 1 — the length of a mid vowel. Every listening pass said the same thing in different words:
+  // "too slow", "a little slurred", and of one fricative, "drawn out".
+  //
+  // And the drawl, described in its own comment as belonging to the first VOWEL, was applied to
+  // the first HELD segment — which in "she sells" is the /ʃ/. It stretched that one fricative
+  // to 190 ms against 142 for the same sound later in the phrase.
+  const P = H.P, S = require("../engine/spelling.js"), bad = [];
+  const v = { ...P.defaultVoice(), ...P.VOICES.man.v }, n = Math.round(v.sect);
+  const segs = text => {
+    const r = S.g2p(text);
+    const W = P.buildWord(r.ph, { D: 1, n, stress: r.stress, pros: v,
+                          glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    return W.seg.filter(x => x.sym !== " ").map(x => ({ sym: x.sym, ms: (x.b - x.a)*1000 }));
+  };
+
+  // a voiced fricative is much shorter than its voiceless partner — nearly two to one for f/v
+  const fr = segs("a fee a vee a see a zee");
+  const get = s => (fr.find(x => x.sym === s) || {}).ms;
+  for (const [vl, vd] of [["f","v"], ["s","z"]]) {
+    const a = get(vl), b = get(vd);
+    if (a && b && !(a > b*1.15)) bad.push(`/${vl}/ ${a.toFixed(0)}ms is not clearly longer than /${vd}/ ${b.toFixed(0)}ms`);
+  }
+
+  // the drawl must land on a vowel, so a word starting with a fricative must not stretch it
+  const sh = segs("she sells sea shells").filter(x => x.sym === "ʃ");
+  if (sh.length >= 2 && sh[0].ms > sh[1].ms*1.25)
+    bad.push(`the first /ʃ/ is ${sh[0].ms.toFixed(0)}ms against ${sh[1].ms.toFixed(0)}ms later — the drawl is on it`);
+
+  // and no fricative should run to a vowel's length
+  const long = segs("the quick brown fox jumps over the lazy dog")
+    .filter(x => "sʃzʒfvθð".includes(x.sym) && x.ms > 200);
+  if (long.length) bad.push(`${long.length} fricative(s) over 200ms`);
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ")
+               : `f ${get("f").toFixed(0)}/v ${get("v").toFixed(0)}ms, s ${get("s").toFixed(0)}/z ${get("z").toFixed(0)}ms, ` +
+                 `first /ʃ/ ${sh[0].ms.toFixed(0)}ms vs ${sh[1].ms.toFixed(0)}ms` };
+});
+
 // ── the head is one shape, not five drawings of one ────────────────────────
 check("the Mouth view defines its geometry once", () => {
   // The roof curve was written out FOUR times inside drawMouth, in two different sign

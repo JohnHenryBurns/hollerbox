@@ -1033,7 +1033,13 @@ Four changes, smallest first:
    **Known gap, from the first run:** the speller marks every monosyllable as stressed, so the
    article *a* in "banana and a tomato" takes an accent. Real phrases destress function words.
    That is phrase-level stress and it wants its own step; it is not an accent-placement bug.
-4. **Declination and reset.**  ❌ **blocked, and worth naming why.** The baseline already falls
+4. **Declination and reset.**  ◐ **unblocked; the pitch work itself is not done.**
+   Punctuation now survives the speller as break tokens — `brk,` `brk.` `brk?` — which ride in
+   the chain beside the phonemes and hold 2.2x and 4x a word gap. So there is a boundary to
+   reset at, and a question is distinguishable from a statement. What remains is the F0 work
+   itself: reset the baseline at a break, and give `brk?` a rising terminal.
+
+   *The original note, kept because it names what was in the way:*  ❌ **blocked, and worth naming why.** The baseline already falls
    across the utterance. What is missing is the *reset* at a phrase boundary — and a phrase
    boundary is punctuation, which the speller deletes: `replace(/[^a-z]/g,'')` on the way in.
    Nothing downstream can tell a comma from a space, so there is no boundary to reset at.

@@ -348,7 +348,14 @@ const nasalFor     = sym => NASAL[sym]     || 0;
 const voicelessFor = sym => VOICELESS[sym] || 0;
 const fricFor      = sym => FRICATIVE[sym] || 0;
 const aspFor       = sym => ASPIRATE[sym]  || 0;
-const isPause = sym => sym === ' ';
+// A break is a pause too — everything that skipped word boundaries must skip these, or a
+// comma would be handed to articulate() as though it were a posture.
+const isBreak = sym => typeof sym === 'string' && sym.slice(0,3) === 'brk';
+const isPause = sym => sym === ' ' || isBreak(sym);
+// How long each one holds, as a multiple of the ordinary word gap. Measured values vary a lot
+// with speaking style; these are the conventional ratios — a comma is about twice a word
+// boundary and a full stop about four times.
+const BREAK_GAP = { 'brk,': 2.2, 'brk.': 4.0, 'brk?': 4.0 };
 const isDiph  = sym => !!DIPH[sym];
 
 // ---- the voices ----
@@ -906,8 +913,10 @@ function buildWord(chain, opts){
       // to trigger it, and punctuation does not currently survive the speller — filed under
       // 8.4 step 4, which is blocked on the same gap.
       const nextSym=chain[i+1];
-      const gap=Math.max(0.015, Math.min(0.30, wgap*(1+drawl)));
-      const quiet=wgap>=0.09 ? 1 : 0;        // long enough to be a pause rather than a boundary
+      const gap=Math.max(0.015, Math.min(0.60, wgap*(1+drawl)*(BREAK_GAP[sym]||1)));
+      // A real pause is silent. A word boundary is not — connected speech does not stop
+      // between words — but a comma or a full stop is exactly the thing that does.
+      const quiet=(BREAK_GAP[sym] ? 1 : (wgap>=0.09 ? 1 : 0));
       const prev=chain[i-1];
       // WHERE THE PREVIOUS SOUND ENDED, not where it began. `shape()` goes through baseFor,
       // and baseFor for a diphthong returns the posture of its FIRST target — /ɑ/ for /aɪ/ —

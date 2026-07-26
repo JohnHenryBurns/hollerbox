@@ -247,22 +247,54 @@ const WORD_SHAPE = [
 ];
 
 const PAUSE=' ';                    // a word boundary in the sound chain
+
+// PUNCTUATION HAS TO SURVIVE THIS FILE. Every word went through
+// `.replace(/[^a-z]/g,'')`, so a comma and a space were the same thing by the time anything
+// downstream saw them — and a phrase boundary IS punctuation. That is what blocks 8.4 step 4:
+// the pitch baseline falls across an utterance correctly and has nothing to reset at. It is
+// also what blocks the terminal contour, since a question and a statement differ by a mark
+// that never arrived.
+//
+// These ride in the chain beside the phonemes, the way PAUSE already does. Everything that
+// asks "is this a pause" says yes to them; what changes is how long they are and, later, what
+// the pitch does across them.
+const BREAKS = { ',': 'brk,', ';': 'brk,', ':': 'brk,',
+                 '.': 'brk.', '!': 'brk.',
+                 '?': 'brk?' };
+const isBreak = sym => typeof sym === 'string' && sym.slice(0,3) === 'brk';
+/** The mark ending a word, if any — the last one, so "what?!" is a question. */
+function breakAfter(word){
+  const m = String(word||'').match(/[,;:.!?]+$/);
+  if(!m) return null;
+  const marks = m[0];
+  if(marks.includes('?')) return BREAKS['?'];
+  if(marks.includes('.') || marks.includes('!')) return BREAKS['.'];
+  return BREAKS[marks[marks.length-1]] || null;
+}
 function g2p(phrase){
   // A space is a word boundary. Each word is looked up on its own, then joined by a pause.
   const words=String(phrase||'').trim().split(/\s+/).filter(Boolean);
   if(words.length>1){
-    const out=[], st=[], syl=[]; let from='rules';
+    const out=[], st=[], syl=[]; let from='rules', prevBreak=null;
     words.forEach((w,i)=>{
       const r=g2pWord(w);
       if(r.from==='remembered'||r.from==='built in') from=r.from;
-      if(i){ out.push(PAUSE); st.push(0); }      // a boundary belongs to no syllable
+      // the break belonging to the PREVIOUS word replaces the plain boundary, so "one. two"
+      // gets a full stop between them rather than a word gap
+      if(i){ out.push(prevBreak || PAUSE); st.push(0); }
       out.push(...r.ph);
       st.push(...r.stress);
       syl.push(...r.syl);
+      prevBreak = breakAfter(w);
     });
+    // and a mark on the last word is a real boundary too — it is what ends the utterance
+    if(prevBreak){ out.push(prevBreak); st.push(0); }
     return {ph:out, from: words.length+' words', stress:st, syl};
   }
-  return g2pWord(words[0]||'');
+  const one = g2pWord(words[0]||'');
+  const b = breakAfter(words[0]||'');
+  if(b) return {...one, ph:[...one.ph, b], stress:[...(one.stress||[]), 0]};
+  return one;
 }
 // English reduces unstressed vowels to schwa, and rules cannot see stress. But the weak
 // first syllable is highly patterned: a-bout, a-gain, be-cause, com-puter, to-gether. Catching

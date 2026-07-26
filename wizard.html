@@ -154,8 +154,9 @@ async function loadEngine(name){
 }
 await loadEngine('phonemes.js');
 await loadEngine('spelling.js');
+await loadEngine('session.js');
 
-const HOLLER = window.HOLLER, SPELL = window.HOLLER_SPELL;
+const HOLLER = window.HOLLER, SPELL = window.HOLLER_SPELL, SESSION = window.HOLLER_SESSION;
 
 /* ── THE FOUR QUESTIONS ───────────────────────────────────────────────────
    Each option is a patch over the base voice. They are deliberately coarse: the point is that
@@ -227,21 +228,12 @@ async function speak(text){
   if (want !== N) { N = want; node.port.postMessage({ type:'tract', n:N,
                     diam: HOLLER.articulate(HOLLER.ART['ə'], N) }); }
   node.port.postMessage({ type:'voice', v });
-  const r = SPELL.g2p(text);
-  const known = new Set([...Object.keys(HOLLER.ART), ...Object.keys(HOLLER.DIPH), ' ']);
-  const keep = r.ph.map(x => known.has(x) || String(x).slice(0,3) === 'brk');
-  const ph = r.ph.filter((_,i) => keep[i]);
-  const st = (r.stress||null) && r.stress.filter((_,i) => keep[i]);
+  const { ph, stress: st } = SESSION.chainFor(text, SPELL);
   if (!ph.length) return;
-  // NO 5-SECOND CEILING. index.html clamps here because its duration slider stops at 5, and
-  // copying that clamp onto a page that reads whole passages crushed them: "It is a truth
-  // universally acknowledged..." is 102 sounds, which wants 9.7 seconds and was being squeezed
-  // into 5 — spoken at 1.94 times the rate, which is exactly how it sounded.
-  const D = Math.max(0.35, ph.length*(v.per||0.17));
-  const W = HOLLER.buildWord(ph, { D, rate: HOLLER.rateFor(ph, D, v), n:N, stress:st, pros:v,
-                            glide:v.glide, stopHold:v.stopT, drawl:v.drawl });
-  node.port.postMessage({ type:'goal', seq:{ keys:W.keys,
-    f0: HOLLER.buildF0(W.end, v, { stress:st, seg:W.seg }), end:W.end } });
+  // One speak path, shared with the other two pages. A view decides WHAT to say and WHO says
+  // it; what a voice MEANS is not a view's business, and it was three different answers before
+  // this — the wizard's being the one that never applied a fitted voice's postures.
+  node.port.postMessage({ type: 'goal', seq: SESSION.planSpeech(ph, v, { n: N, stress: st }) });
 }
 
 /* ── PASSAGES ─────────────────────────────────────────────────────────────

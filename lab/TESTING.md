@@ -153,3 +153,21 @@ source and I have been measuring the wrong thing again.
 
 **Is Phase 8 net positive yet?** It was not, before `gcap`. `Phase 8 off` against on, over
 several phrases, is the whole question, and it is one button.
+
+## Running it
+
+    node lab/check.js --quick     39 checks, 23 seconds
+    node lab/check.js             all 59, 241 seconds
+    node lab/check.js "nasal"     anything matching a word
+
+**`--quick` while you work; the full gate before you push.** It refuses to call a subset green
+and says so, so there is no way to mistake one for the other.
+
+The split is self-maintaining. A full run records what each check cost in `lab/.check-times.json`
+and `--quick` skips anything that took over three seconds last time. Nobody has to remember to
+tag a check slow when it becomes slow, which is the failure mode a hand-kept list has.
+
+**Why this exists.** Twenty of the fifty-nine checks account for ninety per cent of the runtime,
+and the machine has one core, so the worker pool buys nothing — the full run is four minutes of
+serial work. That is past the point where anyone runs it while tuning, and a gate nobody runs is
+worse than no gate, because it still fails at the end and by then the change is large.

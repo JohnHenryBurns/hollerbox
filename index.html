@@ -329,6 +329,7 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
       <div class="group">
         <p class="hint" id="voiceNote" style="margin:0 0 .9rem"></p>
         <div class="crow">
+          <div id="phrasePick" class="row" style="gap:6px;margin-bottom:8px"></div>
           <input id="wordIn" type="text" value="goal" placeholder="a word or a phrase"
                  autocomplete="off" autocapitalize="off" spellcheck="false">
           <button class="btn primary" id="spellBtn">Sound it out</button>
@@ -1177,6 +1178,24 @@ function openKbd(v){
   document.body.style.overflow = v ? 'hidden' : (document.querySelector('aside').classList.contains('open')?'hidden':'');
   drawChain();
 }
+// The shared phrase list, mounted beside the word box. Only the phrase half of the selector is
+// used: this page already has its own voice dropdown wired into the whole preset machinery, and
+// a second one would be two answers to the same question.
+//
+// The twelve probes and the five passages arrive together — the same list the bench sweeps and
+// the wizard reads, so a phrase that finds something here can be taken straight there.
+function mountPhrases(){
+  const host = document.getElementById('phrasePick');
+  if(!host || !window.HOLLER_SESSION || host.dataset.on) return;
+  host.dataset.on = '1';
+  const p = HOLLER_SESSION.mountSelector(host, {
+    voices: [],                                   // no voice picker here
+    onPhrase: t => { document.getElementById('wordIn').value = t; soundOut(t); },
+  });
+  if(p && p.voiceSel) p.voiceSel.style.display = 'none';
+  if(p && p.input) p.input.style.display = 'none';   // wordIn is already this page's text box
+}
+
 function soundOut(raw){
   if(typeof raw!=='string') raw=document.getElementById('wordIn').value;
   raw=String(raw).trim();
@@ -1894,6 +1913,7 @@ sizeMouth();
 lastTyped='goal'; chainSource='built in';   // the markup already carries the word
 setVoice('announcer');             // the app opens as what it is for
 drawChain();
+mountPhrases();                    // the shared list, once the engine is up
 pushShape(false);
 paintBtn();                 // set the resting state of every control
 resize(); frame();

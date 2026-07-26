@@ -22,8 +22,12 @@
 
 (function (root) {
   'use strict';
-  const P = root.HOLLER;
-  if (!P) throw new Error('session.js needs phonemes.js first');
+  // Looked up when used, not when loaded, so this file can be fetched FIRST and then fetch the
+  // rest. That ordering is what lets one bootstrap replace three different loaders.
+  const eng = () => {
+    if (!root.HOLLER) throw new Error('the engine is not loaded yet');
+    return root.HOLLER;
+  };
 
   /** Every option buildWord takes, derived from the voice in one place.
    *
@@ -31,6 +35,7 @@
    *  used to sit here belonged to a duration slider, and a slider is a view concern — a page
    *  that has one may pass `stretch` to scale this, and a page that does not is unaffected.  */
   function planWord(chain, voice, opts) {
+    const P = eng();
     const o = opts || {};
     const v = voice || P.defaultVoice();
     const n = o.n || Math.round(v.sect || 44);
@@ -55,6 +60,7 @@
   /** The word and its pitch track, ready to hand to the worklet. One call, so a view cannot
    *  build a word with one voice and a contour with another — which is its own class of bug. */
   function planSpeech(chain, voice, opts) {
+    const P = eng();
     const o = opts || {};
     const W = planWord(chain, voice, o);
     const f0 = P.buildF0(W.end, voice || P.defaultVoice(), { stress: o.stress || null, seg: W.seg });
@@ -65,6 +71,7 @@
    *  Every page did this differently or not at all; the wizard's version was the only one that
    *  checked, which is why a passage with an unknown symbol went silent elsewhere. */
   function chainFor(text, spell) {
+    const P = eng();
     const S = spell || root.HOLLER_SPELL;
     if (!S) return { ph: [], stress: null };
     const r = S.g2p(String(text || ''));
@@ -76,7 +83,79 @@
     };
   }
 
-  root.HOLLER_SESSION = { planWord, planSpeech, chainFor };
+  // ── ONE ENGINE LOAD ─────────────────────────────────────────────────────
+  //
+  // Three pages had three loaders. index.html and the wizard fetched with no-store and fell back
+  // to a script tag; the bench searched a list of candidate URLs so that `?src=` could point it
+  // at another checkout. That last one is a real feature and survives here as `src`.
+  //
+  // Fetched rather than linked for the reason index.html found: a content hash in the URL and a
+  // BUILD constant in two files are both derived values living in tracked files, so every engine
+  // edit changed them and any two branches touching the engine collided there. Fetching all of
+  // it together with no-store makes the skew impossible rather than merely detectable.
+  function baseFrom(src) {
+    if (src) return src.replace(/[^/]*$/, '');
+    // where THIS file was fetched from, so a page in a subdirectory finds its siblings
+    const me = (document.currentScript && document.currentScript.src) || '';
+    if (me) return me.replace(/[^/]*$/, '');
+    return 'engine/';
+  }
+
+  async function loadOne(url) {
+    try {
+      const r = await fetch(url, { cache: 'no-store' });
+      if (r.ok) { new Function(await r.text())(); return true; }
+    } catch (e) { /* file://, offline, CORS — fall through to a tag */ }
+    return new Promise((res, rej) => {
+      const t = document.createElement('script');
+      t.src = url; t.onload = () => res(true); t.onerror = rej;
+      document.head.appendChild(t);
+    });
+  }
+
+  let engineBase = 'engine/';
+  /** Load the engine. `src` may point at another checkout's phonemes.js, which is how the bench
+   *  compares two versions; everything else is found beside it. */
+  async function loadEngine(opts) {
+    const o = opts || {};
+    engineBase = baseFrom(o.src);
+    await loadOne(engineBase + 'phonemes.js');
+    if (o.speller !== false) await loadOne(engineBase + 'spelling.js');
+    return { base: engineBase };
+  }
+
+  // ── ONE AUDIO START ─────────────────────────────────────────────────────
+  //
+  // A shared promise, because a flag set before the work finishes lets a second caller through
+  // with no node — which happened, and presented as switching voices silencing the voice. Four
+  // things call this on the main page alone.
+  //
+  // And 300 ms of silence before returning. An AudioWorklet gets one 128-sample block every
+  // 2.90 ms and must finish inside it; the engine is interpreted before it is compiled, and cold
+  // it is twice as slow as real time. The first word was rendered by a cold engine and dropped
+  // samples, which sounds exactly like a click. index.html and the wizard both wait; THE BENCH
+  // NEVER DID, so it popped on its first play and nobody had connected the two.
+  let audioP = null;
+  function startAudio(opts) { return audioP || (audioP = reallyStart(opts || {})); }
+  async function reallyStart(o) {
+    const ctx = new (root.AudioContext || root.webkitAudioContext)();
+    const n = o.n || Math.max(24, Math.round(ctx.sampleRate * 2 * 0.175 / 350));
+    // through a Blob, so the worklet cannot be served from cache while the rest is fresh
+    let url = new URL(engineBase + 'tract-worklet.js', document.baseURI).href;
+    try {
+      const r = await fetch(url, { cache: 'no-store' });
+      if (r.ok) url = URL.createObjectURL(new Blob([await r.text()], { type: 'text/javascript' }));
+    } catch (e) { /* the plain URL still works */ }
+    await ctx.audioWorklet.addModule(url);
+    const node = new root.AudioWorkletNode(ctx, 'tract',
+      { processorOptions: { n, velar: eng().VELAR } });
+    // a view may insert an analyser, a gain stage, anything — it is handed the two ends
+    if (o.connect) o.connect(node, ctx); else node.connect(ctx.destination);
+    await new Promise(r => setTimeout(r, o.warm === undefined ? 300 : o.warm));
+    return { ctx, node, n };
+  }
+
+  root.HOLLER_SESSION = { planWord, planSpeech, chainFor, loadEngine, startAudio };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
 if (typeof module !== 'undefined' && module.exports) {

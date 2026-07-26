@@ -719,21 +719,16 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
  * Falls back to a plain script tag if fetch cannot work, which is the file:// case.
  */
 (async () => {
-async function loadEngine(name){
-  const url = 'engine/' + name;
-  try {
-    const r = await fetch(url, { cache: 'no-store' });
-    if (r.ok) { new Function(await r.text())(); return; }
-  } catch (e) { /* file://, offline — fall through */ }
-  await new Promise((res, rej) => {
-    const t = document.createElement('script');
-    t.src = url; t.onload = res; t.onerror = rej;
-    document.head.appendChild(t);
-  });
-}
-await loadEngine('phonemes.js');
-await loadEngine('spelling.js');
-await loadEngine('session.js');
+// ONE BOOTSTRAP. Finding the engine, fetching it, starting the audio and warming it up all live
+// in session.js, which the bench and the wizard load the same way. There were three loaders and
+// three starts before this, and that code had already produced two bugs on its own — the version
+// token skew and the start race — both fixed once, in one copy of three.
+await new Promise((res, rej) => {
+  const t = document.createElement('script');
+  t.src = 'engine/session.js'; t.onload = res; t.onerror = rej;
+  document.head.appendChild(t);
+});
+await window.HOLLER_SESSION.loadEngine();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The tract shapes, solved offline by searching tube geometry until the
@@ -789,54 +784,22 @@ let view='tube';
 //
 // A shared promise is the whole fix: the first call starts the work, every other call awaits the
 // same completion.
-let startPromise = null;
-function start(){ return startPromise || (startPromise = reallyStart()); }
-async function reallyStart(){
-  ctx = new (window.AudioContext||window.webkitAudioContext)();
-  // keep the tract ~17.5 cm whatever the hardware sample rate is
-  N = Math.max(24, Math.round(ctx.sampleRate*2*0.175/350));
-  // through a Blob, so the worklet cannot be served from cache while the rest is fresh —
-  // which is exactly the skew the version tokens existed to police
-  try {
-    const r = await fetch(ENGINE_URL, { cache: 'no-store' });
-    if (r.ok) ENGINE_URL = URL.createObjectURL(new Blob([await r.text()], { type: 'text/javascript' }));
-  } catch (e) { /* fall back to the plain URL */ }
-  await ctx.audioWorklet.addModule(ENGINE_URL);
-  node = new AudioWorkletNode(ctx,'tract',{processorOptions:{n:N, velar:VELAR}});
-  analyser = ctx.createAnalyser();
-  analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.55;
-  gainNode = ctx.createGain(); gainNode.gain.value = +sVol.value;
-  node.connect(analyser); analyser.connect(gainNode); gainNode.connect(ctx.destination);
-  // LET IT WARM UP BEFORE THE FIRST WORD.
-  //
-  // `process()` runs the whole tract loop every block whether or not a word is playing, so the
-  // engine compiles itself as soon as it is connected — but the node is not created until the
-  // first press, so the first word has always been rendered by a cold one. Measured, per
-  // 128-sample block against a 2.90 ms deadline:
-  //
-  //     blocks    0-20     6.17 ms   212% of budget
-  //     blocks   20-100    2.12 ms    73%
-  //     blocks  100+       0.5-0.9 ms  19-33%
-  //
-  // Over budget means the audio callback misses and the buffer drops out, which sounds exactly
-  // like a click. Reported as the first few sounds of a sweep popping and the same sounds being
-  // clean when you come back to them later — not the phonemes, their position in the session.
-  //
-  // 300 ms of silence gets it past the slow stretch with room to spare. It costs a third of a
-  // second on the very first press and nothing after that.
-  await new Promise(r => setTimeout(r, 300));
-  node.port.onmessage = e => {
-    energy=e.data.e; liveDiam=e.data.d; voicedNow=e.data.on;
-    nOpen=e.data.nOpen||0; nEnergy=e.data.nE||null;
-    bOpenLive=e.data.bOpen||0; bEnergy=e.data.bE||null;
-    const changed = (e.data.seq!==sequencing) || (e.data.v!==voicing);
-    sequencing=e.data.seq; voicing=e.data.v;
-    if(changed) paintBtn();                                   // a word ends by itself
-  };
-
-  document.getElementById('secCount').textContent = N;
-  document.getElementById('lenCm').textContent = (N*350/(ctx.sampleRate*2)*100).toFixed(1);
-  if(N !== tubes.length) buildTubes();      // hardware sample rate may want a different count
+// The audio start lives in session.js. What stays here is what is genuinely this page's: the
+// analyser that drives the spectrogram and the gain stage the volume slider moves. A view is
+// handed both ends of the node and may put whatever it likes between them.
+async function start(){
+  if(node) return;
+  const a = await HOLLER_SESSION.startAudio({
+    connect: (nd, c) => {
+      analyser = c.createAnalyser();
+      analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.55;
+      gainNode = c.createGain(); gainNode.gain.value = +sVol.value;
+      nd.connect(analyser); analyser.connect(gainNode); gainNode.connect(c.destination);
+    }
+  });
+  ctx = a.ctx; node = a.node; N = a.n;
+  started = true;
+  applyVoice(champion);
   pushShape(true);
   node.port.postMessage({type:'f0', value:+sF0.value});
   node.port.postMessage({type:'breath', value:+sBr.value});

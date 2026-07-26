@@ -324,10 +324,10 @@ async function boot(src){
   if(!P) throw new Error('phonemes.js did not define HOLLER');
   const VOICES = P.VOICES;
 
-  // The engine sits beside the phoneme layer, whatever origin that came from.
+  // The engine and the session sit beside the phoneme layer, whatever origin that came from —
+  // which is what makes `?src=` work: point the bench at another checkout and it gets that
+  // checkout's worklet and its speak path, not this one's.
   const engineUrl = ENGSRC.replace(/phonemes\.js(\?.*)?$/, 'tract-worklet.js');
-  // session.js sits beside phonemes.js and is fetched the same way, so a bench pointed at a
-  // different checkout with ?src= gets that checkout's speak path rather than this one's
   try {
     const su = ENGSRC.replace(/phonemes\.js(\?.*)?$/, 'session.js');
     const sr = await fetch(su, { cache: 'no-store' });
@@ -392,14 +392,20 @@ function setVoice(k){
 
 async function audioUp(){
   if(node) return;
-  ctx = new (window.AudioContext||window.webkitAudioContext)();
-  const fromRate = Math.round(ctx.sampleRate*2*0.175/350);
-  N = Math.max(14, Math.min(72, Math.round(VOICE.sect || fromRate)));
-  await ctx.audioWorklet.addModule(ENG.engineUrl);
-  node = new AudioWorkletNode(ctx,'tract',{processorOptions:{n:N, velar:ENG.VELAR}});
-  workletN = N;
-  const g = ctx.createGain(); g.gain.value = 0.9;
-  node.connect(g); g.connect(ctx.destination);
+  // The audio start lives in session.js now, shared with the other two pages. Two things this
+  // bench was missing and did not know it: a shared promise, so a second caller cannot get
+  // through with no node — and 300 MS OF WARM-UP. The engine is interpreted before it is
+  // compiled and cold it is twice as slow as real time, so the first word dropped samples,
+  // which sounds exactly like a click. The main page fixed that; nobody carried it here, and
+  // the bench has been popping on its first play ever since.
+  const fromRate = Math.round(44100*2*0.175/350);
+  const want = Math.max(14, Math.min(72, Math.round(VOICE.sect || fromRate)));
+  const a = await window.HOLLER_SESSION.startAudio({
+    n: want,
+    connect: (nd, c) => { const g = c.createGain(); g.gain.value = 0.9;
+                          nd.connect(g); g.connect(c.destination); }
+  });
+  ctx = a.ctx; node = a.node; N = a.n; workletN = N;
 }
 
 /* The worklet only changes tract length on a {type:'tract'} message — a 'voice'

@@ -1873,6 +1873,29 @@ blending, where overlapping gestures blend by a raised-cosine weight rather than
 worse on the meaningful metric, 0.406 to 0.516, because averaging neighbours is coarticulation
 and this model already undershoots. Both are recorded in commits rather than in the tree.
 
+## The speller could not say a past tense or a plural  ✅ fixed
+
+Found by putting real prose through the wizard and listening. The two commonest inflections in
+English were both spelled letter by letter, as though the vowel were pronounced:
+
+| written | was | now |
+|---|---|---|
+| times | t ɪ m **ɛ s** | t aɪ m **z** |
+| travelled | t r æ v ɛ l **ɛ d** | t r æ v ɛ l **d** |
+| diverged | d ɪ v ɝ d ʒ **ɛ d** | d ɪ v ɝ d ʒ **d** |
+
+Both endings are governed by the sound BEFORE them, and the vowel appears only where the stem
+already ends in the ending's own consonant, because otherwise it is unpronounceable — `-ed` is
+/ɪd/ after /t d/, /t/ after a voiceless consonant, /d/ otherwise; `-s` is /ɪz/ after a sibilant,
+/s/ after a voiceless consonant, /z/ otherwise.
+
+Split off before the letter rules run and reattached from the stem's last SOUND, which is the
+part that matters: "diverged" ends in the letter e and the sound /dʒ/.
+
+**Still wrong, and older than this:** the vowels of those stems. "travelled" wants /ə/ and gets
+/ɛ/, "hoped" wants /oʊ/ and gets /o/, "wanted" wants /ɑ/ and gets /ɔ/, "books" wants /ʊ/ and gets
+/u/. Unstressed reduction and vowel quality, not inflection.
+
 ## Open faults
 
 Things known to be wrong, so they are not rediscovered as surprises.

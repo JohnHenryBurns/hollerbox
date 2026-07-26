@@ -1721,6 +1721,45 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── the two commonest inflections in English ──────────────────────────────
+check("regular past tense and regular plural", () => {
+  // These two endings appear in almost every sentence, and the letter-by-letter rules spelled
+  // both as though the vowel were pronounced: "travelled" came out /trævɛlɛd/, "diverged" as
+  // /dɪvɝdʒɛd/, "times" as /tɪmɛs/. Found by putting real prose through the wizard and listening
+  // to what came out.
+  //
+  // Both endings are governed by the sound BEFORE them, and the vowel appears only where the
+  // stem already ends in the ending's own consonant — otherwise it would be unpronounceable.
+  const S = require("../engine/spelling.js"), bad = [];
+  // the ENDING only: the vowels of these stems are a separate and older problem
+  const END = {
+    // -ed
+    wanted:["ɪ","d"], needed:["ɪ","d"], hunted:["ɪ","d"],
+    walked:["t"], hoped:["t"], danced:["t"], stopped:["t"], kissed:["t"],
+    played:["d"], timed:["d"], diverged:["d"], travelled:["d"], seemed:["d"],
+    // -s
+    wishes:["ɪ","z"], buses:["ɪ","z"],
+    cats:["s"], books:["s"], jumps:["s"],
+    dogs:["z"], times:["z"], dreams:["z"], bells:["z"],
+  };
+  for (const [w, want] of Object.entries(END)) {
+    const ph = S.g2p(w).ph;
+    const got = ph.slice(-want.length);
+    if (got.join(" ") !== want.join(" "))
+      bad.push(`${w} ends /${got.join("")}/, want /${want.join("")}/`);
+  }
+  // A word that merely ENDS in those letters must not be split. Checked by length rather than by
+  // looking for a vowel before the last sound — "this" is /ðɪs/ and its second-to-last phoneme
+  // is legitimately an ɪ, which the first version of this check read as an inserted one.
+  for (const [w, n2] of [["bed",3], ["red",3], ["bus",3], ["gas",3], ["this",3], ["dress",4]]) {
+    const ph = S.g2p(w).ph;
+    if (ph.length > n2) bad.push(`${w} came out ${ph.length} sounds (/${ph.join("")}/), want ${n2}`);
+  }
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.slice(0,4).join("  ")
+               : `${Object.keys(END).length} inflected words, all three -ed and all three -s forms` };
+});
+
 // ── the wizard asks for a direction, not a parameter ──────────────────────
 check("the voice wizard's options actually differ", () => {
   // The tournament offers A against B while a dropdown decides which of five groups is being

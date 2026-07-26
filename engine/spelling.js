@@ -314,6 +314,44 @@ function g2pWord(word){
   if(dict[w]) return withStress(spelling, {ph:dict[w].slice(), from: BUILTIN_DICT[w]?'built in':'remembered'});
   const out=[];
   let guard=0;
+  // ---- THE TWO COMMONEST INFLECTIONS IN ENGLISH, BOTH OF WHICH WERE WRONG ----
+  //
+  // Regular past tense and regular plural are the two endings that appear in almost every
+  // sentence, and the letter-by-letter rules spelled both as though the vowel were pronounced:
+  // "travelled" came out /trævɛlɛd/, "diverged" as /dɪvɝdʒɛd/, "times" as /tɪmɛs/.
+  //
+  // Both endings are governed by the sound BEFORE them, and the rule is the same shape in each
+  // case — a vowel appears only when the stem already ends in the ending's own consonant,
+  // because otherwise it would be unpronounceable:
+  //
+  //   -ed   after /t d/                 -> ɪd      wanted, needed
+  //         after a voiceless consonant -> t       walked, kissed
+  //         otherwise                   -> d       played, travelled
+  //
+  //   -s    after a sibilant            -> ɪz      buses, wishes, ages
+  //         after a voiceless consonant -> s       cats, books
+  //         otherwise                   -> z       dogs, times, dreams
+  //
+  // Done here, before the shape rules, so the stem is spelled on its own and the ending is
+  // decided from the stem's LAST SOUND rather than its last letter. The distinction matters:
+  // "diverged" ends in the letter e but the sound /dʒ/.
+  let inflect=null;
+  if(/[a-z]{3,}ed$/.test(w)){
+    inflect='ed';
+    // The `e` before `d` belongs to the STEM in two cases and to the ending otherwise. It stays
+    // when the preceding letter is a soft c or g, which need it to stay soft — "diverged",
+    // "aged", "danced" — and when it is the magic e of a long vowel: "timed", "hoped", "used".
+    // It goes after a doubled consonant, which is a spelling device and not a stem letter:
+    // "travelled" kept it and came out /trævɛləld/.
+    w = (/[cg]ed$/.test(w) || /[aeiou][^aeiou]ed$/.test(w)) ? w.slice(0,-1) : w.slice(0,-2);
+  } else if(/[a-z]{3,}es$/.test(w) && !/[aeiou]es$/.test(w)){
+    inflect='s';
+    w = w.slice(0,-1);                    // "times" -> "time", magic e intact
+  } else if(/[a-z]{3,}[^aeious]s$/.test(w)){
+    inflect='s';
+    w = w.slice(0,-1);
+  }
+
   // Strip the shaped final letter and hold its sound back; the rules run on what is left.
   let tail=null;
   for(const [re,ph] of WORD_SHAPE) if(re.test(w)){ tail=ph; w=w.slice(0,-1); break; }
@@ -349,6 +387,25 @@ function g2pWord(word){
     w=w.slice(hit[0]);
   }
   if(tail) out.push(tail);
+  // ---- reattach the inflection, decided by the stem's LAST SOUND ----
+  // Which is why it had to be split off before the letter rules ran: "diverged" ends in the
+  // letter e and the sound /dʒ/, and it is the sound that chooses.
+  if(inflect){
+    const last = out.length ? out[out.length-1] : '';
+    const VOICELESS = 'p t k f θ s ʃ'.split(' ');
+    const SIB = 's z ʃ ʒ'.split(' ').concat(['t͡ʃ','d͡ʒ']);
+    if(inflect === 'ed'){
+      if(last === 't' || last === 'd') out.push('ɪ','d');
+      else if(VOICELESS.includes(last)) out.push('t');
+      else out.push('d');
+    } else {
+      const sibilant = SIB.includes(last) || (out.length>1 && last==='ʒ') ||
+                       (out.length>1 && out[out.length-2]==='d' && last==='ʒ');
+      if(sibilant) out.push('ɪ','z');
+      else if(VOICELESS.includes(last)) out.push('s');
+      else out.push('z');
+    }
+  }
   // collapse doubled consonants, which English spells but does not say
   const clean=[];
   for(const ph of out) if(!(clean.length && clean[clean.length-1]===ph && !'iɪɛæʌɑɔʊuɝəo'.includes(ph))) clean.push(ph);

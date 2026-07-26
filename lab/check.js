@@ -1764,6 +1764,109 @@ check("vowels in a phrase reach the formants they have alone", () => {
                      : "no vowels measured" };
 });
 
+// ── a sound needs time to be made ─────────────────────────────────────────
+check("no sound is held too briefly to form", () => {
+  // At a real speaking rate the approximants were held 43 ms, and measured at their midpoints
+  // the tract was still 0.52 to 1.00 away from their postures — three of the five sounds in
+  // "world" never formed, which is what "telo norgut" was.
+  //
+  // The target asks correctly; the tract does not arrive. So this is time rather than spelling,
+  // and /l/, /r/, /w/, /j/ and the nasals are whole-tongue movements that cannot be made in a
+  // fricative's worth of it.
+  const P = H.P, S = require("../engine/spelling.js"), bad = [];
+  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  const MIN = { approximant: 60, fricative: 40, h: 35 };
+  for (const t of ["hello world", "she sells sea shells", "red leather yellow leather"]) {
+    const r = S.g2p(t);
+    const D = Math.max(0.35, r.ph.length*(v.per||0.17));
+    const W = P.buildWord(r.ph, { D, rate: P.rateFor(r.ph, D, v), n, stress: r.stress, pros: v,
+                          glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    for (const sg of W.seg) {
+      const ms = (sg.b - sg.a)*1000;
+      const want = P.APPROX.includes(sg.sym) ? MIN.approximant
+                 : P.FRICATIVE[sg.sym] ? MIN.fricative
+                 : sg.sym === "h" ? MIN.h : 0;
+      if (want && ms < want - 1) bad.push(`/${sg.sym}/ held ${ms.toFixed(0)}ms, needs ${want}`);
+    }
+  }
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.slice(0,3).join("  ") : "three phrases, nothing held too briefly" };
+});
+
+// ── a long passage is not crushed to fit ──────────────────────────────────
+check("the wizard does not squeeze a passage into five seconds", () => {
+  // index.html clamps D at 5 because its duration slider stops there. Copied onto a page that
+  // reads whole passages, that ceiling crushed them: 102 sounds wants 9.7 seconds and was being
+  // squeezed into 5, which is 1.94x the rate and exactly how it sounded.
+  const fs = require("fs"), bad = [];
+  const page = fs.readFileSync(__dirname + "/../wizard.html", "utf8");
+  const code = page.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  if (/Math\.min\(5,\s*ph\.length/.test(code)) bad.push("the five-second ceiling is back");
+  // and the longest passage in the file must come out at a speakable rate
+  const P = H.P, S = require("../engine/spelling.js");
+  const v = { ...P.defaultVoice(), ...P.VOICES.john.v };
+  const books = [...page.matchAll(/\['([^']{40,})',/g)].map(m => m[1]);
+  if (!books.length) bad.push("no passages found");
+  let slowest = 99, worst = "";
+  for (const t of books) {
+    const r = S.g2p(t);
+    const D = Math.max(0.35, r.ph.length*(v.per||0.17));
+    const W = P.buildWord(r.ph, { D, rate: P.rateFor(r.ph, D, v), n: 44, stress: r.stress, pros: v,
+                          glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    const syl = r.ph.filter(x => H.P.VDUR[x] !== undefined && "iɪɛæɑɔʊuʌɝəo".includes(x[0])).length;
+    const rate = syl/W.end;
+    if (rate > 6.5) bad.push(`"${t.slice(0,24)}..." runs at ${rate.toFixed(1)} syllables/s`);
+    if (rate < slowest) { slowest = rate; worst = t.slice(0,24); }
+  }
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.slice(0,2).join("  ")
+               : `${books.length} passages, none above 6.5 syllables/s (slowest ${slowest.toFixed(1)})` };
+});
+
+// ── the two commonest inflections in English ──────────────────────────────
+check("regular past tense and regular plural", () => {
+  // These two endings appear in almost every sentence, and the letter-by-letter rules spelled
+  // both as though the vowel were pronounced: "travelled" came out /trævɛlɛd/, "diverged" as
+  // /dɪvɝdʒɛd/, "times" as /tɪmɛs/. Found by putting real prose through the wizard and listening
+  // to what came out.
+  //
+  // It exists because a DIAMETER-distance metric badly overstated the problem: the wide parts
+  // of the tract sat 0.43 out of position, which sounds like a catastrophe, and translated to
+  // 1.6% of formant error, because a wide section's exact width barely moves a resonance. The
+  // thing that matters had to be measured directly.
+  const P = H.P, S = require("../engine/spelling.js");
+  const VOW = ["i","ɪ","ɛ","æ","ɑ","ɔ","ʊ","u","ʌ","ɝ"];
+  const v = { ...P.defaultVoice(), ...P.VOICES.john.v }, n = Math.round(v.sect);
+  let err = 0, cnt = 0, worst = 0, worstSym = "";
+  for (const t of ["she sells sea shells", "hello world", "banana and a tomato"]) {
+    const r = S.g2p(t);
+    const D = Math.max(0.35, Math.min(5, r.ph.length*(v.per||0.17)));
+    const W = P.buildWord(r.ph, { D, rate: P.rateFor(r.ph, D, v), n, stress: r.stress, pros: v,
+                          glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    const p = H.makeProcessor(n);
+    p.port.onmessage({ data: { type: "voice", v } });
+    p.port.onmessage({ data: { type: "goal",
+      seq: { keys: W.keys, f0: P.buildF0(W.end, v, { stress: r.stress, seg: W.seg }), end: W.end } } });
+    const out = [new Float32Array(128)];
+    for (let b = 0; b < Math.ceil(W.end*H.SR/128); b++) {
+      p.process([], [out]);
+      const tt = b*128/H.SR;
+      const sg = W.seg.find(x => tt >= x.a && tt <= x.b);
+      if (!sg || !VOW.includes(sg.sym) || Math.abs(tt - (sg.a+sg.b)/2) > 0.006) continue;
+      const want = H.formants(sg.sym, { n });
+      const got = H.formantsOfShape(p.diam, { n });
+      if (!want || !got || want.length < 2 || got.length < 2) continue;
+      const e = 100*(Math.abs(got[0]-want[0])/want[0] + Math.abs(got[1]-want[1])/want[1])/2;
+      err += e; cnt++;
+      if (e > worst) { worst = e; worstSym = sg.sym; }
+    }
+  }
+  const mean = cnt ? err/cnt : 99;
+  return { ok: cnt > 4 && mean < 4 && worst < 12,
+           note: cnt ? `${cnt} vowels, mean ${mean.toFixed(2)}% off, worst /${worstSym}/ ${worst.toFixed(1)}%`
+                     : "no vowels measured" };
+});
+
 // ── the wizard asks for a direction, not a parameter ──────────────────────
 check("the voice wizard's options actually differ", () => {
   // The tournament offers A against B while a dropdown decides which of five groups is being

@@ -1826,6 +1826,41 @@ These came from the fitting run, which optimised against formants. A fricative's
 something formants can see, so nothing constrained it — the same shape of error as fitting the
 nasals on F2, and the same fix: the objective has to include what makes the sound.
 
+## The constriction arrives; the rest of the tract does not  ❌ open, measured
+
+Measured at each segment's midpoint, as distance from that phoneme's OWN posture, split by
+whether the section is a narrow constriction or a wide part of the tract:
+
+| sym | at the constriction | in the wide parts |
+|---|---|---|
+| /n/ | **0.000** | 0.806 |
+| /r/ | 0.135 | 0.731 |
+| /w/ | 0.326 | 0.601 |
+| /l/ | 0.631 | 0.700 |
+| /ð/ | 0.484 | **1.164** |
+| /s/ | 0.000 | 0.073 |
+| /i/ | 0.004 | 0.052 |
+
+**The narrow gestures land perfectly and the wide ones are nowhere near.** /n/ seals to within a
+thousandth and its pharynx is 0.8 out.
+
+The cause is the criticality rule, and it is doing exactly what it was written to do:
+`stiff = target < 0.6 ? max(0.22, target/0.6) : 1`. Stiffness is keyed on how NARROW a section's
+target is, on the reasoning that a sibilant channel is a few millimetres wide and a vowel has no
+surface to press against. That reasoning is right about precision of CONTACT and wrong about
+precision of SHAPE: a vowel's formants depend on the wide parts of the tract exactly as tightly
+as a fricative's noise depends on its groove.
+
+So the model produces the right manner with the wrong quality — the constriction that decides
+WHAT the sound is arrives, and the resonator that decides what it SOUNDS LIKE does not. That is
+a good description of a synthesiser whose phonemes are identifiable and unnatural.
+
+**Two structural fixes were tried this session and neither survived measurement.** A third-order
+critically damped follower: worse at a fair comparison, 0.124 against 0.058. Gestural activation
+blending, where overlapping gestures blend by a raised-cosine weight rather than taking turns:
+worse on the meaningful metric, 0.406 to 0.516, because averaging neighbours is coarticulation
+and this model already undershoots. Both are recorded in commits rather than in the tree.
+
 ## Open faults
 
 Things known to be wrong, so they are not rediscovered as surprises.

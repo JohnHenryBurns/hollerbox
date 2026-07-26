@@ -272,8 +272,64 @@
     };
   }
 
+  // ── STATE THAT SURVIVES THE TRIP ────────────────────────────────────────
+  //
+  // Voice and phrase in the URL, so tuning a voice in the wizard and pressing Bench keeps both,
+  // and a pasted link reproduces exactly what the sender heard.
+  //
+  // TWO FIELDS, NOT ONE. A seed is 42 voice parameters and no text; the phrase is text and no
+  // voice. Folding them together would mean a new seed every time a word changed, and the point
+  // of a seed is that the same voice can say anything.
+  //
+  // In the hash rather than the query, for three reasons: no server sees it, changing it does
+  // not reload the page, and `?src=` already means something specific to the bench. Written with
+  // replaceState so that tuning a voice does not fill the back button with every intermediate
+  // step — a person pressing Back wants the page they came from, not the knob they last moved.
+  function readURL() {
+    const out = {};
+    try {
+      const h = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+      const v = h.get('v');
+      if (v) { try { out.voice = eng().decodeVoice(v); out.seed = v; } catch (e) { /* a bad seed is ignored, not fatal */ } }
+      const say = h.get('say');
+      if (say) out.phrase = say;
+    } catch (e) { /* no location, or a hash that is not ours */ }
+    return out;
+  }
+
+  function writeURL(state) {
+    try {
+      const h = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+      if (state.voice) h.set('v', typeof state.voice === 'string' ? state.voice
+                                                                 : eng().encodeVoice(state.voice));
+      if (state.phrase !== undefined) {
+        if (state.phrase) h.set('say', state.phrase); else h.delete('say');
+      }
+      history.replaceState(null, '', location.pathname + location.search + '#' + h.toString());
+    } catch (e) { /* a URL that will not update is not worth failing over */ }
+  }
+
+  /** Rewrite the links between the pages so the current state travels with them. Called after
+   *  any change; cheap, and it means every route into another page carries the state rather
+   *  than only the ones somebody remembered to wire. */
+  function carryState(state) {
+    let tail = '';
+    try {
+      const h = new URLSearchParams();
+      if (state.voice) h.set('v', typeof state.voice === 'string' ? state.voice
+                                                                  : eng().encodeVoice(state.voice));
+      if (state.phrase) h.set('say', state.phrase);
+      tail = '#' + h.toString();
+    } catch (e) { return; }
+    for (const a of document.querySelectorAll('a[href]')) {
+      const href = a.getAttribute('href') || '';
+      if (!/\.html(\?|#|$)/.test(href)) continue;          // only our own pages
+      a.setAttribute('href', href.split('#')[0] + tail);
+    }
+  }
+
   root.HOLLER_SESSION = { planWord, planSpeech, chainFor, loadEngine, startAudio,
-                          PHRASES, mountSelector };
+                          PHRASES, mountSelector, readURL, writeURL, carryState };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
 if (typeof module !== 'undefined' && module.exports) {

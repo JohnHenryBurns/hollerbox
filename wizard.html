@@ -151,7 +151,7 @@ const HOLLER = window.HOLLER, SPELL = window.HOLLER_SPELL, SESSION = window.HOLL
 /* ── THE FOUR QUESTIONS ───────────────────────────────────────────────────
    Each option is a patch over the base voice. They are deliberately coarse: the point is that
    a child can hear the difference between two of them without being told what changed. */
-const BASE = { ...HOLLER.defaultVoice(), ...(HOLLER.VOICES.john.v || {}) };
+const BASE = { ...HOLLER.defaultVoice(), ...(HOLLER.VOICES.john.v || {}) };  // mutated by an inbound seed
 
 const Q = [
   { id:'q1', key:'size', opts:[
@@ -285,6 +285,7 @@ function draw(){
       b.innerHTML = label + '<small>' + hint + '</small>';
       b.addEventListener('click', () => {
         chosen[q.id] = i; battle = null; round = 0;
+        SESSION.writeURL({ voice: current() }); linkUp();
         document.getElementById('battleCount').textContent = '';
         draw(); showSeed();
         speak(sample());
@@ -295,6 +296,7 @@ function draw(){
 }
 function showSeed(){
   const v = current();
+  SESSION.writeURL({ voice: v }); linkUp();
   const name = (document.getElementById('vname').value || '').trim();
   document.getElementById('seed').textContent = (name ? name + ' · ' : '') + HOLLER.encodeVoice(v);
 }
@@ -304,8 +306,25 @@ function showSeed(){
 // question. Passages first, since a voice is judged on something long.
 const picker = SESSION.mountSelector('picker', {
   kinds: ['passage', 'probe'],
-  onPhrase: t => speak(t),
+  onPhrase: t => { SESSION.writeURL({ phrase: t }); linkUp(); speak(t); },
 });
+
+// ── STATE THAT SURVIVES THE TRIP ──────────────────────────────────────────
+// A voice built here can be carried to the bench and swept, or to the main page and watched.
+// Written on every change and pushed into the links, so every route out of this page carries it
+// rather than only the ones somebody remembered to wire.
+function linkUp(){ SESSION.carryState({ voice: current(), phrase: picker.phrase() }); }
+
+{
+  const inbound = SESSION.readURL();
+  if (inbound.phrase) picker.setPhrase(inbound.phrase);
+  if (inbound.voice) {
+    // An arriving voice replaces the base the questions patch, so the four answers still work —
+    // they become adjustments to what was sent rather than to this page's own starting point.
+    Object.assign(BASE, inbound.voice);
+  }
+  linkUp();
+}
 /** What every button on this page plays: whatever the shared selector currently holds. */
 const sample = () => picker.phrase();
 document.getElementById('readIt').addEventListener('click', () => speak(sample()));

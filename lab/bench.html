@@ -384,10 +384,40 @@ async function boot(src){
     ' · ' + Object.keys(VOICES).length + ' voices · ' + CONS.length + ' consonants';
   document.getElementById('pick').classList.add('hidden');
   build();
+  stateIn();          // a voice or a phrase arriving from another page, and the links back out
 }
 function setVoice(k){
   const d = Object.fromEntries(ENG.VOICE_SPEC.map(p=>[p.k,p.d]));
   VOICE = {...d, ...(ENG.VOICES[k].v||{}), art:ENG.VOICES[k].art||null, name:k};
+  linkUp();
+}
+
+// ── STATE THAT SURVIVES THE TRIP ──────────────────────────────────────────
+// A voice arrives here from the wizard to be swept, and leaves for the main page to be watched.
+// Written on change and pushed into the links, so every route out carries it rather than only
+// the ones somebody remembered to wire.
+function linkUp(){
+  const S = window.HOLLER_SESSION;
+  if(!S || !VOICE) return;
+  const v = {...VOICE}; delete v.art; delete v.name;   // a seed carries parameters, not postures
+  S.writeURL({ voice: v });
+  S.carryState({ voice: v, phrase: (window.lastPhrase || '') });
+}
+function stateIn(){
+  const S = window.HOLLER_SESSION;
+  if(!S) return;
+  const inbound = S.readURL();
+  if(inbound.voice){
+    // An arriving seed keeps whatever postures the current voice has: a seed is 42 parameters
+    // and carries none, so replacing them with nothing would silently un-fit a fitted voice.
+    VOICE = { ...inbound.voice, art: (VOICE && VOICE.art) || null, name: 'from a link' };
+  }
+  if(inbound.phrase){
+    window.lastPhrase = inbound.phrase;
+    const box = document.getElementById('phraseIn');
+    if(box) box.value = inbound.phrase;
+  }
+  linkUp();
 }
 
 async function audioUp(){

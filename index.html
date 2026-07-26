@@ -1201,6 +1201,7 @@ function soundOut(raw){
   raw=String(raw).trim();
   if(!raw) return;
   lastTyped=raw;
+  if(window.HOLLER_SESSION){ HOLLER_SESSION.writeURL({phrase:raw}); linkUp(); }
   const r=g2p(raw);
   // A sound the model can say is not only a posture in ART — diphthongs live in DIPH and a
   // pause is its own thing. Filtering on ART alone silently dropped every diphthong, which
@@ -1329,6 +1330,9 @@ function setVoice(name){
   voiceName=name;
   const V=VOICES[name];
   if(V.v) champion={...defaultVoice(), ...V.v};    // a preset IS a complete voice
+  // Carried in the URL so the voice travels to the bench and the wizard. Guarded because
+  // setVoice runs during boot, before session.js has necessarily finished loading.
+  if(window.HOLLER_SESSION){ HOLLER_SESSION.writeURL({voice:champion}); linkUp(); }
   const sel=document.getElementById('voiceSel'); if(sel) sel.value=name;
   const el=document.getElementById('voiceNote'); if(el) el.textContent=V.note;
   const sv=document.getElementById('stageVoice');
@@ -1914,6 +1918,27 @@ lastTyped='goal'; chainSource='built in';   // the markup already carries the wo
 setVoice('announcer');             // the app opens as what it is for
 drawChain();
 mountPhrases();                    // the shared list, once the engine is up
+
+// ── STATE THAT SURVIVES THE TRIP ──────────────────────────────────────────
+// A voice tuned in the wizard arrives here and is watched; a phrase found here goes to the bench
+// to be swept. Written on change and pushed into the links, so every route out carries it.
+function linkUp(){
+  if(window.HOLLER_SESSION) HOLLER_SESSION.carryState({ voice: champion, phrase: lastTyped });
+}
+{
+  const inbound = window.HOLLER_SESSION ? HOLLER_SESSION.readURL() : {};
+  if(inbound.voice){
+    // An arriving seed becomes the custom voice rather than overwriting a named preset, so the
+    // presets stay what they are and the dropdown still tells the truth about which is selected.
+    VOICES.custom.v = { ...inbound.voice };
+    setVoice('custom');
+  }
+  if(inbound.phrase){
+    document.getElementById('wordIn').value = inbound.phrase;
+    soundOut(inbound.phrase);
+  }
+  linkUp();
+}
 pushShape(false);
 paintBtn();                 // set the resting state of every control
 resize(); frame();

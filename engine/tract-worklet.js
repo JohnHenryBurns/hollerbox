@@ -513,7 +513,11 @@ class TractProcessor extends AudioWorkletProcessor {
       const fd = this.fricDuck===undefined ? 0.62 : this.fricDuck;
       const squeeze = ((this.prevClose < 0.55 && this.nasal < 0.15)
         ? 1 - 0.62 * Math.min(1, (0.55 - this.prevClose) / 0.42) : 1)
-        * (this.fric > 0.01 ? 1 - fd : 1);
+        // Gated well below any real gain. It used to be , and setting /ð/ to a
+        // realistic 0.010 dropped it under its own trigger — so the quietest fricative in
+        // English was the one sound that kept full voicing, and sat 25 dB louder than it
+        // should. A magic number that was fine until a value moved past it.
+        * (this.fric > 1e-4 ? 1 - fd : 1);
       // NOT scaled by `fric`. The first version wrote the cut as fd*fric, and the sounds that
       // need the largest cut have the SMALLEST fric — /ð/ at 0.20 got a 27% duck when asked for
       // 85%, so the voicing kept winning in exactly the cases that were broken. The same

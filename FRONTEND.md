@@ -106,7 +106,7 @@ questions *are* its voice picker. index.html uses the phrase list only, because 
 voice dropdown wired into the preset machinery. The bench takes the list itself and renders it
 its own way, since its phrase panel shows each phrase's chain beneath it.
 
-## Phase 4 — state that survives the trip
+## Phase 4 — state that survives the trip  ✅ built
 
 Voice and phrase persist across navigation. Tune a voice in the wizard, press Bench, and it is
 the same voice saying the same phrase.
@@ -116,8 +116,25 @@ Carried in the URL rather than in storage, so a link is shareable and a state is
 
 *Risk:* low, and it is the thing that makes three pages feel like one tool rather than three.
 
-*Done when:* every navigation between pages preserves both, and a pasted link reproduces exactly
-what the sender heard.
+*Done.* `readURL`, `writeURL` and `carryState` in session.js.
+
+**Two fields, not one.** A seed is 42 voice parameters and no text; the phrase is text and no
+voice. Folding them together would mean a new seed every time a word changed, and the whole point
+of a seed is that the same voice can say anything.
+
+In the hash rather than the query, for three reasons: no server sees it, changing it does not
+reload the page, and `?src=` already means something specific to the bench. Written with
+`replaceState`, so tuning a voice does not fill the back button with every intermediate step —
+somebody pressing Back wants the page they came from, not the knob they last moved.
+
+`carryState` rewrites the links between pages rather than each page wiring its own. That way
+every route out carries the state, not only the ones somebody remembered.
+
+Two details that would have been silent bugs. An arriving seed becomes the **custom** voice on
+the main page rather than overwriting a named preset, so the presets stay what they are and the
+dropdown keeps telling the truth. And on the bench an arriving seed **keeps whatever postures the
+current voice has**, because a seed carries 42 parameters and no postures at all — replacing them
+with nothing would quietly un-fit a fitted voice.
 
 ---
 

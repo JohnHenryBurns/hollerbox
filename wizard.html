@@ -127,11 +127,21 @@ a{color:var(--hot)}
 .btn.quiet:hover,.btn.quiet:focus-visible{color:var(--ink);border-color:var(--line);background:none}
 .btn.quiet.here{background:var(--hot);color:var(--hot-ink);border-color:var(--hot);font-weight:600}
 
-/* The nudge is an action among the answers, not one of them: outlined where they are filled, and
-   marked when this question has been moved off its answer. */
-.opt.nudge{flex:1 1 100%;border-style:dashed;color:var(--dim);font-weight:500}
-.opt.nudge:hover{color:var(--ink);border-color:var(--hot)}
-.opt.nudge.on{border-style:solid;border-color:var(--hot);color:var(--hot);background:none}
+
+/* ── THE ANSWER, VARIED ───────────────────────────────────────────────────
+   A tap on the answer you already chose varies it. The shimmy exists because a tap that changes
+   a number you cannot see is indistinguishable from a tap that did nothing — the voice does
+   change, but not until it next speaks, and by then the tap is forgotten. */
+@keyframes hb-shimmy{
+  0%{transform:translateX(0)}   20%{transform:translateX(-3px)}
+  40%{transform:translateX(3px)} 60%{transform:translateX(-2px)}
+  80%{transform:translateX(2px)} 100%{transform:translateX(0)}
+}
+.opt.shimmy{animation:hb-shimmy .28s ease-in-out}
+@media (prefers-reduced-motion:reduce){ .opt.shimmy{animation:none} }
+/* varied: the answer is still the answer, and it has been moved off it */
+.opt.varied{box-shadow:inset 0 0 0 2px var(--hot-ink)}
+.opt.on small{opacity:.75}
 </style>
 
 <header>
@@ -506,19 +516,28 @@ function draw(){
   for (const q of Q){
     const host = document.getElementById(q.id);
     host.innerHTML = '';
-    // the nudge sits with the options, not in the heading, because it is one of the things you
-    // can do to this question rather than a label on it
-    const nb = document.createElement('button');
-    nb.className = 'opt nudge' + (nudged[q.id] ? ' on' : '');
-    nb.innerHTML = (nudged[q.id] ? 'Nudge again' : 'Nudge') +
-                   '<small>' + (nudged[q.id] ? 'tap an answer to reset' : 'somewhere in between') + '</small>';
-    nb.addEventListener('click', e => { e.stopPropagation(); nudge(q.id); });
-    host.appendChild(nb);
+    // THE NUDGE LIVES ON THE ANSWER, not beside it. It was a fifth button in every question — a
+    // control with equal weight to the four things the question is actually asking, and no way
+    // to tell from looking which answer it would vary. Tapping the answer you have already
+    // chosen varies it, which is where the relationship is obvious: this one, but different.
     q.opts.forEach(([label, hint], i) => {
       const b = document.createElement('button');
-      b.className = 'opt' + (chosen[q.id] === i ? ' on' : '');
-      b.innerHTML = label + '<small>' + hint + '</small>';
+      const mine = chosen[q.id] === i;
+      b.className = 'opt' + (mine ? ' on' : '') + (mine && nudged[q.id] ? ' varied' : '');
+      // The chosen one says what a second tap does. An affordance nobody can see is not an
+      // affordance, and "tap again" is the whole of the instruction.
+      b.innerHTML = label + '<small>' + (mine ? (nudged[q.id] ? 'varied · tap to vary again'
+                                                             : 'tap again to vary')
+                                              : hint) + '</small>';
       b.addEventListener('click', () => {
+        if (mine) {
+          // already the answer: vary it, and shimmy so the tap is visibly not a no-op
+          b.classList.remove('shimmy');
+          void b.offsetWidth;                       // restart the animation rather than ignore it
+          b.classList.add('shimmy');
+          nudge(q.id);
+          return;
+        }
         chosen[q.id] = i; delete nudged[q.id];      // a fresh answer, not a nudged one
         battle = null; round = 0;
         SESSION.writeURL({ voice: current() }); linkUp();

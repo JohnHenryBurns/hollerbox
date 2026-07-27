@@ -111,7 +111,38 @@ check("a nudge stays in bounds and stays near its answer", () => {
   if (!/@keyframes hb-shimmy/.test(page)) bad.push("no acknowledgement that the tap did anything");
   if (!/prefers-reduced-motion/.test(page)) bad.push("the shimmy ignores prefers-reduced-motion");
   // and a varied answer must look different from an untouched one, or the state is invisible
-  if (!/\.opt\.varied/.test(page)) bad.push("a varied answer looks the same as an untouched one");
+  // CHOSEN AND VARIED MUST NOT BE THE SAME PICTURE. They were: both orange-filled, the varied one
+  // distinguished by an inset line most people would never notice. They mean different things —
+  // one is an answer, the other is an answer you have moved off — so chosen is outlined and
+  // varied is filled, which is also what the shimmy flashes against.
+  if (!/\.opt\.on\{border-color:var\(--hot\);color:var\(--hot\);background:transparent/.test(page))
+    bad.push("a chosen answer is not outlined — it cannot be told from a varied one");
+  if (!/\.opt\.on\.varied\{background:var\(--hot\)/.test(page))
+    bad.push("a varied answer is not filled — it looks the same as a merely chosen one");
+
+  // AND A NUDGE MUST NOT REBUILD THE QUESTION. draw() empties the host and recreates every
+  // button, including the one mid-shimmy, which is destroyed before a frame of it renders — the
+  // voice changed, nothing moved, and it read as a dead button. Rebuilding also re-lays the row.
+  // the tail of nudge: from where it records the result to where it speaks. A brace-counting
+  // match is not worth writing for this; the region between two fixed lines is unambiguous.
+  const a0 = page.indexOf("nudged[qid] = out;");
+  const a1 = page.indexOf("speak(sample());", a0);
+  // COMMENTS STRIPPED FIRST. The comment in nudge() explains why it does NOT call draw(), and
+  // contains the words "draw()" twice — so the check fired on the very explanation of its own
+  // invariant, and reported the fixed code and the broken code identically. A check that reads
+  // source has to read the code, not the prose about the code.
+  const tail = a0 >= 0 && a1 > a0
+    ? page.slice(a0, a1).replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "")
+    : "";
+  if (/\bdraw\(\)/.test(tail))
+    bad.push("nudge() calls draw(), which destroys the button it just animated");
+  if (!/function refreshAnswer/.test(page))
+    bad.push("nothing updates the answer's label in place");
+
+  // and the options must not re-flow when one is chosen: a wrapping row sizes each cell from its
+  // own text, so a hint growing to "tap again to vary" rearranges the question under your thumb
+  if (!/\.opts\{display:grid/.test(page))
+    bad.push("the options wrap rather than sitting in a grid — choosing one re-lays the row");
 
   // AND EACH QUESTION MOVES ITS OWN DISTANCE. One step for all four was wrong: q1 at a fifth of
   // range gives 7.4 dB of spectral change and q2 gives 3.9, because they do not move the same

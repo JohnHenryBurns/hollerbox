@@ -157,6 +157,21 @@ const rms = (x, a, b) => {
 };
 
 /** Averaged magnitude spectrum — averaging matters, noise-excited sounds need it. */
+// ── THE WINDOW MUST FIT THE SOUND ─────────────────────────────────────────
+//
+// `win` is the FFT length in samples, and if the slice handed in is SHORTER than it, what comes
+// back is not a measurement of that slice. It cost a whole investigation: a /v/ measured over
+// 0.3 to 0.7 of a 55 ms segment is 22 ms of audio, asked for with the default 1024-sample window
+// at 23 ms. It read 8% voicing where the truth is 94%, and it read 8% for every variant tried —
+// isolated, in a word, with a longer hold, with five different knobs moved — because the number
+// had nothing to do with the audio.
+//
+// That flatness is the tell, and it is worth knowing. A measurement that refuses to move when
+// the thing it measures moves is not measuring it. I spent a turn trying to fix a sound that was
+// already correct, and only stopped because nothing I changed had any effect at all.
+//
+// Rule of thumb: slice length must exceed `win`, and for a short segment take the WHOLE segment
+// and drop `win` to the largest power of two that fits inside it.
 function spectrum(x, { from = 0.4, lo = 500, hi = 10000, step = 250, win = 2048, hops = 24 } = {}) {
   const start = Math.floor(x.length * from);
   const freqs = []; for (let f = lo; f <= hi; f += step) freqs.push(f);

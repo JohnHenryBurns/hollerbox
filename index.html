@@ -437,7 +437,10 @@ header{border-bottom:1px solid var(--hot-line)}
     <div class="badge">
       <b id="secCount">—</b> cylinders · <b id="lenCm">—</b> cm<br>
       <span id="tubeKey">colour = wave energy</span><span id="mouthKey" hidden><b style="color:#c0554e">red</b> fixed · <b style="color:#e8a33c">yellow</b> flaps · <b style="color:#3f7fd6">blue</b> air</span><br>
-      drag · pinch to zoom
+      <!-- Only the Tube can be dragged. The Mouth is a flat drawing with no camera, and the hint
+           sat under both — telling you to do something to a picture that does not respond, which
+           reads as the page being broken rather than as the hint being wrong. -->
+      <span id="tubeHint">drag · pinch to zoom</span>
     </div>
   </div>
 
@@ -1397,6 +1400,9 @@ function mountPhrases(){
     HOLLER_SESSION.phraseMenu({
       current: lastTyped,
       onPick: t => { document.getElementById('wordIn').value = t; soundOut(t); playWord(); },
+      // The same first row the wizard shows. It opened the floating box that used to be behind
+      // its own button — which still exists and is still reachable from the Phrase panel, but is
+      // no longer the only way to say something of your own.
       onCustom: () => { sheet(null); openQuick(true); },
     });
   });
@@ -2111,9 +2117,11 @@ document.querySelector('.viewtabs').addEventListener('click',e=>{
   document.querySelectorAll('.vt').forEach(t=>t.classList.toggle('on',t===b));
   mouthCv.hidden = view!=='mouth';
   // the two views mean different things by colour, so only one key is shown at a time
-  { const mk=document.getElementById('mouthKey'), tk=document.getElementById('tubeKey');
+  { const mk=document.getElementById('mouthKey'), tk=document.getElementById('tubeKey'),
+          th=document.getElementById('tubeHint');
     if(mk) mk.hidden = view!=='mouth';
-    if(tk) tk.hidden = view==='mouth'; }
+    if(tk) tk.hidden = view==='mouth';
+    if(th) th.hidden = view==='mouth'; }
   renderer.domElement.style.visibility = view==='mouth' ? 'hidden' : 'visible';
   // Size it on the way in. Sizing happened only at startup and on resize, so if the stage had
   // no height when the page loaded, mw stayed 0, drawMouth returned early on every frame, and

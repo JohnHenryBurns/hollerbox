@@ -132,16 +132,42 @@ a{color:var(--hot)}
    A tap on the answer you already chose varies it. The shimmy exists because a tap that changes
    a number you cannot see is indistinguishable from a tap that did nothing — the voice does
    change, but not until it next speaks, and by then the tap is forgotten. */
+/* THE ROLL. This is the part of the app that is a game, so a nudge should feel like a die
+   landing rather than a setting being applied: a quick kick, a scale that overshoots and comes
+   back, and a flash of the accent that fades. Three cheap things that together read as "that
+   did something" long before the voice gets around to speaking. */
 @keyframes hb-shimmy{
-  0%{transform:translateX(0)}   20%{transform:translateX(-3px)}
-  40%{transform:translateX(3px)} 60%{transform:translateX(-2px)}
-  80%{transform:translateX(2px)} 100%{transform:translateX(0)}
+  0%  {transform:translateX(0)   scale(1)}
+  15% {transform:translateX(-4px) scale(1.04)}
+  35% {transform:translateX(4px)  scale(1.03)}
+  55% {transform:translateX(-2px) scale(1.01)}
+  75% {transform:translateX(2px)  scale(1)}
+  100%{transform:translateX(0)   scale(1)}
 }
-.opt.shimmy{animation:hb-shimmy .28s ease-in-out}
-@media (prefers-reduced-motion:reduce){ .opt.shimmy{animation:none} }
+@keyframes hb-flash{
+  0%  {box-shadow:inset 0 0 0 2px var(--hot-ink), 0 0 0 0 var(--hot)}
+  40% {box-shadow:inset 0 0 0 2px var(--hot-ink), 0 0 0 7px rgba(255,138,76,.34)}
+  100%{box-shadow:inset 0 0 0 2px var(--hot-ink), 0 0 0 0 rgba(255,138,76,0)}
+}
+.opt.shimmy{animation:hb-shimmy .34s cubic-bezier(.36,.07,.19,.97), hb-flash .5s ease-out}
+@media (prefers-reduced-motion:reduce){
+  /* still acknowledged, just not moved: the flash alone carries it */
+  .opt.shimmy{animation:hb-flash .4s ease-out}
+}
+/* how many variations this answer has been through — the score, effectively */
+.opt .tally{position:absolute;top:.3rem;right:.42rem;font:600 .62rem/1 var(--mono);
+  opacity:.72;letter-spacing:.02em}
+.opt{position:relative}
+/* The button must not resize when it is chosen. It was not the outline — an inset shadow has no
+   layout effect — it was the LABEL: the hint under an unchosen option is "a mouse", and under a
+   chosen one it becomes "tap again to vary", which is longer, wraps, and makes the button taller
+   than its neighbour. The sub-label gets a fixed height and one line, so every option in a row
+   is the same size whatever it currently says. */
+.opt small{display:block;height:1.15em;line-height:1.15em;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.opt.on small{opacity:.8}
 /* varied: the answer is still the answer, and it has been moved off it */
 .opt.varied{box-shadow:inset 0 0 0 2px var(--hot-ink)}
-.opt.on small{opacity:.75}
 </style>
 
 <header>
@@ -387,6 +413,20 @@ async function reallySpeak(text, who){
 //   artStiff  — breaks articulation at its top end, measured
 //   outGain   — loudness is not character. A nudge that only makes it quieter is not variety.
 //   fricDuck  — what makes a voiced fricative sound like one rather than a hum. Correctness.
+// HOW FAR A NUDGE MOVES, per question. One step for all four was wrong: measured, q1 at a fifth
+// of each range gives 7.4 dB of spectral change and q2 gives 3.9 — half as noticeable — because
+// the questions do not move the same KIND of thing.
+//
+// q2 is melody, and a spectral measure is nearly blind to it. Measured on the pitch contour
+// instead, where it actually lives: at a fifth of range, five nudges span 4.3 semitones; at
+// 0.45 they span 9.7. q3 is voice quality and simply needed more: 4.4 dB at 0.2 against 7.5 at
+// 0.5, which matches q1.
+//
+// q1 and q4 stay where they are — q1 because it is already the one that produces the voices
+// people keep, and q4 because it saturates: bigger steps there stopped changing anything
+// (7.9 dB at 0.2 and 6.8 at 0.5) since timing has real limits either side.
+const STEP = { q1: 0.20, q2: 0.45, q3: 0.45, q4: 0.20 };
+
 const OWNS = {
   q1: ['sect','f0a','f0b','f0c','lipR'],
   q2: ['acc','decl','wklev','wkdur','pert','ask','reset'],
@@ -433,6 +473,7 @@ function mutate(v, strength){
  *  still sound like relatives. Clamped, because a parameter outside its own bounds cannot
  *  survive a seed — Barry White could not be shared for exactly that reason. */
 const nudged = {};                       // per question, on top of the chosen option
+const tally  = {};                       // how many times this answer has been varied
 function nudge(qid){
   const keys = OWNS[qid] || [];
   // Around the ANSWER, not around the last nudge. Nudging from the previous nudge is a random
@@ -448,9 +489,11 @@ function nudge(qid){
     if (!spec) continue;
     const span = spec.hi - spec.lo;
     const at = answer[k] === undefined ? spec.d : answer[k];
-    out[k] = Math.max(spec.lo, Math.min(spec.hi, at + (rnd()*2 - 1) * span * 0.2));
+    const step = STEP[qid] || 0.2;
+    out[k] = Math.max(spec.lo, Math.min(spec.hi, at + (rnd()*2 - 1) * span * step));
   }
   nudged[qid] = out;
+  tally[qid] = (tally[qid] || 0) + 1;
   battle = null; round = 0;
   document.getElementById('battleCount').textContent = '';
   draw(); showSeed();
@@ -526,9 +569,11 @@ function draw(){
       b.className = 'opt' + (mine ? ' on' : '') + (mine && nudged[q.id] ? ' varied' : '');
       // The chosen one says what a second tap does. An affordance nobody can see is not an
       // affordance, and "tap again" is the whole of the instruction.
-      b.innerHTML = label + '<small>' + (mine ? (nudged[q.id] ? 'varied · tap to vary again'
-                                                             : 'tap again to vary')
-                                              : hint) + '</small>';
+      const rolls = tally[q.id] || 0;
+      b.innerHTML = label +
+        (mine && rolls ? '<span class="tally">\u00d7' + rolls + '</span>' : '') +
+        '<small>' + (mine ? (rolls ? 'varied \u00b7 tap to vary again' : 'tap again to vary')
+                          : hint) + '</small>';
       b.addEventListener('click', () => {
         if (mine) {
           // already the answer: vary it, and shimmy so the tap is visibly not a no-op
@@ -538,7 +583,7 @@ function draw(){
           nudge(q.id);
           return;
         }
-        chosen[q.id] = i; delete nudged[q.id];      // a fresh answer, not a nudged one
+        chosen[q.id] = i; delete nudged[q.id]; delete tally[q.id];   // a fresh answer
         battle = null; round = 0;
         SESSION.writeURL({ voice: current() }); linkUp();
         document.getElementById('battleCount').textContent = '';

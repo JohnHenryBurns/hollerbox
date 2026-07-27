@@ -113,6 +113,25 @@ check("a nudge stays in bounds and stays near its answer", () => {
   // and a varied answer must look different from an untouched one, or the state is invisible
   if (!/\.opt\.varied/.test(page)) bad.push("a varied answer looks the same as an untouched one");
 
+  // AND EACH QUESTION MOVES ITS OWN DISTANCE. One step for all four was wrong: q1 at a fifth of
+  // range gives 7.4 dB of spectral change and q2 gives 3.9, because they do not move the same
+  // kind of thing. q2 is melody — a spectral measure is nearly blind to it, and on the pitch
+  // contour where it lives, five nudges span 4.3 semitones at 0.2 and 9.7 at 0.45.
+  const stepM = page.match(/const STEP = \{[^}]*\};/);
+  if (!stepM) bad.push("one step for all four questions — q2 and q3 vary half as much as q1");
+  else {
+    const STEP = new Function(stepM[0] + "\nreturn STEP;")();
+    for (const q of Object.keys(OWNS))
+      if (!STEP[q]) bad.push(`${q} has no step of its own`);
+    if (STEP.q2 <= STEP.q1) bad.push("q2 does not move further than q1, and it is the least audible");
+  }
+
+  // and the button must not resize when it becomes the answer. It was never the outline — an
+  // inset shadow has no layout effect — it was the LABEL growing from "a mouse" to "tap again to
+  // vary" and wrapping, which made one option taller than its neighbour.
+  if (!/\.opt small\{display:block;height:/.test(page))
+    bad.push("the sub-label has no fixed height — the chosen option resizes");
+
   return { ok: bad.length === 0,
            note: bad.slice(0,3).join("  ") ||
                  `${Object.keys(OWNS).length} questions reach ${reach} of ${P.VOICE_SPEC.length} ` +

@@ -1653,12 +1653,37 @@ async function playWord(){
   const pb = document.getElementById('playBtn');
   if(pb){ pb.classList.remove('tapped'); void pb.offsetWidth; pb.classList.add('tapped'); }
 }
+// ── STOP MEANS EVERYTHING STOPS ──────────────────────────────────────────
+//
+// Three things run off three clocks and Stop was only telling one of them.
+//
+//   the worklet   stopSeq, and the sound ends
+//   playSeg       the karaoke's own clock: which chip is lit and where the strip sits
+//   artTrack      the mouth's own clock: where the articulators are drawn
+//
+// The last two carried on to the end of the phrase after the sound had gone — a silent throat
+// mouthing the rest of the sentence, which is worse than either stopping or not stopping.
+//
+// They are on their own clocks BY DESIGN, and that was the right fix for its own problem: the
+// karaoke used to follow the worklet's `sequencing` flag, which arrives late and can arrive
+// stale, and a message in flight from the end of one word could blank the chips while the next
+// was still being said. Moving the picture onto the plan fixed that and left Stop with no way to
+// say the plan is over. This is that way.
+//
+// `turn` is bumped too, so an utterance still queued behind an await abandons instead of starting
+// after the user asked for silence.
+function stopEverything(){
+  if(node) node.port.postMessage({type:'stopSeq'});
+  turn++;                               // anything mid-flight gives up rather than starting
+  sequencing=false; voicing=0;
+  playSeg=null;                         // the karaoke has nothing left to follow
+  artTrack=null;                        // and the mouth returns to the resting shape
+  paintBtn();
+  bounceWord();                         // clear the lit chip now rather than on the next frame
+}
+
 playBtn.addEventListener('click', ()=>{
-  if(sequencing){                       // cut it short
-    node.port.postMessage({type:'stopSeq'});
-    sequencing=false; voicing=0; paintBtn();
-    return;
-  }
+  if(sequencing){ stopEverything(); return; }
   playWord();
 });
 

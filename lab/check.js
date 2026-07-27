@@ -3532,7 +3532,13 @@ if (!isMainThread && workerData && workerData.idx) {
     // Record what each check cost, so --quick knows what to skip next time. Written on any run
     // that was not itself filtered, merged with what is already there so a --report run does not
     // erase the gate's timings or the other way round.
-    if (!terms.length && !quick) {
+    // Record whenever the FULL set actually ran, however that came about. This read `!quick`,
+    // and quick became the default — so a fresh clone with no timings ran everything (having
+    // nothing to skip by), recorded nothing, and never got fast. The condition was written when
+    // quick was the flag and quietly stopped meaning what it said.
+    const ranEverything = !terms.length &&
+      done.length === REG.filter(c => wantReport || c.tier === "gate").length;
+    if (ranEverything) {
       try {
         const fs2 = require("fs");
         let all = {};

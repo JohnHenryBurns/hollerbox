@@ -329,8 +329,7 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
       <div class="group">
         <p class="hint" id="voiceNote" style="margin:0 0 .9rem"></p>
         <div class="crow">
-          <div id="phrasePick" class="row" style="gap:6px;margin-bottom:8px"></div>
-          <input id="wordIn" type="text" value="goal" placeholder="a word or a phrase"
+          <input id="wordIn" type="text" value="To be, or not to be, that is the question." placeholder="a word or a phrase"
                  autocomplete="off" autocapitalize="off" spellcheck="false">
           <button class="btn primary" id="spellBtn">Sound it out</button>
         </div>
@@ -428,6 +427,8 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
   <button class="icn" id="holdBtn" title="Sustain the shape the tract is in"
           aria-label="Sustain">&#8767;</button>
   <button class="icn play" id="playBtn" title="Play the word" aria-label="Play">&#9654;</button>
+  <span class="selwrap"><span class="sellabel">Say</span>
+    <span id="phrasePick"></span></span>
   <span class="selwrap"><span class="sellabel">Voice</span>
     <select id="voiceSel" aria-label="Voice"></select></span>
   <button class="btn" id="wordBtn">Word</button>
@@ -439,7 +440,7 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
 <div id="quick" hidden>
   <div class="qbox">
   <div class="qcard">
-    <input id="quickIn" type="text" value="goal" placeholder="a word or a phrase"
+    <input id="quickIn" type="text" value="To be, or not to be, that is the question." placeholder="a word or a phrase"
            autocomplete="off" autocapitalize="off" spellcheck="false"
            enterkeyhint="go" aria-label="Word to say">
     <button class="icn play" id="quickPlay" title="Say it" aria-label="Say it">&#9654;</button>
@@ -926,7 +927,7 @@ sSect.addEventListener('input',()=>{
 const VOWEL_KEYS = HOLLER.VOWEL_KEYS;
 const STOP_KEYS = HOLLER.STOP_KEYS;
 const CONS_KEYS = HOLLER.CONS_KEYS;
-let chain = ['g','o','l'];             // one gliding vowel — the opening does the rest
+let chain = ['t','u'];                 // replaced at boot by the opening phrase
 // Parallel to `chain`, one entry per sound: 1 stressed, 0 not. null means "no stress
 // information", which buildWord reads as all-stressed — the right default for a chain the
 // speller never saw. It MUST be filtered in lockstep with `chain` wherever that is filtered,
@@ -1189,11 +1190,13 @@ function mountPhrases(){
   if(!host || !window.HOLLER_SESSION || host.dataset.on) return;
   host.dataset.on = '1';
   const p = HOLLER_SESSION.mountSelector(host, {
-    voices: [],                                   // no voice picker here
-    onPhrase: t => { document.getElementById('wordIn').value = t; soundOut(t); },
+    voices: [],                                   // the dock has its own voice dropdown
+    onPhrase: t => { document.getElementById('wordIn').value = t; soundOut(t); playWord(); },
   });
+  // In the dock, so the front door is: a throat, what it says, whose voice. The typing box and
+  // the phoneme keyboard live behind Word, where somebody who wants them will look.
   if(p && p.voiceSel) p.voiceSel.style.display = 'none';
-  if(p && p.input) p.input.style.display = 'none';   // wordIn is already this page's text box
+  if(p && p.input) p.input.style.display = 'none';
 }
 
 function soundOut(raw){
@@ -1915,9 +1918,20 @@ function frame(){
 buildTubes();
 sizeMouth();
 lastTyped='goal'; chainSource='built in';   // the markup already carries the word
-setVoice('announcer');             // the app opens as what it is for
-drawChain();
+// THE FRONT DOOR OPENS ON SOMETHING THAT TALKS. It used to open as the announcer saying "goal",
+// which is what the project grew out of and the worst possible introduction to a vocal tract: a
+// goal cry is the one thing a tract does that does NOT sound like speech. Both stay in the lists.
+//
+// The phrase is checked rather than chosen by taste. The speller says this line correctly, it
+// carries two commas and a full stop so the punctuation work is audible, and it is the most
+// recognisable sentence in English. Armstrong gives /smæl/ for "small" and Apollo gives /haʊstən/
+// for "Houston" — neither can be the thing a stranger hears first.
+setVoice('man');
 mountPhrases();                    // the shared list, once the engine is up
+// and the chain is the opening line, not a hand-built one — so the door opens on something a
+// stranger recognises rather than on three phonemes spelling "goal"
+soundOut(document.getElementById('wordIn').value);
+drawChain();
 
 // ── STATE THAT SURVIVES THE TRIP ──────────────────────────────────────────
 // A voice tuned in the wizard arrives here and is watched; a phrase found here goes to the bench

@@ -1860,6 +1860,55 @@ check("the fricative pairs share a place of articulation", () => {
                  `s/z ${seen["s"].toFixed(0)}/${seen["z"].toFixed(0)} Hz` };
 });
 
+// ── what a stranger sees and hears first ──────────────────────────────────
+check("the front door opens on something worth hearing", () => {
+  // For a long time it opened as the announcer saying "goal" — which is what the project grew
+  // out of, and the worst possible introduction to a vocal tract: a goal cry is the one thing a
+  // tract does that does NOT sound like speech. Nothing asserted what a stranger sees, so it
+  // survived every rethink of everything behind it.
+  //
+  // The opening phrase is checked rather than chosen by taste — but read what this can and
+  // cannot see. It catches a phrase that is too short, has no punctuation, or contains a symbol
+  // the engine has no posture for. IT CANNOT CATCH A MISPRONUNCIATION: "One small step for man"
+  // comes out /smæl/ and "Houston, we have a problem" comes out /haʊstən/, and both are perfectly
+  // sayable sequences that happen to be wrong. Ablated, and this check passes the Armstrong line.
+  //
+  // Those two were caught by measuring, by hand, before choosing. Anything that becomes the
+  // opening phrase has to be listened to; this check only stops it being obviously unsuitable.
+  const fs = require("fs"), P = H.P, S = require("../engine/spelling.js"), bad = [];
+  const page = fs.readFileSync(__dirname + "/../index.html", "utf8");
+
+  const phrase = (page.match(/id="wordIn"[^>]*value="([^"]*)"/) || [])[1];
+  if (!phrase) { bad.push("no opening phrase"); }
+  else {
+    // long enough to hear phrase rhythm rather than word rhythm
+    const words = phrase.trim().split(/\s+/).length;
+    if (words < 5) bad.push(`the opening phrase is ${words} words — too short to hear rhythm in`);
+    // and it must carry punctuation, since that is a thing the model does and nobody would know
+    if (!/[,.?]/.test(phrase)) bad.push("the opening phrase has no punctuation to show");
+    // every word must be one the speller can say: no letter-by-letter fallback producing a vowel
+    // the language does not have. Checked against the dictionary and the rules together.
+    const r = S.g2p(phrase);
+    const known = new Set([...Object.keys(P.ART), ...Object.keys(P.DIPH), " "]);
+    const lost = r.ph.filter(x => !known.has(x) && String(x).slice(0,3) !== "brk");
+    if (lost.length) bad.push(`the opening phrase contains ${lost.join(" ")}, which cannot be said`);
+  }
+
+  // and it must not open as the goal cry — that voice and that word stay available and stop
+  // being the first impression
+  const opens = (page.match(/\nsetVoice\('(\w+)'\)/) || [])[1];
+  if (opens === "announcer" || opens === "johncry")
+    bad.push(`the door opens as ${opens} — a goal cry is not an introduction to speech`);
+  if (/id="wordIn"[^>]*value="goal"/.test(page)) bad.push('the opening word is still "goal"');
+
+  // the announcer must still EXIST, though: de-emphasised is not deleted
+  if (!P.VOICES.announcer) bad.push("the announcer was removed rather than de-emphasised");
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  ")
+               : `opens as ${opens} saying "${phrase.slice(0,32)}${phrase.length>32?"…":""}"` };
+});
+
 // ── every control on every page does something ────────────────────────────
 check("no button or input is left unwired", () => {
   // Five of the wizard's controls — playA, playB, keepA, keepB, battleOff — had no event

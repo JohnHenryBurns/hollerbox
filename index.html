@@ -287,6 +287,10 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
   #sheetPlay{margin-left:auto}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* The room you are in, marked rather than omitted. A navigation that hides the current page
+   makes every page look like a different app. */
+.btn.here{opacity:.55;cursor:default;border-style:dashed}
 </style>
 </head>
 <body>
@@ -295,8 +299,7 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
   <h1>Hollerbox</h1>
   <span class="sub">Kelly–Lochbaum waveguide · 1962</span>
   <span class="spacer"></span>
-  <a class="btn" href="wizard.html">Make a voice</a>
-  <a class="btn" id="benchBtn" href="lab/bench.html" title="Consonant test bench">Bench</a>
+  <span id="nav"></span>
   <button class="btn" id="aboutBtn">About</button>
 </header>
 
@@ -1928,6 +1931,7 @@ lastTyped='goal'; chainSource='built in';   // the markup already carries the wo
 // for "Houston" — neither can be the thing a stranger hears first.
 setVoice('man');
 mountPhrases();                    // the shared list, once the engine is up
+HOLLER_SESSION.mountNav('nav', 'index.html');
 // and the chain is the opening line, not a hand-built one — so the door opens on something a
 // stranger recognises rather than on three phonemes spelling "goal"
 soundOut(document.getElementById('wordIn').value);

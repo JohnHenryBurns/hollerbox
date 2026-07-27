@@ -57,13 +57,16 @@ main{max-width:44rem;margin:0 auto;padding:1rem 1rem 4rem}
 #seed{width:100%;font-family:var(--mono);font-size:.75rem;word-break:break-all;color:var(--dim);
   background:var(--panel2);border:1px solid var(--rule);border-radius:6px;padding:.5rem;margin-top:.5rem}
 .note{font-family:var(--mono);font-size:.72rem;color:var(--dim);margin-top:.5rem;line-height:1.5}
+
+/* The room you are in, marked rather than omitted. A navigation that hides the current page
+   makes every page look like a different app. */
+.btn.here{opacity:.55;cursor:default;border-style:dashed}
 </style>
 
 <header>
   <h1>Hollerbox</h1><span class="sub">make a voice</span>
   <span class="spacer"></span>
-  <a class="btn" href="index.html">Back</a>
-  <a class="btn" href="lab/bench.html">Bench</a>
+  <span id="nav"></span>
 </header>
 
 <main>
@@ -366,5 +369,6 @@ document.getElementById('save').addEventListener('click', async () => {
 });
 
 draw(); showSeed();
+SESSION.mountNav('nav', 'wizard.html');
 })();
 </script>

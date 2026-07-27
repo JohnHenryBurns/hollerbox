@@ -121,23 +121,35 @@ a preset and *goal* stays a phrase.
 
 *Done when:* a stranger who clicks nothing has heard a famous line spoken by a moving throat.
 
-## Phase 2 — Look inside
+## Phase 2 — Look inside  ❌ withdrawn, it was the wrong idea
 
-The anatomy room: Mouth view, tube view, spectrogram, section count, length. Lifted out of
-`index.html` whole — this is a move, not a rewrite.
+**Withdrawn after looking properly.** The anatomy *is* the showcase: the Tube and Mouth toggle,
+the cylinder count, the length in centimetres and the colour key are what make the front door
+worth looking at rather than a picture with nothing to read. Lifting them out would leave the
+door emptier and the tool no clearer.
 
-*Done when:* the front door has three controls and this page has the rest.
+Counted rather than assumed: the front door shows **eight** controls, of which two are the view
+toggle and two are doors to rooms. The phoneme keyboard and the knob panel were already behind
+buttons. Phase 1 had already done the work this phase was invented to do.
 
-## Phase 3 — Build a word
+## Phase 3 — Build a word  ❌ withdrawn, already true
 
 The phoneme keyboard and chain editor, also lifted whole. It keeps its own page and gains the
 shared voice and phrase, so a chain built by hand can be heard in any voice and watched in the
 throat.
 
-## Phase 4 — one way between rooms
+## Phase 4 — one way between rooms  ✅ built
 
-A single navigation, the same on all five pages, carrying voice and phrase — which the session
-already does. The three current headers each name a different subset of the others.
+**This was the phase that mattered**, and finding that out cost nothing but looking.
+
+index offered *Make a voice · Bench · About*. The wizard offered *Back · Bench*. **The bench
+offered nothing at all** — a page you could reach and could not leave. "Back" did not say where
+it went and "Bench" did not say what it was.
+
+One list now, in session.js, named for what each room is *for*: **Throat · Make a voice · Lab**.
+The page you are on is marked rather than omitted, because a navigation that hides the current
+page makes every page look like a different app. Links carry voice and phrase, which is what
+makes the three feel like one tool rather than three.
 
 ---
 

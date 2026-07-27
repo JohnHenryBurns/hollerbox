@@ -107,6 +107,15 @@ a{color:var(--hot)}
 .btn.big .lb{font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
 .btn.big .val{font-size:.92rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .btn.big:hover .lb,.btn.big:focus-visible .lb{color:var(--hot-ink)}
+
+/* A room that is not for visitors. Small, grey, no border — it reads as a footnote beside two
+   buttons, which is what it is: a workbench, one tap away for the person who needs it and
+   visibly not an invitation. It still fills and darkens when it is the room you are in, because
+   being there and not knowing it is worse than the clutter. */
+.btn.quiet{border-color:transparent;background:none;color:var(--dim);
+  font-size:.78rem;font-weight:400;padding:.35rem .45rem}
+.btn.quiet:hover,.btn.quiet:focus-visible{color:var(--ink);border-color:var(--line);background:none}
+.btn.quiet.here{background:var(--hot);color:var(--hot-ink);border-color:var(--hot);font-weight:600}
 </style>
 
 <header>

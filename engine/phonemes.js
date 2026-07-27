@@ -378,7 +378,7 @@ const isPause = sym => sym === ' ' || isBreak(sym);
 // Sized against the recording instead. The long within-phrase pauses there are 220 to 290 ms and
 // those are commas; a sentence boundary is longer again. 5.6 and 11.5 put a comma at about
 // 270 ms and a full stop at about 560, which clears the word-gap distribution entirely.
-const BREAK_GAP = { 'brk,': 5.6, 'brk.': 11.5, 'brk?': 11.5 };
+const BREAK_GAP = { 'brk,': 5.6, 'brk;': 8.0, 'brk.': 11.5, 'brk?': 11.5, 'brk…': 19.0 };
 const isDiph  = sym => !!DIPH[sym];
 
 // ---- the voices ----
@@ -1076,8 +1076,13 @@ function buildWord(chain, opts){
       const gBase = wgap*(1+drawl)*(BREAK_GAP[sym]||1);
       let gap;
       if (BREAK_GAP[sym]) {
-        // punctuation is structure, not spread — a full stop is a decision, not a wobble
-        gap = Math.max(0.015, Math.min(0.60, gBase));
+        // punctuation is structure, not spread — a full stop is a decision, not a wobble.
+        //
+        // A HIGHER CEILING THAN A WORD GAP GETS. 0.60 s was the limit for everything, and it was
+        // set to stop a runaway word gap; applied to punctuation it silently capped the longest
+        // mark — an ellipsis computes to 0.92 s and came out at 0.60, the same as a full stop,
+        // so the mark that exists to be dramatic was indistinguishable from the one before it.
+        gap = Math.max(0.015, Math.min(1.40, gBase));
       } else {
         // ASYMMETRIC, because the measured distribution is. Quartiles sit at 40 and 80 around a
         // median of 50 — that is 0.8x below and 1.6x above, so a gap is far freer to stretch

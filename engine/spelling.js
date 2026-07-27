@@ -297,13 +297,31 @@ const PAUSE=' ';                    // a word boundary in the sound chain
 // These ride in the chain beside the phonemes, the way PAUSE already does. Everything that
 // asks "is this a pause" says yes to them; what changes is how long they are and, later, what
 // the pitch does across them.
-const BREAKS = { ',': 'brk,', ';': 'brk,', ':': 'brk,',
+// FIVE LENGTHS, NOT TWO. Everything that was not a comma was a full stop, and three real marks
+// were being flattened into those: an ellipsis read as a full stop, an em dash produced no break
+// at all, and a semicolon and colon were commas.
+//
+// The dramatic pause after "Call me Ishmael" is a performance choice and nothing in that sentence
+// asks for it — but English already has marks that DO ask for it, and text pasted out of a book
+// carries them. An ellipsis means a trailing silence and an em dash means an interruption. So
+// there is no need to invent a convention like a doubled full stop: honouring the ones readers
+// already use gets the same result and works on text nobody wrote for this program.
+//
+//   brk;   between a comma and a full stop     semicolon, colon
+//   brk…   longer than a full stop             ellipsis, em dash, double dash
+const BREAKS = { ',': 'brk,', ';': 'brk;', ':': 'brk;',
                  '.': 'brk.', '!': 'brk.',
-                 '?': 'brk?' };
+                 '?': 'brk?',
+                 '…': 'brk…', '—': 'brk…', '–': 'brk…' };
 const isBreak = sym => typeof sym === 'string' && sym.slice(0,3) === 'brk';
 /** The mark ending a word, if any — the last one, so "what?!" is a question. */
 function breakAfter(word){
-  const m = String(word||'').match(/[,;:.!?]+$/);
+  const w = String(word||'');
+  // The dramatic marks are tested first and separately, because they are the LONGEST and an
+  // ellipsis is made of the same character as a full stop — checking "does it contain a dot"
+  // first would read every ellipsis as a full stop, which is what used to happen.
+  if(/(\.\.\.|…|—|–|--)$/.test(w)) return BREAKS['…'];
+  const m = w.match(/[,;:.!?]+$/);
   if(!m) return null;
   const marks = m[0];
   if(marks.includes('?')) return BREAKS['?'];

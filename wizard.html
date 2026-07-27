@@ -384,6 +384,21 @@ const start = async () => {
 // way through at once — each past its own `await`, each resizing the tract for a different
 // voice, and whichever finished last left the worklet at a length the others had already built
 // keyframes for. Reported as the wizard going silent after changing the size a few times.
+// ── ONE UTTERANCE AT A TIME, AND THE LAST TAP WINS ────────────────────────
+//
+// Every call takes a ticket. After any await — and there are two, starting the audio and waking
+// the context — a call whose ticket is stale stops before it posts anything. So a second tap
+// does not race the first: it supersedes it, and the first one quietly gives up rather than
+// resizing the tract under the second's keyframes.
+//
+// Deliberately NOT disabling the buttons while a phrase plays. A passage is five seconds and
+// locking the controls for it means you cannot change your mind, cannot stop, and cannot compare
+// two voices without waiting out the first — which is the whole activity on this page. Blocking
+// input is the fix that makes the tool worse than the bug.
+//
+// The engine already supports this: a new goal replaces the old one and blends from wherever the
+// tract currently is, so interrupting mid-word is a supported thing rather than a hazard.
+let turn = 0;
 let speaking = Promise.resolve();
 function speak(text, who){
   // A CHAIN THAT CANNOT BE BLOCKED. Serialising through `.then` was right — several taps at once
@@ -406,12 +421,14 @@ function speak(text, who){
   return link;
 }
 async function reallySpeak(text, who){
+  const mine = ++turn;
   await start();
-  if (!node) return;
+  if (!node || mine !== turn) return;          // superseded while the audio was starting
   // Not awaited. resume() is a request, not a step — the goal below can be posted while it is
   // still in flight, and if it never settles the word is not held hostage to it.
   if (ctx.state === 'suspended') ctx.resume().catch(() => {});
   if (wakeAudio) wakeAudio();
+  if (mine !== turn) return;                   // superseded while the context was waking
   const v = who || current();
   // The resize lives in session.js, which tracks what the worklet actually has. This page used
   // to compare against its own local N and assume they matched — and it is the page whose first

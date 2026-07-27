@@ -333,6 +333,10 @@ const chosen = { q1:2, q2:2, q3:1, q4:1 };          // the "as it is" option in 
 
 function voice(){
   let v = { ...BASE };
+  // same guard on the hot path: this runs on every tap, every nudge and every seed write, and a
+  // single bad index here silences the page rather than misreading one question
+  for (const q of Q)
+    if (!(chosen[q.id] >= 0 && chosen[q.id] < q.opts.length)) chosen[q.id] = 0;
   // the chosen option first, then whatever that question has been nudged to — so picking a new
   // option starts you cleanly from it, and a nudge is always relative to your last answer
   for (const q of Q) v = { ...v, ...q.opts[chosen[q.id]][2], ...(nudged[q.id] || {}) };
@@ -363,13 +367,31 @@ const start = async () => {
 // keyframes for. Reported as the wizard going silent after changing the size a few times.
 let speaking = Promise.resolve();
 function speak(text, who){
-  speaking = speaking.then(() => reallySpeak(text, who)).catch(() => {});
-  return speaking;
+  // A CHAIN THAT CANNOT BE BLOCKED. Serialising through `.then` was right — several taps at once
+  // each resized the tract for a different voice and whichever finished last left the worklet at
+  // a length the others had already built for. But it made every future utterance depend on
+  // every past one: a link that never settles kills the page's voice for good, and there is no
+  // way back short of a reload. Reported as swapping woman, giant, woman and it stopping.
+  //
+  // `ctx.resume()` is the one that can hang. A browser returns a promise from it and is under no
+  // obligation to settle that promise promptly — a context suspended by an autoplay policy can
+  // sit there until a gesture it likes arrives, and a tap on an option is not always one.
+  //
+  // So the link is raced against a deadline. Two seconds is far longer than starting a word
+  // takes and far shorter than a person will wait before deciding the page is broken.
+  const link = Promise.race([
+    reallySpeak(text, who),
+    new Promise(r => setTimeout(r, 2000)),
+  ]).catch(() => {});
+  speaking = speaking.then(() => link).catch(() => {});
+  return link;
 }
 async function reallySpeak(text, who){
   await start();
   if (!node) return;
-  if (ctx.state === 'suspended') await ctx.resume();
+  // Not awaited. resume() is a request, not a step — the goal below can be posted while it is
+  // still in flight, and if it never settles the word is not held hostage to it.
+  if (ctx.state === 'suspended') ctx.resume().catch(() => {});
   if (wakeAudio) wakeAudio();
   const v = who || current();
   // The resize lives in session.js, which tracks what the worklet actually has. This page used
@@ -533,6 +555,11 @@ function nudge(qid){
  *  edit, rather than as an invisible layer you cannot see or undo. */
 function adoptVoice(v){
   for (const q of Q) {
+    // Guarded: q.opts[-1] is undefined and every read of the chosen option throws on it, which
+    // takes draw(), showSeed() and current() down together and leaves the page rendered but
+    // inert. `best` starts at 0 below so it cannot happen there, but this is the invariant the
+    // rest of the file assumes and nothing was stating it.
+    if (!(chosen[q.id] >= 0 && chosen[q.id] < q.opts.length)) chosen[q.id] = 0;
     const keys = OWNS[q.id] || [];
     // nearest option, measured only on what this question is about
     let best = 0, bestD = Infinity;

@@ -40,8 +40,21 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family
   -webkit-font-smoothing:antialiased;overscroll-behavior:none;overflow-x:hidden}
 body{display:flex;flex-direction:column}
 
-header{display:flex;align-items:center;gap:.75rem;padding:.6rem 1rem;
+/* The nav wrapped onto a second line on a phone and landed on top of the title, because the
+   header was one flex row with no rule about what gives way. Two rows now: the name on one, the
+   rooms on the other, each scrolling sideways rather than wrapping. Nothing overlaps because
+   nothing has to fit beside anything. */
+header{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .75rem;padding:.55rem 1rem;
   border-bottom:1px solid var(--rule)}
+@media (max-width:640px){
+  header{padding:.5rem .7rem}
+  header .sub{display:none}                 /* the subtitle is the first thing to go */
+  header #nav{order:3;flex:1 0 100%;display:flex;gap:.4rem;overflow-x:auto;
+    scrollbar-width:none;padding-bottom:.1rem}
+  header #nav::-webkit-scrollbar{display:none}
+  header #nav .btn{flex:0 0 auto}
+  header .spacer{flex:1}
+}
 h1{font-family:var(--sans);font-weight:600;font-size:1.1rem;letter-spacing:-.01em;margin:0}
 .sub{font-family:var(--mono);font-size:.78rem;color:var(--dim);letter-spacing:.04em}
 .spacer{flex:1}
@@ -75,9 +88,6 @@ main>*{min-width:0}
   pointer-events:none}
 #stageChain .karaoke{display:flex;gap:.35rem;align-items:center;
   transition:transform .18s cubic-bezier(.22,.61,.36,1);will-change:transform}
-#stageVoice{margin-top:.5rem;font-family:var(--mono);font-size:.76rem;color:var(--dim);
-  letter-spacing:.04em}
-#stageVoice b{color:var(--ink);font-weight:500}
 #stageChain .chip{background:rgba(23,28,32,.82);border-color:var(--line);
   font-size:1.15rem;padding:.24rem .55rem}
 #stageChain .chip.now{background:var(--ink);color:#0f1316;border-color:var(--ink)}
@@ -357,6 +367,29 @@ header{border-bottom:1px solid var(--hot-line)}
 #stageChain:before{content:'';position:absolute;left:50%;top:0;bottom:0;width:2.6rem;
   transform:translateX(-50%);border-radius:9px;pointer-events:none;
   background:var(--hot-soft);box-shadow:inset 0 0 0 1px var(--hot-line)}
+
+/* ── THE TWO QUESTIONS, WIDER ─────────────────────────────────────────────
+   They share whatever the sustain and play buttons leave, rather than sitting at their text
+   width with a gap after them. Two lines each: the label, and what is currently chosen. */
+#dock{display:flex;align-items:stretch;gap:.5rem}
+#dock .icn{flex:0 0 auto}
+.btn.big{flex:1 1 0;min-width:0;display:inline-flex;align-items:center;gap:.5rem;
+  padding:.42rem .7rem;text-align:left;background:var(--panel2);border-color:var(--line)}
+.btn.big .gl{flex:0 0 auto;font-size:1.1rem;line-height:1;color:var(--hot)}
+.btn.big .two{display:flex;flex-direction:column;min-width:0;line-height:1.2}
+.btn.big .lb{font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--dim)}
+.btn.big .val{font-size:.92rem;font-weight:600;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+.btn.big:hover,.btn.big:focus-visible{border-color:var(--hot);background:var(--hot);
+  color:var(--hot-ink)}
+.btn.big:hover .gl,.btn.big:focus-visible .gl,
+.btn.big:hover .lb,.btn.big:focus-visible .lb{color:var(--hot-ink)}
+
+/* The strip and the Phrase control are the same fact seen twice — what it is saying, and where
+   in it we are. The strip carries the accent's line on the edge nearest the dock, so the eye
+   connects the two without either having to be labelled. */
+#stageChain{border-bottom:1px solid var(--hot-line)}
 </style>
 </head>
 <body>
@@ -378,7 +411,6 @@ header{border-bottom:1px solid var(--hot-line)}
     </div>
     <div id="stageInfo">
       <div id="stageChain"></div>
-      <div id="stageVoice"></div>
     </div>
     <div class="badge">
       <b id="secCount">—</b> cylinders · <b id="lenCm">—</b> cm<br>
@@ -500,10 +532,18 @@ header{border-bottom:1px solid var(--hot-line)}
        are the nouns, so they are wider, brighter and carry a mark. A quotation for what it says,
        a wave for who says it — both monochrome, both in every font, neither an emoji that would
        arrive in somebody else's colours. -->
+  <!-- Two lines each: what the control IS on top, what it currently HOLDS underneath. The
+       selection used to be displayed somewhere else entirely — the voice on a line over the
+       tract, the phrase in the strip — so the button and the thing it chose were two unrelated
+       objects on the screen. Now they are one control that answers its own question. -->
   <button class="btn big" id="sayBtn" title="What it says">
-    <span class="gl">&#10077;</span><span class="lb">Say</span></button>
+    <span class="gl">&#10077;</span>
+    <span class="two"><span class="lb">Phrase</span><span class="val" id="sayVal">—</span></span>
+  </button>
   <button class="btn big" id="voiceBtn" title="Who says it">
-    <span class="gl">&#8767;</span><span class="lb" id="voiceLb">Voice</span></button>
+    <span class="gl">&#8767;</span>
+    <span class="two"><span class="lb">Voice</span><span class="val" id="voiceLb">—</span></span>
+  </button>
 </div>
 <div id="specWrap"><canvas id="spectro"></canvas><span id="specTag">spectrogram · 0–10 kHz</span></div>
 <div id="scrim"></div>
@@ -910,8 +950,9 @@ function paintBtn(){
   if(sp){ sp.textContent = sequencing ? 'Stop' : 'Play'; sp.classList.toggle('solid', !!sequencing); }
   const vl=document.getElementById('voiceLb');
   if(vl && VOICES[voiceName]) vl.textContent=VOICES[voiceName].label;
-  const sv=document.getElementById('stageVoice');
-  if(sv && VOICES[voiceName]) sv.innerHTML='voice · <b>'+VOICES[voiceName].label+'</b>';
+  // The voice is named by the Voice control, on its own second line, which is where somebody
+  // looking for it will look. The stage used to say it too — one fact, stated twice, in two
+  // places that had to be kept in step.
   const panel=document.querySelector('aside');          // looked up, not closed over
   const open = panel && panel.classList.contains('open');
   const shown = panel ? panel.dataset.show : '';
@@ -1307,6 +1348,10 @@ function soundOut(raw){
   raw=String(raw).trim();
   if(!raw) return;
   lastTyped=raw;
+  // The control names its own selection, so the button and the thing it chose are one object
+  // rather than two unrelated ones on opposite sides of the screen.
+  const sv=document.getElementById('sayVal');
+  if(sv) sv.textContent = raw.length>28 ? raw.slice(0,27).trimEnd()+'\u2026' : raw;
   if(window.HOLLER_SESSION){ HOLLER_SESSION.writeURL({phrase:raw}); linkUp(); }
   const r=g2p(raw);
   // A sound the model can say is not only a posture in ART — diphthongs live in DIPH and a
@@ -1450,8 +1495,6 @@ function setVoice(name){
   const lb=document.getElementById('voiceLb');
   if(lb) lb.textContent = (VOICES[name] && VOICES[name].label) || name;
   const el=document.getElementById('voiceNote'); if(el) el.textContent=V.note;
-  const sv=document.getElementById('stageVoice');
-  if(sv) sv.innerHTML='voice · <b>'+V.label+'</b>';
   document.querySelectorAll('[data-custom]').forEach(e=>e.hidden = name!=='custom');
   applyDelivery();
   drawChain();

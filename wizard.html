@@ -101,6 +101,12 @@ a{color:var(--hot)}
 .btn.big .gl{font-size:1.05rem;line-height:1;color:var(--hot)}
 .btn.big:hover,.btn.big:focus-visible{border-color:var(--hot);background:var(--hot);color:var(--hot-ink)}
 .btn.big:hover .gl,.btn.big:focus-visible .gl{color:var(--hot-ink)}
+
+.btn.big{flex:1 1 0;min-width:0;text-align:left}
+.btn.big .two{display:flex;flex-direction:column;min-width:0;line-height:1.2}
+.btn.big .lb{font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.btn.big .val{font-size:.92rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn.big:hover .lb,.btn.big:focus-visible .lb{color:var(--hot-ink)}
 </style>
 
 <header>
@@ -370,13 +376,16 @@ function showSeed(){
 SESSION.menuStyle();
 let chosen_phrase = '';
 document.getElementById('picker').innerHTML =
-  '<button class="btn big" id="sayBtn"><span class="gl">\u275D</span><span class="lb">Say</span></button>' +
+  '<button class="btn big" id="sayBtn"><span class="gl">\u275D</span>' +
+  '<span class="two"><span class="lb">Phrase</span><span class="val" id="sayVal">pick one</span></span></button>' +
   '<input id="own" placeholder="or type your own">';
 document.getElementById('sayBtn').addEventListener('click', () => {
   SESSION.phraseMenu({
     current: chosen_phrase,
     kinds: ['passage', 'probe'],
     onPick: t => { chosen_phrase = t; document.getElementById('own').value = '';
+                   const sv=document.getElementById('sayVal');
+                   if(sv) sv.textContent = t.length>26 ? t.slice(0,25).trimEnd()+'\u2026' : t;
                    SESSION.writeURL({ phrase: t }); linkUp(); speak(t); },
   });
 });

@@ -160,8 +160,21 @@ the knob, not against the number the knob happened to hold.**
    the r of /kæmərə/.
 
 
-4. **/ð/'s noise peaks at 9500 Hz**, at or past the edge of hearing, so it needs absurd gain to
-   register at all. Spectrum, not balance.
+4. ~~/ð/'s noise peaks at 9500 Hz.~~ **Mis-stated, and the real fault was next to it.** /ð/'s
+   noise is at 5384 Hz, alongside /θ/'s 5471 — the place is correct. As *spoken* it reads 929 Hz
+   because its frication gain is 0.010, the quietest sound in English by design, so what is heard
+   is almost entirely voicing. That is the already-recorded /ð/ problem, not a spectrum fault.
+
+   **What was actually wrong: /ʒ/ was made in the wrong place.** Its tongue tip sat at 0.862 —
+   the alveolar position, where /z/ is made — against /ʃ/'s 0.842, with a third of /ʃ/'s lip
+   rounding. Both raise the resonance, and its centroid came out at 4450 Hz against /ʃ/'s 2865,
+   in /z/'s territory. A voiced and voiceless pair is one posture with the folds on or off. Now
+   2852 against 2791.
+
+   Checking that found two more: /s/-/z/ and /θ/-/ð/ also disagreed on lip aperture. All four
+   pairs match on place and rounding now; channel width stays independent, since a voiced
+   fricative really does have a slightly narrower one.
+
 
 5. **The affricate.** "Jump" is *doo-ump*: /dʒ/ is spelled d+ʒ and rendered as two segments
    where a real affricate releases a stop INTO friction, as one gesture.

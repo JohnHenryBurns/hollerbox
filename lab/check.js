@@ -1794,6 +1794,72 @@ check("voiceless stops are aspirated", () => {
 // own `return {...};` and share the single `});` after the last marker, so keeping both means
 // closing the first one explicitly.
 
+// ── a voiced fricative is made in the same place as its voiceless twin ────
+check("the fricative pairs share a place of articulation", () => {
+  // /ʃ/ and /ʒ/ are one posture with the folds on or off, as are /s/-/z/, /θ/-/ð/ and /f/-/v/.
+  // /ʒ/ was not: its tongue tip sat at 0.862 where /ʃ/'s is at 0.842 — the alveolar position,
+  // which is where /z/ is made — and it had a third of /ʃ/'s lip rounding. Both raise the
+  // resonance, and its spectral centroid came out at 4450 Hz against /ʃ/'s 2865, in /z/'s
+  // territory rather than its own.
+  //
+  // Checked on the POSTURE for place and on the SPECTRUM for the consequence, because either
+  // alone can be right while the other is wrong: a posture is what was intended and a centroid
+  // is what came out.
+  const P = H.P, bad = [];
+  const PAIRS = [["s","z"], ["ʃ","ʒ"], ["θ","ð"], ["f","v"]];
+  for (const [a, b] of PAIRS) {
+    for (const k of ["tipPos", "bodyPos", "bodyHi", "lip"]) {
+      const x = P.ART[a][k], y = P.ART[b][k];
+      if (x === undefined || y === undefined) continue;
+      // place and rounding must match; the CHANNEL WIDTH may differ, since a voiced fricative
+      // really does have a slightly narrower one and the level work tuned those separately
+      if (Math.abs(x - y) > 0.03)
+        bad.push(`/${a}/ and /${b}/ differ in ${k}: ${x} vs ${y}`);
+    }
+  }
+  // and the spectra must land together
+  // Constructed, not borrowed. This needs A voice to render a fricative with and does not care
+  // whose — rule 1 at the top of this file, which the first draft broke by reaching for John out
+  // of habit.
+  const v = P.defaultVoice(), n = Math.round(v.sect);
+  const cent = sym => {
+    const W = P.buildWord(["ɑ", sym, "ɑ"], { D: 1.4, n, pros: v,
+                          glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    const p = H.makeProcessor(n);
+    p.port.onmessage({ data: { type: "voice", v: { ...v, fricDuck: 0.98 } } });
+    p.port.onmessage({ data: { type: "goal",
+      seq: { keys: W.keys, f0: P.buildF0(W.end, v), end: W.end } } });
+    const out = [new Float32Array(128)], buf = [];
+    for (let b = 0; b < Math.ceil(W.end*H.SR/128); b++) { p.process([], [out]); buf.push(...out[0]); }
+    const B = Float64Array.from(buf);
+    const sg = W.seg.find(x => x.sym === sym);
+    const a = sg.a + (sg.b-sg.a)*0.35, z = sg.a + (sg.b-sg.a)*0.65;
+    return H.centroid(H.spectrum(B.slice(Math.floor(a*H.SR), Math.floor(z*H.SR)),
+      { from: 0, lo: 300, hi: 11000, step: 100, hops: 6, win: 1024 }), 300, 11000);
+  };
+  const seen = {};
+  for (const [a, b] of PAIRS) {
+    const ca = seen[a] = cent(a), cb = seen[b] = cent(b);
+    // /θ/-/ð/ is exempt from the SPECTRAL half and its posture is still checked above. /ð/'s
+    // frication gain is 0.010 — the quietest sound in English, and deliberately so — which
+    // leaves almost no noise to take a centroid of, so what gets measured is whatever voicing
+    // survives the duck. That varies with the voice, and on the spec defaults the pair reads
+    // 5309 against 3053 while on a fitted one it reads 5471 against 5384. A measurement that
+    // depends that much on the voice is measuring the voice.
+    if (a === "θ") continue;
+    if (Math.abs(ca - cb) > 700)
+      bad.push(`/${a}/ ${ca.toFixed(0)} Hz against /${b}/ ${cb.toFixed(0)} — not the same place`);
+  }
+  // and the sibilants must be where a sibilant is: /ʃ/ well below /s/
+  if (!(seen["ʃ"] < seen["s"] - 800))
+    bad.push(`/ʃ/ ${seen["ʃ"].toFixed(0)} is not below /s/ ${seen["s"].toFixed(0)}`);
+
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.slice(0,3).join("  ")
+               : `four pairs matched; ʃ/ʒ ${seen["ʃ"].toFixed(0)}/${seen["ʒ"].toFixed(0)}, ` +
+                 `s/z ${seen["s"].toFixed(0)}/${seen["z"].toFixed(0)} Hz` };
+});
+
 // ── magic e, and what comes before a rule ─────────────────────────────────
 check("a magic e makes the vowel English actually has", () => {
   // Every magic-e vowel in the table produced what English has — a gives eɪ, i gives aɪ — except

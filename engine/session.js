@@ -220,6 +220,14 @@
 
     const pSel = document.createElement('select');
     pSel.setAttribute('aria-label', 'Phrase');
+    // "Write your own" is the first option rather than a button beside the list. It is the same
+    // question the list answers — what should it say — so it belongs in the same control, and a
+    // front door with one fewer button is a front door with one fewer thing to explain.
+    if (o.onCustom) {
+      const c = document.createElement('option');
+      c.value = '__custom'; c.textContent = 'Write your own\u2026';
+      pSel.appendChild(c);
+    }
     let last = '';
     for (const ph of PHRASES) {
       if (o.kinds && !o.kinds.includes(ph.kind)) continue;
@@ -237,6 +245,7 @@
       pSel.appendChild(opt);
     }
 
+    let lastPick = '';
     const own = document.createElement('input');
     own.placeholder = 'or type your own';
 
@@ -259,7 +268,17 @@
       }
     });
     const say = () => { if (o.onPhrase) o.onPhrase(own.value.trim() || pSel.value); };
-    pSel.addEventListener('change', () => { own.value = ''; say(); });
+    pSel.addEventListener('change', () => {
+      if (pSel.value === '__custom') {
+        // put the list back where it was before opening the editor, so closing it without
+        // typing anything leaves the page saying what it was saying
+        pSel.value = lastPick;
+        if (o.onCustom) o.onCustom();
+        return;
+      }
+      lastPick = pSel.value;
+      own.value = ''; say();
+    });
     own.addEventListener('keydown', e => { if (e.key === 'Enter') say(); });
 
     return {
@@ -267,7 +286,8 @@
       /** what the page should say now: typed text wins over the dropdown */
       phrase: () => own.value.trim() || pSel.value,
       setVoice: k => { if (k && [...vSel.options].some(x => x.value === k)) vSel.value = k; },
-      setPhrase: t => { own.value = ''; if ([...pSel.options].some(x => x.value === t)) pSel.value = t;
+      setPhrase: t => { own.value = '';
+                        if ([...pSel.options].some(x => x.value === t)) { pSel.value = t; lastPick = t; }
                         else own.value = t; },
     };
   }

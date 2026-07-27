@@ -67,7 +67,7 @@ class TractProcessor extends AudioWorkletProcessor {
     this.asp=0; this.ah=0; this.silNow=0;
     this.flow=0; this.flowT=0; this.turb=1; this.turbT=1; this.turbCd=0; this.fh1=0; this.fh2=0; this.fhx=0; this.fhy=0;
     this.seqFrom=null; this.seqFromB=0; this.blend=0.03;
-    this.seq=null; this.seqT=0; this.prevClose=1;
+    this.seq=null; this.seqT=0; this.prevClose=1; this._lastState=-1;
     this.velar=Math.round((opt.processorOptions.velar ?? 0.568)*(n-1));
     this.port.onmessage=(e)=>{
       const d=e.data;
@@ -886,6 +886,23 @@ class TractProcessor extends AudioWorkletProcessor {
           const e=Math.abs(this.R[i])+Math.abs(this.L[i]);
           this.energy[i]=this.energy[i]*0.75+e*0.25;
         }
+      }
+      // ── STATE GOES OUT WHEN IT CHANGES, PICTURES ON A TIMER ─────────────────
+      //
+      // This posted every 512 ticks — once every 1.49 seconds — and that was the only way the
+      // page learned anything. Two faults followed. The Play button stayed a Stop button for up
+      // to a second and a half after the word ended, because nothing told it sooner. And a post
+      // already in flight could arrive AFTER the page had optimistically started a word,
+      // carrying a `seq` from before the goal was received and clearing it — which stopped the
+      // karaoke dead while the voice carried on speaking.
+      //
+      // The diameters and the energies are a picture and a timer is right for them. Whether the
+      // tract is SPEAKING is a state, and a state should go out when it changes.
+      const stateNow = (this.seq ? 1 : 0) | (this.voicing > 0 ? 2 : 0);
+      const stateChanged = stateNow !== this._lastState;
+      this._lastState = stateNow;
+      if(stateChanged){
+        this.port.postMessage({ state:true, on:this.vAmp>0.02, v:this.voicing, seq:!!this.seq });
       }
       if((this.tick % 512)===0){
         // The branches go out too, so the page can draw them. The nasal tract is an eleven

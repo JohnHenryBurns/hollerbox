@@ -86,8 +86,9 @@ main>*{min-width:0}
   -webkit-mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);
           mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);
   pointer-events:none}
-#stageChain .karaoke{display:flex;gap:.35rem;align-items:center;
-  transition:transform .18s cubic-bezier(.22,.61,.36,1);will-change:transform}
+/* No transition. The transform is recomputed every frame from the clock, so a CSS ease would be
+   a second animation chasing the first — it would lag behind its own target and never settle. */
+#stageChain .karaoke{display:flex;gap:.35rem;align-items:center;will-change:transform}
 #stageChain .chip{background:rgba(23,28,32,.82);border-color:var(--line);
   font-size:1.15rem;padding:.24rem .55rem}
 #stageChain .chip.now{background:var(--ink);color:#0f1316;border-color:var(--ink)}
@@ -373,8 +374,13 @@ header{border-bottom:1px solid var(--hot-line)}
    width with a gap after them. Two lines each: the label, and what is currently chosen. */
 #dock{display:flex;align-items:stretch;gap:.5rem}
 #dock .icn{flex:0 0 auto}
-.btn.big{flex:1 1 0;min-width:0;display:inline-flex;align-items:center;gap:.5rem;
-  padding:.42rem .7rem;text-align:left;background:var(--panel2);border-color:var(--line)}
+/* #dock .btn is one id and a class, which outranks a two-class selector — so `flex:0 0 auto`
+   and `white-space:nowrap` up there beat `flex:1 1 0` down here, the two controls could not
+   shrink, and Voice was pushed off the right edge of a phone. Matched specificity, and the
+   nowrap is lifted so the value can ellipsis instead of forcing the button wider. */
+#dock .btn.big{flex:1 1 0;min-width:0;display:inline-flex;align-items:center;gap:.5rem;
+  padding:.42rem .7rem;text-align:left;white-space:normal;
+  background:var(--panel2);border-color:var(--line)}
 .btn.big .gl{flex:0 0 auto;font-size:1.1rem;line-height:1;color:var(--hot)}
 .btn.big .two{display:flex;flex-direction:column;min-width:0;line-height:1.2}
 .btn.big .lb{font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
@@ -1792,30 +1798,49 @@ function bounceWord(){
       if(t>=g.a-0.02 && t<=g.b+0.02){ idx=i; break; }
     }
   } else if(!sequencing) playSeg=null;
-  if(idx===lastBounce) return;
-  lastBounce=idx;
+
   // ── THE PLAYHEAD DOES NOT MOVE; THE WORD DOES ────────────────────────────
   //
-  // The sound being spoken sits at the centre of the strip and stays there, and the phrase slides
-  // through it. An earlier version clamped the travel at both ends so the row could not scroll
-  // past its own edges — which meant the first few sounds and the last few were read off-centre
-  // while the middle ones were centred, and the marker appeared to wander.
+  // The sound being spoken sits at the centre and stays there, and the phrase slides through it.
   //
-  // Unclamped now. The row is free to hang off either side, so the first chip begins at the
-  // centre and the last one ends there. Measured from the chip rather than computed from an
-  // index, because the chips are not all the same width — a /aɪ/ is wider than a /t/, and a row
-  // positioned by counting drifts further out the longer the phrase gets.
-  const kar=document.querySelector('#stageChain .karaoke');
-  if(kar){
-    const chips=kar.querySelectorAll('.chip,.gap');
+  // Continuously, not one chip at a time. This used to run only when the current segment CHANGED
+  // and set a CSS transition to catch up, so the row sat still for the length of a vowel and then
+  // lurched — a stutter that got worse the longer the sound. It reads the clock every frame now
+  // and interpolates between the chip being spoken and the one after it, weighted by how far
+  // through the segment we are, so the travel is as steady as the speech is.
+  //
+  // Measured from the chips rather than computed from an index, because they are not all the
+  // same width: a /aɪ/ is wider than a /t/, and a row positioned by counting drifts further out
+  // the longer the phrase gets.
+  {
+    const kar=document.querySelector('#stageChain .karaoke');
     const wrap=document.getElementById('stageChain');
-    const cur=idx>=0 && idx<chips.length ? chips[idx] : null;
-    const at = cur ? cur : chips[0];
-    if(at && wrap){
-      const want = at.offsetLeft + at.offsetWidth/2 - wrap.clientWidth/2;
-      kar.style.transform = 'translateX(' + (-want) + 'px)';
+    if(kar && wrap){
+      const chips=kar.querySelectorAll('.chip,.gap');
+      const mid=c=>c.offsetLeft + c.offsetWidth/2;
+      let want=null;
+      if(playSeg && sequencing && chips.length){
+        const t=(performance.now()-playSeg.t0)/1000;
+        // which segment, and how far through it
+        let i=0; while(i<playSeg.seg.length-1 && t>playSeg.seg[i].b) i++;
+        const g=playSeg.seg[i];
+        const span=Math.max(1e-4, g.b-g.a);
+        const u=Math.max(0, Math.min(1, (t-g.a)/span));
+        const a=chips[Math.min(i,chips.length-1)];
+        const b=chips[Math.min(i+1,chips.length-1)];
+        if(a) want = mid(a) + (mid(b)-mid(a))*u - wrap.clientWidth/2;
+      } else if(chips.length){
+        want = mid(chips[0]) - wrap.clientWidth/2;      // at rest, the first sound is centred
+      }
+      if(want!==null) kar.style.transform='translateX('+(-want)+'px)';
     }
   }
+
+  // Only the HIGHLIGHT is skipped when nothing changed. The slide above runs every frame — it is
+  // the whole difference between gliding and lurching, and putting it below this return is what
+  // made the row sit still for the length of a vowel and then jump.
+  if(idx===lastBounce) return;
+  lastBounce=idx;
   for(const host of ['chain','kbdChain','stageChain']){
     const el=document.getElementById(host);
     if(!el) continue;

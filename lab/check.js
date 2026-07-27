@@ -1389,7 +1389,11 @@ report("male voices against the vowel targets", () => {
     return g;
   };
   const rows = [], bad = [];
-  for (const name of ["john", "johnfit", "man", "barry"]) {
+  // johnfit was here and is gone: it was the older fitted John, superseded by `john`, and its
+  // postures were measured but wrong — /z/ too wide to fricate at 0.246 against a jet that peaks
+  // at 0.19, and /θ/ sealed at 0.020, which is a stop rather than a fricative. The generic set
+  // it was compared against has since been calibrated past it.
+  for (const name of ["john", "man", "woman", "barry"]) {
     const V = P.VOICES[name]; if (!V) continue;
     const n = Math.round({ ...P.defaultVoice(), ...V.v }.sect);
     const g = at(V.art || null, n);
@@ -1905,7 +1909,8 @@ check("the front door opens on something worth hearing", () => {
   // and it must not open as the goal cry — that voice and that word stay available and stop
   // being the first impression
   const opens = (page.match(/\nsetVoice\('(\w+)'\)/) || [])[1];
-  if (opens === "announcer" || opens === "johncry")
+  // johncry is gone with johnfit; the announcer remains and is still the wrong first impression
+  if (opens === "announcer")
     bad.push(`the door opens as ${opens} — a goal cry is not an introduction to speech`);
   if (/id="wordIn"[^>]*value="goal"/.test(page)) bad.push('the opening word is still "goal"');
 
@@ -2249,7 +2254,16 @@ check("vowels in a phrase reach the formants they have alone", () => {
   // thing that matters had to be measured directly.
   const P = H.P, S = require("../engine/spelling.js");
   const VOW = ["i","ɪ","ɛ","æ","ɑ","ɔ","ʊ","u","ʌ","ɝ"];
-  const v = P.defaultVoice(), n = Math.round(v.sect);
+  // AT A REAL SPEAKING RATE, and constructed rather than borrowed. The spec default `per` is
+  // 0.17 — a hundred and seventy milliseconds a sound, where connected speech averages seventy
+  // to eighty — and at that tempo the tract has so much time that it arrives exactly. The check
+  // read a flawless 0.00% off across 28 vowels and could not have failed.
+  //
+  // It used to run on a preset whose tempo was real, which is why it ever caught anything; when
+  // that preset was swapped out for the defaults under rule 1, the tempo went with it and the
+  // check quietly stopped asking a question. Rule 1 says construct what you need — this needs a
+  // real rate, so it says so.
+  const v = { ...P.defaultVoice(), per: 0.075 }, n = Math.round(v.sect);
   let err = 0, cnt = 0, worst = 0, worstSym = "";
   for (const t of ["she sells sea shells", "hello world", "banana and a tomato"]) {
     const r = S.g2p(t);

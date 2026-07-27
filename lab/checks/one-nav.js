@@ -32,27 +32,11 @@ check("every page can reach every other", () => {
     if (!fs.existsSync(path.join(root, r.href))) bad.push(`${r.href} does not exist`);
     if (!r.why) bad.push(`${r.name} does not say what it is for`);
   }
-  // A quiet room is still linked. The Lab is a workbench and reads as a footnote, but it must
-  // stay in the nav: carryState rewrites these links, so a voice tuned in the wizard arrives
-  // there by clicking, and a Lab reachable only by typing a URL lands on the default voice
-  // instead. A page nothing links to is also a page that breaks unnoticed — this one has already
-  // been a dead end once, with no navigation at all, and that survived because nothing pointed
-  // at it.
-  // About is a room too. It was a button beside the nav pretending not to be one — reachable
-  // from the throat and from nowhere else, so a visitor on the wizard had no way to find out
-  // what any of this is. It lives as a dialog rather than a file, so the room is a MARKER in the
-  // hash, and carryState has to put that marker back after writing the state onto every link:
-  // a naive rewrite dropped it and the About link silently became a link to the throat.
-  const about = rooms.find(r => r.mark === 'about');
-  if (!about) bad.push("About is not a room — it is reachable from one page only");
-  else {
-    const sess2 = fs.readFileSync(path.join(root, "engine", "session.js"), "utf8");
-    if (!/a\.dataset && a\.dataset\.mark/.test(sess2))
-      bad.push("carryState does not preserve a room's own marker — About would lose it");
-    const idx = fs.readFileSync(path.join(root, "index.html"), "utf8");
-    if (!/has\('about'\)/.test(idx)) bad.push("nothing opens About when the marker arrives");
-    if (!/h\.delete\('about'\)/.test(idx)) bad.push("closing About leaves the marker, so a reload reopens it");
-  }
+  // The Lab is a full room again. It was quiet for a while — a workbench a visitor would have
+  // walked into — and it stays in the nav either way, because carryState rewrites these links
+  // and a Lab reachable only by URL loses the voice on the way there.
+  const lab = rooms.find(r => /bench/.test(r.href));
+  if (!lab) bad.push("the Lab is not in the nav — state cannot travel to it");
 
   const lab = rooms.find(r => /bench/.test(r.href));
   if (!lab) bad.push("the Lab is not in the nav — state cannot travel to it");

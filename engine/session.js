@@ -389,24 +389,10 @@
   // One list, named by what the room is for rather than by what it is called internally, and the
   // page you are on is marked rather than omitted — a navigation that hides the current page
   // makes every page look like a different app.
-  // `quiet` is not decoration. The Lab is a workbench — sweeps, blind tests, a tournament and
-  // forty knobs — and a visitor who opens it has walked into somebody's workshop. It stays in the
-  // nav rather than being removed for two reasons that matter more than tidiness:
-  //
-  // The nav is how STATE TRAVELS. carryState rewrites these links, so a voice tuned in the wizard
-  // arrives in the Lab by clicking. A Lab reachable only by typing a URL loses the voice on the
-  // way and lands on the default, which makes it useless for the one person who uses it.
-  //
-  // And a page nothing links to is a page that breaks without anybody noticing. It has already
-  // been a dead end once — no navigation at all, reachable and not leavable — and that survived
-  // because nothing pointed at it.
-  //
-  // So: still one tap, and visibly not for you.
   const ROOMS = [
     { href: 'index.html',     name: 'Throat',       why: 'watch it speak' },
     { href: 'wizard.html',    name: 'Make a voice', why: 'four questions and a walk' },
-    { href: 'lab/bench.html', name: 'Lab',          why: 'the workbench: sweeps, pairs, every knob',
-      quiet: true },
+    { href: 'lab/bench.html', name: 'Lab',          why: 'the workbench: sweeps, pairs, every knob' },
     // About is a room too, and was a button sitting outside the nav pretending not to be one.
     // It lives as a dialog on the throat page rather than as a file, so the room is a MARKER in
     // the hash: every page links to it, index opens it on arrival, and it is shareable like any

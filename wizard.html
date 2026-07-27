@@ -357,6 +357,31 @@ const Q = [
     ['Rough',   'gravelly',  { jit:3.2, brth:0.30, press:0.7 }],
     ['Pressed', 'strained',  { rd:0.45, press:0.95, brth:0.05 }],
   ]},
+  // ── HOW IT COMES OUT ────────────────────────────────────────────────────
+  //
+  // Split out of "tone", which was two questions wearing one label. Measured, the six parameters
+  // below move the sound 8.22 dB — more than the five that stayed, more than the whole of the
+  // liveliness question — and NOT ONE q3 OPTION SET ANY OF THEM. They were reachable only by
+  // nudging: the largest single thing in this wizard that nobody could choose on purpose.
+  //
+  // What stayed with "tone" is the folds — how the voice is made. What comes here is everything
+  // after: how hard the consonants hiss and pop, how fast the voice comes back after a closure,
+  // how much the walls absorb. Two different questions about two different parts of a throat.
+  //
+  // ORDERED ON CONSONANT PROMINENCE, not on brightness. High-frequency share was the obvious
+  // measure and it is the wrong one: damp, open and burst each move it non-monotonically across
+  // their own ranges, so a ladder built on it bounced — Sharp came out DARKER than Soft. What
+  // this question is actually about is how far the consonants stand out from the vowels, and on
+  // that the ladder runs clean: -9.50, -8.66, -7.42, -6.69 dB.
+  //
+  // `damp` was backwards in the first attempt. Closer to 1 is LESS loss, so the tract rings more
+  // and its low resonances dominate — the opposite of sharp.
+  { id:'q5', key:'edge', opts:[
+    ['Soft',    'muffled',   { hiss:0.5, burst:0.06, onset:0.090, damp:0.99860, open:0.08, stopVc:1.2 }],
+    ['Normal',  'ordinary',  { hiss:1.0, burst:0.16, onset:0.035, damp:0.99950, open:0.05, stopVc:1.5 }],
+    ['Crisp',   'clean',     { hiss:1.6, burst:0.45, onset:0.012, damp:0.99975, open:0.03, stopVc:1.7 }],
+    ['Sharp',   'spat out',  { hiss:2.2, burst:1.10, onset:0.000, damp:0.99985, open:0.02, stopVc:2.0 }],
+  ]},
   { id:'q4', key:'pace', opts:[
     ['Slow',    'drawn out', { per:0.17 }],
     ['Normal',  'ordinary',  { per:0.095 }],
@@ -516,12 +541,13 @@ async function reallySpeak(text, who){
 // q1 and q4 stay where they are — q1 because it is already the one that produces the voices
 // people keep, and q4 because it saturates: bigger steps there stopped changing anything
 // (7.9 dB at 0.2 and 6.8 at 0.5) since timing has real limits either side.
-const STEP = { q1: 0.20, q2: 0.45, q3: 0.45, q4: 0.20 };
+const STEP = { q1: 0.20, q2: 0.45, q3: 0.45, q4: 0.20, q5: 0.45 };
 
 const OWNS = {
   q1: ['sect','f0a','f0b','f0c','lipR'],
   q2: ['acc','decl','wklev','wkdur','pert','ask','reset'],
-  q3: ['rd','press','brth','jit','folds','damp','open','hiss','burst','onset','stopVc'],
+  q3: ['rd','press','brth','jit','folds'],
+  q5: ['damp','open','hiss','burst','onset','stopVc'],
   q4: ['per','drawl','glide','stopT','vlen','coda','fnl','poly','apw','wgap','gcap',
        'artT','artCrit','artFar','artPush','velT'],
 };

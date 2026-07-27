@@ -103,6 +103,52 @@ check("the wizard can start from any voice, and says which", () => {
       bad.push(`the liveliest option reaches ${top.toFixed(1)} st of a possible ${ceiling.toFixed(1)}`);
   }
 
+  // AND THE EDGE LADDER RUNS ON CONSONANT PROMINENCE. Split out of "tone", which was two
+  // questions wearing one label: measured, these six parameters move the sound 8.22 dB — more
+  // than the five that stayed — and not one option in the old question set any of them. They
+  // were reachable only by nudging.
+  //
+  // Ordered on how far the consonants stand out from the vowels, NOT on brightness. High-
+  // frequency share was the obvious measure and it is the wrong one — damp, open and burst each
+  // move it non-monotonically across their own ranges, and a ladder built on it put Sharp darker
+  // than Soft.
+  const edge = Q.find(q => q.key === "edge" || q.id === "q5");
+  if (edge) {
+    const S3 = require("../../engine/spelling.js");
+    const B3 = { ...P.defaultVoice(), ...(P.VOICES.john.v || {}) };
+    const VOW = "iɪɛæɑɔʊuʌɝəeɪaɪaʊoʊ";
+    const prom = over => {
+      const v = { ...B3, ...over }, n = Math.round(v.sect);
+      const r = S3.g2p("she sells sea shells by the shore");
+      const D = Math.max(0.35, P.phraseTime(r.ph.length, v.per));
+      const W = P.buildWord(r.ph, { D, rate: P.rateFor(r.ph, D, v), n, stress: r.stress, pros: v,
+                                    glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+      const p2 = H.makeProcessor(n);
+      p2.port.postMessage = () => {};
+      p2.port.onmessage({ data: { type: "voice", v } });
+      p2.port.onmessage({ data: { type: "goal",
+        seq: { keys: W.keys, f0: P.buildF0(W.end, v, { stress: r.stress, seg: W.seg }), end: W.end } } });
+      const o2 = [new Float32Array(128)], buf = [];
+      for (let b = 0; b < Math.ceil(W.end * H.SR / 128); b++) { p2.process([], [o2]); buf.push(...o2[0]); }
+      const B = Float64Array.from(buf);
+      let c = 0, cn = 0, vv = 0, vn = 0;
+      for (const sg of W.seg) {
+        const sym = String(sg.sym);
+        if (sym === " " || sym.slice(0, 3) === "brk") continue;
+        const e = H.rms(B, sg.a + 0.005, sg.b - 0.005);
+        if (!isFinite(e)) continue;
+        if (VOW.includes(sym)) { vv += e; vn++; } else { c += e; cn++; }
+      }
+      return 20 * Math.log10((c / Math.max(1, cn)) / (vv / Math.max(1, vn)));
+    };
+    let prev = -99;
+    for (const [label, , patch] of edge.opts) {
+      const x = prom(patch);
+      if (x < prev - 0.3) bad.push(`edge/${label} has quieter consonants than the option above it`);
+      prev = x;
+    }
+  }
+
   return { ok: bad.length === 0,
            note: bad.slice(0,3).join("  ") ||
                  `${Object.keys(P.VOICES).filter(k => P.VOICES[k].v).length} starting voices, ` +

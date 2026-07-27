@@ -543,13 +543,35 @@ function nudge(qid){
   // wanders.
   const q = Q.find(x => x.id === qid);
   const answer = { ...BASE, ...(q ? q.opts[chosen[qid]][2] : {}) };
+  const step = STEP[qid] || 0.2;
   const out = {};
+
+  // SOME PARAMETERS MOVE TOGETHER OR NOT AT ALL. f0a, f0b and f0c are the pitch at the start of
+  // a phrase, at its accent and at its end — a shape, not three numbers. Nudged independently
+  // they scramble: measured over twenty rolls, "A man" produced 138/113/38, 112/65/97, 143/51/93
+  // — accents BELOW the phrase start, ends above it. Nothing crashes, and every one of them
+  // speaks, but the voice lurches, and by the third roll you have almost certainly hit one.
+  //
+  // They move as a register instead: one multiplier for all three, so the voice goes higher or
+  // lower and keeps its own melody. That is also the thing a person means by "a bit higher".
+  const REGISTER = ['f0a','f0b','f0c'];
+  const inReg = keys.filter(k => REGISTER.includes(k));
+  if (inReg.length) {
+    const lift = Math.exp((rnd()*2 - 1) * step * 1.4);   // a ratio, not an offset
+    for (const k of inReg) {
+      const spec = HOLLER.VOICE_SPEC.find(x => x.k === k);
+      if (!spec) continue;
+      const at = answer[k] === undefined ? spec.d : answer[k];
+      out[k] = Math.max(spec.lo, Math.min(spec.hi, at * lift));
+    }
+  }
+
   for (const k of keys) {
+    if (REGISTER.includes(k)) continue;
     const spec = HOLLER.VOICE_SPEC.find(x => x.k === k);
     if (!spec) continue;
     const span = spec.hi - spec.lo;
     const at = answer[k] === undefined ? spec.d : answer[k];
-    const step = STEP[qid] || 0.2;
     out[k] = Math.max(spec.lo, Math.min(spec.hi, at + (rnd()*2 - 1) * span * step));
   }
   nudged[qid] = out;

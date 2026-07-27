@@ -27,6 +27,19 @@ check("every page can reach every other", () => {
     if (!fs.existsSync(path.join(root, r.href))) bad.push(`${r.href} does not exist`);
     if (!r.why) bad.push(`${r.name} does not say what it is for`);
   }
+  // A quiet room is still linked. The Lab is a workbench and reads as a footnote, but it must
+  // stay in the nav: carryState rewrites these links, so a voice tuned in the wizard arrives
+  // there by clicking, and a Lab reachable only by typing a URL lands on the default voice
+  // instead. A page nothing links to is also a page that breaks unnoticed — this one has already
+  // been a dead end once, with no navigation at all, and that survived because nothing pointed
+  // at it.
+  const lab = rooms.find(r => /bench/.test(r.href));
+  if (!lab) bad.push("the Lab is not in the nav — state cannot travel to it");
+  else if (!lab.quiet) bad.push("the Lab is not marked quiet; it is a workbench, not a room for visitors");
+  for (const p of PAGES) {
+    const t = fs.readFileSync(path.join(root, p), "utf8");
+    if (!/\.btn\.quiet/.test(t)) bad.push(`${p} does not style a quiet room`);
+  }
 
   return { ok: bad.length === 0,
            note: bad.join("  ") || rooms.map(r => r.name).join(" · ") + ", reachable from all three" };

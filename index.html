@@ -390,6 +390,15 @@ header{border-bottom:1px solid var(--hot-line)}
    in it we are. The strip carries the accent's line on the edge nearest the dock, so the eye
    connects the two without either having to be labelled. */
 #stageChain{border-bottom:1px solid var(--hot-line)}
+
+/* A room that is not for visitors. Small, grey, no border — it reads as a footnote beside two
+   buttons, which is what it is: a workbench, one tap away for the person who needs it and
+   visibly not an invitation. It still fills and darkens when it is the room you are in, because
+   being there and not knowing it is worse than the clutter. */
+.btn.quiet{border-color:transparent;background:none;color:var(--dim);
+  font-size:.78rem;font-weight:400;padding:.35rem .45rem}
+.btn.quiet:hover,.btn.quiet:focus-visible{color:var(--ink);border-color:var(--line);background:none}
+.btn.quiet.here{background:var(--hot);color:var(--hot-ink);border-color:var(--hot);font-weight:600}
 </style>
 </head>
 <body>

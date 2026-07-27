@@ -406,7 +406,89 @@
     return host;
   }
 
+  // ── A PHRASE MENU, NOT A DROPDOWN ───────────────────────────────────────
+  //
+  // A native <select> renders on a phone as a full-screen list of radio buttons with nothing but
+  // the text — which throws away the `why` on every entry, the grouping, and any hope of putting
+  // "write your own" somewhere it reads as an action rather than as another thing to be.
+  //
+  // This is a sheet: the phrases with what each is for underneath, grouped, and writing your own
+  // at the top where it belongs. It closes on a pick, on the backdrop, and on Escape.
+  function phraseMenu(opts) {
+    const o = opts || {};
+    const back = document.createElement('div');
+    back.className = 'hb-sheet-back';
+    const sheet = document.createElement('div');
+    sheet.className = 'hb-sheet';
+    back.appendChild(sheet);
+
+    const close = () => { back.remove(); document.removeEventListener('keydown', esc); };
+    const esc = e => { if (e.key === 'Escape') close(); };
+    document.addEventListener('keydown', esc);
+    back.addEventListener('click', e => { if (e.target === back) close(); });
+
+    if (o.onCustom) {
+      const b = document.createElement('button');
+      b.className = 'hb-row hb-row-action';
+      b.innerHTML = '<b>Write your own</b><small>type anything and hear it</small>';
+      b.addEventListener('click', () => { close(); o.onCustom(); });
+      sheet.appendChild(b);
+    }
+
+    let last = '';
+    for (const ph of PHRASES) {
+      if (o.kinds && !o.kinds.includes(ph.kind)) continue;
+      if (ph.kind !== last) {
+        const h = document.createElement('div');
+        h.className = 'hb-head';
+        h.textContent = ph.kind === 'probe' ? 'Test phrases' : 'Passages';
+        sheet.appendChild(h);
+        last = ph.kind;
+      }
+      const b = document.createElement('button');
+      b.className = 'hb-row' + (ph.text === o.current ? ' on' : '');
+      // the probe's own text is the point; a passage is known by who wrote it
+      const title = ph.kind === 'probe' ? ph.text : ph.why;
+      const note  = ph.kind === 'probe' ? ph.why  : ph.text;
+      b.innerHTML = '<b></b><small></small>';
+      b.firstChild.textContent = title;
+      b.lastChild.textContent = note;
+      b.addEventListener('click', () => { close(); if (o.onPick) o.onPick(ph.text); });
+      sheet.appendChild(b);
+    }
+    document.body.appendChild(back);
+    return { close };
+  }
+
+  /** The stylesheet the menu needs, injected once. A page should not have to paste this in to
+   *  use a shared component, and three pages pasting it is three copies to drift. */
+  function menuStyle() {
+    if (document.getElementById('hb-sheet-css')) return;
+    const st = document.createElement('style');
+    st.id = 'hb-sheet-css';
+    st.textContent = [
+      '.hb-sheet-back{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:60;',
+      '  display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}',
+      '.hb-sheet{background:#171c20;border:1px solid #2f373d;border-radius:14px 14px 0 0;',
+      '  width:min(34rem,100%);max-height:78vh;overflow:auto;padding:.5rem 0 1.2rem;',
+      '  box-shadow:0 -8px 40px rgba(0,0,0,.5)}',
+      '.hb-head{font:600 .72rem/1.6 ui-monospace,monospace;letter-spacing:.08em;',
+      '  text-transform:uppercase;color:#8b969c;padding:.9rem 1.1rem .3rem}',
+      '.hb-row{display:block;width:100%;text-align:left;background:none;border:0;',
+      '  color:#f1f5f7;padding:.62rem 1.1rem;cursor:pointer;font:inherit}',
+      '.hb-row:hover,.hb-row:focus{background:#212930;outline:none}',
+      '.hb-row b{display:block;font-weight:600;font-size:.98rem}',
+      '.hb-row small{display:block;color:#8b969c;font:.76rem/1.45 ui-monospace,monospace;',
+      '  margin-top:.1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.hb-row.on b:after{content:" \\2713";color:#cfe3ff}',
+      '.hb-row-action{border-bottom:1px solid #2f373d;margin-bottom:.2rem}',
+      '.hb-row-action b{color:#cfe3ff}',
+    ].join('');
+    document.head.appendChild(st);
+  }
+
   root.HOLLER_SESSION = { planWord, planSpeech, chainFor, loadEngine, startAudio, tractFor,
+                          phraseMenu, menuStyle,
                           ROOMS, mountNav,
                           PHRASES, mountSelector, readURL, writeURL, carryState };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

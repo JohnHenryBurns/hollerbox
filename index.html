@@ -42,7 +42,18 @@ main>*{min-width:0}
 #stage canvas{display:block;width:100%;height:100%}
 #stageInfo{position:absolute;left:0;right:0;bottom:.85rem;z-index:2;
   padding:0 1rem;pointer-events:none;text-align:center}
-#stageChain{display:flex;flex-wrap:wrap;gap:.35rem;justify-content:center}
+/* ── KARAOKE ──────────────────────────────────────────────────────────────
+   One line that slides, rather than a block that wraps. A long phrase is thirty-odd sounds, and
+   wrapped they covered four rows of the throat — the thing the page is for. The row is centred
+   on whatever is being said and slides as it goes, so the phrase stays one line however long it
+   is and the sounds around the current one are still readable. */
+#stageChain{display:flex;flex-wrap:nowrap;gap:.35rem;justify-content:flex-start;
+  position:absolute;left:0;right:0;bottom:2.6rem;overflow:hidden;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);
+          mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);
+  pointer-events:none}
+#stageChain .karaoke{display:flex;gap:.35rem;align-items:center;
+  transition:transform .18s cubic-bezier(.22,.61,.36,1);will-change:transform}
 #stageVoice{margin-top:.5rem;font-family:var(--mono);font-size:.76rem;color:var(--dim);
   letter-spacing:.04em}
 #stageVoice b{color:var(--ink);font-weight:500}
@@ -430,8 +441,7 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
   <button class="icn" id="holdBtn" title="Sustain the shape the tract is in"
           aria-label="Sustain">&#8767;</button>
   <button class="icn play" id="playBtn" title="Play the word" aria-label="Play">&#9654;</button>
-  <span class="selwrap"><span class="sellabel">Say</span>
-    <span id="phrasePick"></span></span>
+  <button class="btn" id="sayBtn" title="What it says">Say&nbsp;&#8230;</button>
   <span class="selwrap"><span class="sellabel">Voice</span>
     <select id="voiceSel" aria-label="Voice"></select></span>
   <button class="btn" id="advBtn">Advanced</button>
@@ -1024,8 +1034,9 @@ function drawChain(){
     ? chain.map(chipHTML).join('')
     : '<span class="empty">type a word or a phrase</span>';
   const el=document.getElementById('chain');    if(el) el.innerHTML=html;
+  // The stage row is wrapped in a slider, so it can be moved as a whole rather than reflowed.
   const sc=document.getElementById('stageChain');
-  if(sc) sc.innerHTML = chain.map(chipHTML).join('');
+  if(sc) sc.innerHTML = '<span class="karaoke">' + chain.map(chipHTML).join('') + '</span>';
   const kc=document.getElementById('kbdChain');
   if(kc) kc.innerHTML = chain.length
     ? chain.map(chipHTML).join('')
@@ -1196,27 +1207,26 @@ function openKbd(v){
   document.body.style.overflow = v ? 'hidden' : (document.querySelector('aside').classList.contains('open')?'hidden':'');
   drawChain();
 }
-// The shared phrase list, mounted beside the word box. Only the phrase half of the selector is
-// used: this page already has its own voice dropdown wired into the whole preset machinery, and
-// a second one would be two answers to the same question.
+// WHAT IT SAYS, as a sheet rather than a dropdown. A native <select> renders on a phone as a
+// full-screen list of radio buttons showing nothing but the text — which throws away the note on
+// every phrase saying what it is FOR, the grouping, and any hope of "write your own" reading as
+// an action rather than as one more thing to be. It also, on Firefox, did not fire.
 //
-// The twelve probes and the five passages arrive together — the same list the bench sweeps and
-// the wizard reads, so a phrase that finds something here can be taken straight there.
+// The twelve probes and the five passages are one list, the same one the bench sweeps and the
+// wizard reads, so a phrase that finds something here can be taken straight there.
 function mountPhrases(){
-  const host = document.getElementById('phrasePick');
-  if(!host || !window.HOLLER_SESSION || host.dataset.on) return;
-  host.dataset.on = '1';
-  const p = HOLLER_SESSION.mountSelector(host, {
-    voices: [],                                   // the dock has its own voice dropdown
-    onPhrase: t => { document.getElementById('wordIn').value = t; soundOut(t); playWord(); },
-    // "Write your own" opens the editor that used to be behind its own button. It is the same
-    // question — what should it say — so it belongs in the same control.
-    onCustom: () => { sheet(null); openQuick(true); },
+  if(!window.HOLLER_SESSION) return;
+  HOLLER_SESSION.menuStyle();
+  const btn = document.getElementById('sayBtn');
+  if(!btn || btn.dataset.on) return;
+  btn.dataset.on = '1';
+  btn.addEventListener('click', () => {
+    HOLLER_SESSION.phraseMenu({
+      current: lastTyped,
+      onPick: t => { document.getElementById('wordIn').value = t; soundOut(t); playWord(); },
+      onCustom: () => { sheet(null); openQuick(true); },
+    });
   });
-  // In the dock, so the front door is: a throat, what it says, whose voice. The typing box and
-  // the phoneme keyboard live behind Word, where somebody who wants them will look.
-  if(p && p.voiceSel) p.voiceSel.style.display = 'none';
-  if(p && p.input) p.input.style.display = 'none';
 }
 
 function soundOut(raw){
@@ -1651,6 +1661,21 @@ function bounceWord(){
   } else if(!sequencing) playSeg=null;
   if(idx===lastBounce) return;
   lastBounce=idx;
+  // Slide the stage row so the sound being spoken sits in the middle. Measured from the chip
+  // rather than computed from an index, because the chips are not all the same width — a /aɪ/ is
+  // wider than a /t/, and a row positioned by counting drifts further out the longer it gets.
+  const kar=document.querySelector('#stageChain .karaoke');
+  if(kar){
+    const chips=kar.querySelectorAll('.chip,.gap');
+    const cur=idx>=0 && idx<chips.length ? chips[idx] : null;
+    if(cur){
+      const wrap=document.getElementById('stageChain');
+      const want=cur.offsetLeft + cur.offsetWidth/2 - wrap.clientWidth/2;
+      kar.style.transform='translateX('+(-Math.max(0,Math.min(want, kar.scrollWidth-wrap.clientWidth)))+'px)';
+    } else if(idx<0){
+      kar.style.transform='translateX(0)';       // not speaking: back to the beginning
+    }
+  }
   for(const host of ['chain','kbdChain','stageChain']){
     const el=document.getElementById(host);
     if(!el) continue;

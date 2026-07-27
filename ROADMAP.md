@@ -31,6 +31,17 @@ seal-and-release. But the word currently comes out, in the project's own field n
 
 ---
 
+## The front end, rethought  ❌ a vision and a plan, nothing built
+
+`index.html` is two thousand lines doing four jobs — word editor, knob panel, spectrogram, tract
+animation — and the animation, the thing worth showing anybody, has the fewest references of the
+five. Advanced is a button rather than a place, so a stranger's first sight is a phoneme keyboard,
+forty knobs and a word that says *goal*.
+
+**VISION.md** has the shape: a front door that opens on the throat saying a famous line, and four
+rooms behind it — make a voice, look inside, build a word, the lab. Five phases, the first of
+which is a bug: five of the wizard's controls have no event listeners at all.
+
 ## Front end: one session, three views  ❌ planned, not started
 
 Three pages hold their own copy of loading the engine, starting the audio, holding a voice and

@@ -369,7 +369,16 @@ const isPause = sym => sym === ' ' || isBreak(sym);
 // How long each one holds, as a multiple of the ordinary word gap. Measured values vary a lot
 // with speaking style; these are the conventional ratios — a comma is about twice a word
 // boundary and a full stop about four times.
-const BREAK_GAP = { 'brk,': 2.2, 'brk.': 4.0, 'brk?': 4.0 };
+// Punctuation has to stand clear of the WORD GAPS, and it stopped doing so the moment those
+// became variable. A word gap now runs 32 to 135 ms around a median of 49; a comma was 107 and a
+// full stop 194, so a comma sat inside the word-gap range and a sentence boundary was barely
+// outside it. Reported as "Call me Ishmael" having no pause after the name — and it had one, of
+// 194 ms, which is simply not a pause when an ordinary word boundary can be 117.
+//
+// Sized against the recording instead. The long within-phrase pauses there are 220 to 290 ms and
+// those are commas; a sentence boundary is longer again. 5.6 and 11.5 put a comma at about
+// 270 ms and a full stop at about 560, which clears the word-gap distribution entirely.
+const BREAK_GAP = { 'brk,': 5.6, 'brk.': 11.5, 'brk?': 11.5 };
 const isDiph  = sym => !!DIPH[sym];
 
 // ---- the voices ----

@@ -62,6 +62,16 @@ const G2P_RULES = [
   // bread, dead and breath, and stopped at the consonant it happened to be written for.
   [/^ea(?=v)/,   ['ɛ']],
   [/^ea/,        ['i']],
+  // `a` before a doubled l is /ɔ/: all, ball, call, fall, hall, small, tall. Only "wall" and
+  // "walk" were right, and by accident — the `wa` rule above happened to catch them.
+  // Before a VOWEL it stays /æ/: shallow, tallow, callous. So the test is on what follows the l.
+  [/^a(?=ll($|[^aeiouy]))/, ['ɔ']],
+  // and `al` before another consonant: salt, talk, walk, chalk, calm
+  [/^a(?=l[kmt])/, ['ɔ']],
+  // `er` before a VOWEL is two sounds, /ər/, not the single /ɝ/: every, several, general,
+  // camera, difference. /ɝ/ is right when the r closes the syllable — her, term, serve — and
+  // wrong when it opens the next one, which is what a following vowel means.
+  [/^er(?=[aeiouy])/, ['ə','r'], null, 2],
   [/^ie/,        ['i']],
   [/^oo/,        ['u']],
   [/^ow$/,       ['oʊ']],       // yellow, window, show — final -ow is not the -ow of "down"

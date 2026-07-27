@@ -239,29 +239,39 @@ const HOLLER = window.HOLLER, SPELL = window.HOLLER_SPELL, SESSION = window.HOLL
    a child can hear the difference between two of them without being told what changed. */
 const BASE = { ...HOLLER.defaultVoice(), ...(HOLLER.VOICES.john.v || {}) };  // mutated by an inbound seed
 
+// EVERY OPTION SAYS WHAT IT MEANS. Each question used to have one option that patched nothing —
+// "as it is", "normal" — which silently inherited whatever BASE held. BASE is John, and John is
+// the fastest voice in the set at per 0.095, so the wizard's "Normal" tempo was John's and every
+// other voice matched "Slow". Worse, a seed arriving from a URL overwrote BASE, so that option
+// meant something different depending on how you got to the page, and the button could not say
+// so. Two sources of truth, and the buttons described the wrong one.
+//
+// The values below are John's, so nothing about the page's own starting point changes — what
+// changes is that it is now written down, and an option means the same thing however you
+// arrived.
 const Q = [
   { id:'q1', key:'size', opts:[
     ['Tiny',    'a mouse',   { sect:26, f0a:300, f0b:340, f0c:250 }],
     ['A kid',   'small',     { sect:33, f0a:210, f0b:240, f0c:180 }],
-    ['Grown up','normal',    {}],
+    ['Grown up','normal',    { sect:44, f0a:88, f0b:99, f0c:78 }],
     ['A giant', 'huge',      { sect:54, f0a:70,  f0b:80,  f0c:60  }],
   ]},
   { id:'q2', key:'life', opts:[
     ['Robot',   'no range',  { acc:0,   decl:0,   wklev:1.0  }],
     ['Calm',    'a little',  { acc:2,   decl:0.4, wklev:0.8  }],
-    ['Normal',  'as it is',  {}],
+    ['Normal',  'even',      { acc:7, decl:0.6, wklev:0.65 }],
     ['Bouncy',  'lots',      { acc:6,   decl:1.2, wklev:0.45 }],
     ['Wild',    'all of it', { acc:8,   decl:1.8, wklev:0.35 }],
   ]},
   { id:'q3', key:'tone', opts:[
     ['Breathy', 'whispery',  { rd:1.9,  brth:0.55, press:0.1 }],
-    ['Clear',   'plain',     {}],
+    ['Clear',   'plain',     { rd:1.26, press:0.18, brth:0.19, jit:1 }],
     ['Rough',   'gravelly',  { jit:3.2, brth:0.30, press:0.7 }],
     ['Pressed', 'strained',  { rd:0.45, press:0.95, brth:0.05 }],
   ]},
   { id:'q4', key:'pace', opts:[
     ['Slow',    'drawn out', { per:0.17 }],
-    ['Normal',  'as it is',  {}],
+    ['Normal',  'ordinary',  { per:0.095 }],
     ['Quick',   'brisk',     { per:0.075 }],
   ]},
 ];
@@ -437,6 +447,51 @@ function nudge(qid){
   speak(sample());
 }
 
+/** Take an arriving voice INTO the questions, rather than underneath them.
+ *
+ *  A seed used to overwrite BASE — the thing the options patch — and every question has exactly
+ *  one option that patches nothing, the one labelled "as it is". So arriving with a seed whose
+ *  sect is 26 and touching nothing left the button reading "Grown up" while the tract was the
+ *  size "Tiny" sets. The buttons described a voice that was not playing, and there was no way to
+ *  tell from the page which of the two was winning.
+ *
+ *  Now the seed is expressed in the wizard's own vocabulary: for each question, whichever option
+ *  is nearest, plus the remainder as a nudge. The voice is reproduced exactly and the buttons
+ *  tell the truth about it — a link arrives as "A giant, nudged", which is a thing you can then
+ *  edit, rather than as an invisible layer you cannot see or undo. */
+function adoptVoice(v){
+  for (const q of Q) {
+    const keys = OWNS[q.id] || [];
+    // nearest option, measured only on what this question is about
+    let best = 0, bestD = Infinity;
+    q.opts.forEach(([, , patch], i) => {
+      let d = 0;
+      for (const k of keys) {
+        const spec = HOLLER.VOICE_SPEC.find(x => x.k === k);
+        if (!spec) continue;
+        const want = patch[k] !== undefined ? patch[k] : (BASE[k] !== undefined ? BASE[k] : spec.d);
+        const got  = v[k] !== undefined ? v[k] : want;
+        d += Math.abs(got - want) / ((spec.hi - spec.lo) || 1);
+      }
+      if (d < bestD) { bestD = d; best = i; }
+    });
+    chosen[q.id] = best;
+
+    // whatever that option does not account for becomes this question's nudge, so the voice is
+    // exact rather than merely close
+    const patch = q.opts[best][2];
+    const rest = {};
+    for (const k of keys) {
+      const spec = HOLLER.VOICE_SPEC.find(x => x.k === k);
+      if (!spec || v[k] === undefined) continue;
+      const want = patch[k] !== undefined ? patch[k] : (BASE[k] !== undefined ? BASE[k] : spec.d);
+      if (Math.abs(v[k] - want) / ((spec.hi - spec.lo) || 1) > 0.002) rest[k] = v[k];
+    }
+    if (Object.keys(rest).length) nudged[q.id] = rest; else delete nudged[q.id];
+  }
+  draw(); showSeed();
+}
+
 function startBattle(){
   const from = battle ? battle.keep : voice();
   battle = { keep: from, A: mutate(from, 1), B: mutate(from, 1) };
@@ -527,11 +582,7 @@ function linkUp(){ SESSION.carryState({ voice: current(), phrase: picker.phrase(
 {
   const inbound = SESSION.readURL();
   if (inbound.phrase) picker.setPhrase(inbound.phrase);
-  if (inbound.voice) {
-    // An arriving voice replaces the base the questions patch, so the four answers still work —
-    // they become adjustments to what was sent rather than to this page's own starting point.
-    Object.assign(BASE, inbound.voice);
-  }
+  if (inbound.voice) adoptVoice(inbound.voice);
   linkUp();
 }
 /** What every button on this page plays: whatever the shared selector currently holds. */

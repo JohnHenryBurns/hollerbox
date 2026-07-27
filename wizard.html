@@ -75,12 +75,18 @@ main{max-width:44rem;margin:0 auto;padding:1rem 1rem 4rem}
   padding:.9rem 1rem;margin-bottom:.9rem}
 .step h2{font-size:1rem;margin:0 0 .15rem}
 .step .why{font-family:var(--mono);font-size:.75rem;color:var(--dim);margin-bottom:.7rem}
-.opts{display:flex;flex-wrap:wrap;gap:.5rem}
-.opt{flex:1 1 8rem;border:1px solid var(--line);border-radius:8px;background:var(--panel2);
+/* A GRID, NOT A WRAPPING ROW. `flex-wrap` sizes each option from its own content, so the moment
+   one is chosen and its hint grows from "a mouse" to "tap again to vary" the whole row re-flows
+   — options change width, some jump to the next line, and on a phone the question you just
+   answered rearranges itself under your thumb.
+   Fixed columns instead: two on a phone, and the cells do not care what is written in them. */
+.opts{display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem}
+@media (min-width:560px){ .opts{grid-template-columns:repeat(auto-fit,minmax(8rem,1fr))} }
+.opt{border:1px solid var(--line);border-radius:8px;background:var(--panel2);min-width:0;
   color:var(--ink);padding:.6rem .5rem;cursor:pointer;font-size:.92rem;text-align:center}
 .opt:hover{border-color:var(--ink)}
-.opt.on{background:var(--pick);color:#0b1b2e;border-color:var(--pick);font-weight:600}
-.opt small{display:block;font-family:var(--mono);font-size:.68rem;opacity:.75;margin-top:.15rem}
+.opt small{display:block;font-family:var(--mono);font-size:.68rem;opacity:.75;margin-top:.15rem;
+  height:1.15em;line-height:1.15em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 .say{display:flex;gap:.5rem;align-items:center;margin-top:.8rem;flex-wrap:wrap}
 .say input,.say select{flex:1 1 12rem;background:var(--panel2);color:var(--ink);
@@ -97,7 +103,6 @@ main{max-width:44rem;margin:0 auto;padding:1rem 1rem 4rem}
   color:var(--hot-ink);font-weight:600}
 
 /* The chosen answer to each question, and the seed the answers make. */
-.opt.on{background:var(--hot);color:var(--hot-ink);border-color:var(--hot);font-weight:600}
 /* the seed is orange TEXT, and legitimately so: it sits on the plain panel, not inside an
    orange box, so there is nothing for it to wash out against */
 #seed{border-color:var(--hot-line)}
@@ -166,14 +171,28 @@ a{color:var(--hot)}
 .opt small{display:block;height:1.15em;line-height:1.15em;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
 .opt.on small{opacity:.8}
-/* varied: the answer is still the answer, and it has been moved off it */
-.opt.varied{box-shadow:inset 0 0 0 2px var(--hot-ink)}
 
 /* The two things the questions are about: what it says, and what it starts from. Stacked, full
    width, so neither is squashed against the other the way the phrase button was when it shared a
    row with a text box. */
 #picker{display:flex;flex-direction:column;gap:.5rem;align-items:stretch}
 #picker .btn.big{width:100%}
+
+/* ── CHOSEN, AND CHOSEN-THEN-VARIED ───────────────────────────────────────
+   Two different states and they were nearly the same picture: both orange-filled, the varied one
+   distinguished by an inset line most people would never notice. They mean different things —
+   one is an answer, the other is an answer you have moved off — so they get different weights.
+
+   CHOSEN is outlined: the accent on the border and the text, nothing filled. It reads as "this
+   is the one" without shouting.
+
+   VARIED is filled. It is the louder state because it is the rarer and more surprising one, and
+   because the fill is what the shimmy flashes against. */
+.opt.on{border-color:var(--hot);color:var(--hot);background:transparent;font-weight:600}
+.opt.on.varied{background:var(--hot);color:var(--hot-ink);border-color:var(--hot)}
+.opt.on.varied small,.opt.on.varied .tally{color:var(--hot-ink);opacity:.8}
+.opt.on small{color:var(--hot);opacity:.75}
+.opt .tally{color:var(--hot)}
 </style>
 
 <header>
@@ -537,8 +556,36 @@ function nudge(qid){
   tally[qid] = (tally[qid] || 0) + 1;
   battle = null; round = 0;
   document.getElementById('battleCount').textContent = '';
-  draw(); showSeed();
+  // NOT draw(). draw() empties the question and rebuilds every button in it — including the one
+  // that was just tapped and is mid-shimmy, which is destroyed before a frame of it renders. The
+  // voice changed, nothing moved, and it read as a dead button. Rebuilding also re-lays the row,
+  // which is what made the options jump around on a phone.
+  //
+  // A nudge changes one question's numbers and nothing about its structure, so only the label of
+  // the answer needs touching.
+  refreshAnswer(qid);
+  showSeed();
   speak(sample());
+}
+
+/** Update the chosen option's label in place: the tally, and what a second tap will do. Nothing
+ *  else about the question has changed, so nothing else is touched — no rebuild, no reflow, and
+ *  the animation on the button survives to be seen. */
+function refreshAnswer(qid){
+  const host = document.getElementById(qid);
+  if (!host) return;
+  const btns = host.querySelectorAll('.opt');
+  const b = btns[chosen[qid]];
+  if (!b) return;
+  const rolls = tally[qid] || 0;
+  const lab = (Q.find(x => x.id === qid) || {opts:[]}).opts[chosen[qid]];
+  // keep the shimmy: this runs from inside the tap that started it, and rewriting className
+  // wholesale would strip the very animation it exists to let play
+  const shim = b.classList.contains('shimmy') ? ' shimmy' : '';
+  b.className = 'opt on' + (nudged[qid] ? ' varied' : '') + shim;
+  b.innerHTML = (lab ? lab[0] : '') +
+    (rolls ? '<span class="tally">\u00d7' + rolls + '</span>' : '') +
+    '<small>' + (rolls ? 'varied \u00b7 tap to vary again' : 'tap again to vary') + '</small>';
 }
 
 /** Take an arriving voice INTO the questions, rather than underneath them.

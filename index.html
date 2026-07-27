@@ -408,7 +408,6 @@ header{border-bottom:1px solid var(--hot-line)}
   <span class="sub">Kelly–Lochbaum waveguide · 1962</span>
   <span class="spacer"></span>
   <span id="nav"></span>
-  <button class="btn" id="aboutBtn">About</button>
 </header>
 
 <main>
@@ -1274,6 +1273,13 @@ document.getElementById('loadSeed').addEventListener('click',()=>{
 // ── about dialog: shown once, reopenable from the header ──
 const about=document.getElementById('about');
 function showAbout(v){
+  // Closing takes the marker out of the URL. Without that, a reload — or the back button —
+  // reopens the dialog over a page the reader has already dismissed it from.
+  if(!v){ try {
+    const h = new URLSearchParams((location.hash||'').replace(/^#/,''));
+    if(h.has('about')){ h.delete('about');
+      history.replaceState(null,'',location.pathname+location.search+(h.toString()?'#'+h:'')); }
+  } catch(e) {} }
   about.hidden=!v;
   if(!v){ try{ localStorage.setItem('hollerbox.seen','1'); }catch(e){} }
 }
@@ -1284,7 +1290,16 @@ document.getElementById('tabs').addEventListener('click',e=>{
   about.querySelectorAll('.cardbody section').forEach(sec=>sec.hidden = sec.dataset.tab!==want);
   const body=about.querySelector('.cardbody'); if(body) body.scrollTop=0;
 });
-document.getElementById('aboutBtn').addEventListener('click',()=>showAbout(true));
+// About is a room in the nav now rather than a button beside it. It lives here as a dialog
+// rather than as a file, so the room is a MARKER in the hash: every page links to it, and this
+// page opens it on arrival. That makes it shareable like any other state — a link to About
+// carries the voice and the phrase with it, and comes back to them when the dialog closes.
+if(window.HOLLER_SESSION){
+  try {
+    const h = new URLSearchParams((location.hash||'').replace(/^#/,''));
+    if(h.has('about')) showAbout(true);
+  } catch(e) { /* a hash that is not ours */ }
+}
 document.getElementById('aboutClose').addEventListener('click',()=>showAbout(false));
 about.addEventListener('click',e=>{ if(e.target===about) showAbout(false); });
 addEventListener('keydown',e=>{ if(e.key==='Escape' && !about.hidden) showAbout(false); });

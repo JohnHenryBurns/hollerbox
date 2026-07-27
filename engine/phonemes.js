@@ -402,7 +402,7 @@ const VOICE_SPEC=[
   // below his own declared minimum, and a seed round-trip would have clamped his tempo back up.
   // Real connected speech averages 70 to 80 milliseconds a sound, so the floor was wrong on its
   // own terms as well.
-  {k:'per',  lo:0.04,   hi:0.80,    d:0.17},   // seconds per sound
+  {k:'per',  lo:0.04,   hi:0.80,    d:0.075},   // seconds per sound
   {k:'folds',lo:0,      hi:1,       d:0, off:0,},      // 0 = LF waveform, 1 = two-mass oscillator
   // ---- the prosody layer, Phase 8 ----
   // These were module constants until now, which meant the one part of the model that most
@@ -571,7 +571,7 @@ const VOICES = {
 VOICES.john = {
   label: 'John',
   v: { rd: 1.26, press: 0.18, brth: 0.19, f0a: 88, f0b: 99, f0c: 78,
-       drawl: 0.08, sect: 44, per: 0.095, artT: 0.020 },
+       drawl: 0.08, sect: 44, per: 0.075, artT: 0.020 },
   note: 'Rebuilt off man: his measured pitch and voice quality on the shared postures, at a '
       + 'tract length that agrees with his pitch. The fitted version is `johnfit`.'
 };
@@ -835,6 +835,30 @@ function closureFor(sym, stopHold, ratio){
  * cry. It becomes a stretch on the rate rather than a hard total, so a word asked to be twice
  * as long is twice as long throughout instead of having its proportions squeezed to fit.
  */
+// ── HOW LONG A PHRASE TAKES ───────────────────────────────────────────────
+//
+// Not sounds x per. Measured against a person reading these phrases, the time per sound FALLS as
+// the phrase gets longer:
+//
+//   a probe    18 sounds   1.70 s   0.094 s a sound
+//   Hamlet     37          2.70     0.073
+//   Frost      87          5.20     0.060
+//
+// Three independent pairings and they disagree by more than fifty per cent, which is why the
+// model was nearly right on four-word probes and sixty per cent slow on a passage: a constant
+// `per` cannot be both. Longer utterances are spoken faster per sound — a well-attested effect
+// and one nobody had thought to look for here, because nothing longer than a probe was ever
+// tested until the passages went into the phrase list.
+//
+// D = per x n x (40/n)^0.285 fits all three within five per cent. Forty sounds is roughly a
+// short sentence and is where the exponent does nothing, so `per` keeps meaning what it meant
+// for anything sentence-sized.
+const LEN_REF = 40, LEN_K = 0.285;
+function phraseTime(n, per){
+  const c = Math.max(1, n);
+  return per * c * Math.pow(LEN_REF / c, LEN_K);
+}
+
 function rateFor(chain, D, v){
   const per = (v && v.per) || 0.17;
   const base = per*0.90;
@@ -1261,7 +1285,7 @@ const HOLLER = {
   BRANCHED, NASAL, VOICELESS, FRICATIVE, ASPIRATE,
   VOICE_SPEC, VOICES, defaultVoice, VOICE_GROUPS,
   clampVoice, mutateVoice, encodeVoice, decodeVoice,
-  restingDiam, hump, articulate, baseFor, shapeFor, openedShape, buildWord, rateFor,
+  restingDiam, hump, articulate, baseFor, shapeFor, openedShape, buildWord, rateFor, phraseTime,
   VDUR, CODA_VOICED, CODA_SONORANT, CODA_OPEN, CODA_VOICELESS,
   UNSTRESSED, FINAL_LENGTH, POLY_SHORT, APPROX_W, codaFactor, polyShorten,
   STOP_CLOSE, closureFor, UNSTRESSED_LEVEL, buildF0, lerpHz,

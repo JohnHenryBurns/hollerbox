@@ -40,7 +40,11 @@
     const v = voice || P.defaultVoice();
     const n = o.n || Math.round(v.sect || 44);
     const per = v.per || 0.17;
-    const D = Math.max(0.35, chain.length * per * (o.stretch === undefined ? 1 : o.stretch));
+    // phraseTime, not chain.length * per: the time per sound falls as a phrase gets longer, and
+    // a constant `per` was nearly right on a four-word probe and sixty per cent slow on a
+    // passage. See the note above phraseTime in phonemes.js for the three measurements.
+    const D = Math.max(0.35, P.phraseTime(chain.length, per) *
+                             (o.stretch === undefined ? 1 : o.stretch));
     return P.buildWord(chain, {
       D,
       rate: P.rateFor(chain, D, v),

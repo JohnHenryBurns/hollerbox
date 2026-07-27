@@ -1785,14 +1785,22 @@ check("voiceless stops are aspirated", () => {
 // The one deliberate exception is the wizard check, which tests options defined as patches over
 // the wizard's own base voice, and is marked where it sits.
 
-// New checks go at the end of this file. That does not stop two branches colliding here — an
-// earlier version of this comment claimed it did, which was wrong, since two branches appending
-// to one file conflict wherever they append. What stops it is not having two branches open.
+// ── A NEW CHECK GOES IN ITS OWN FILE ──────────────────────────────────────
 //
-// When it does happen, the resolution is always the same and worth knowing, because stripping
-// the markers alone gives a file that LOOKS right and does not parse: both sides stop at their
-// own `return {...};` and share the single `});` after the last marker, so keeping both means
-// closing the first one explicitly.
+//     lab/checks/whatever-it-is.js
+//
+// and it is picked up automatically. `check` and `report` are on `globalThis` while those files
+// load, so a new one is four lines and touches nothing anybody else is editing.
+//
+// This used to say "new checks go at the end of this file", and the append point cost three
+// merge conflicts in a week — always the same file, always the same anchor, and NOT always the
+// same resolution. Twice both sides ended unclosed and shared the trailing `});`, so keeping
+// both meant adding one. Once one side closed itself and the other did not, and adding one
+// broke the parse. A convention that needs you to read both sides carefully is a convention
+// that will eventually be applied carelessly.
+//
+// The seventy-nine checks below stay where they are. Moving them would be a large diff for no
+// benefit — the conflicts came from the APPEND POINT, and there is no longer one.
 
 // ── a voiced fricative is made in the same place as its voiceless twin ────
 check("the fricative pairs share a place of articulation", () => {
@@ -3399,6 +3407,24 @@ check("the bench never leaves the tournament without a champion", () => {
            note: bad.length ? bad.join("  ") : "every clear is followed by a re-seed" };
 });
 
+
+// ── the checks that live in their own files ───────────────────────────────
+// Loaded after everything above, so a file may use any helper this one defines. `check` and
+// `report` go on globalThis for the duration: a check file is a script with two functions in
+// scope, not a module with an export ceremony.
+{
+  const fs_ = require("fs"), path_ = require("path");
+  const dir = path_.join(__dirname, "checks");
+  try {
+    for (const f of fs_.readdirSync(dir).filter(x => x.endsWith(".js")).sort()) {
+      globalThis.check = check; globalThis.report = report; globalThis.H = H;
+      try { require(path_.join(dir, f)); }
+      catch (e) { check(`${f} loads`, () => ({ ok: false, note: `threw on load: ${e.message}` })); }
+    }
+  } catch (e) { /* no directory yet */ }
+  delete globalThis.check; delete globalThis.report;
+}
+
 // ── the runner ─────────────────────────────────────────────────────────────
 // The gate gates correctness. It should not gate iteration. Three things follow:
 //   a subset can be run while working   node lab/check.js stops
@@ -3506,7 +3532,13 @@ if (!isMainThread && workerData && workerData.idx) {
     // Record what each check cost, so --quick knows what to skip next time. Written on any run
     // that was not itself filtered, merged with what is already there so a --report run does not
     // erase the gate's timings or the other way round.
-    if (!terms.length && !quick) {
+    // Record whenever the FULL set actually ran, however that came about. This read `!quick`,
+    // and quick became the default — so a fresh clone with no timings ran everything (having
+    // nothing to skip by), recorded nothing, and never got fast. The condition was written when
+    // quick was the flag and quietly stopped meaning what it said.
+    const ranEverything = !terms.length &&
+      done.length === REG.filter(c => wantReport || c.tier === "gate").length;
+    if (ranEverything) {
       try {
         const fs2 = require("fs");
         let all = {};

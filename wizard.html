@@ -330,11 +330,26 @@ const Q = [
     ['A giant', 'huge',      { sect:54, f0a:70,  f0b:80,  f0c:60  }],
   ]},
   { id:'q2', key:'life', opts:[
-    ['Robot',   'no range',  { acc:0,   decl:0,   wklev:1.0  }],
+    // A LADDER THAT RUNS ONE WAY, and reaches the top. Bouncy used to sit at acc 6 against
+    // Normal's 7 — measured, 13.3 semitones of pitch range against 14.5, so the fourth option
+    // was FLATTER than the third and the question ran backwards in the middle. Normal's values
+    // are John's, written down so an arriving seed can be matched to them, so the fix is to
+    // raise the two above it rather than lower it.
+    //
+    // And Wild reached 15.2 st where the parameters allow 20.7 — 73% of what the engine can do,
+    // in the option whose whole job is to be the extreme. It is at the top now.
+    //
+    //   Robot 7.6 · Calm 9.5 · Normal 14.5 · Bouncy 17.0 · Wild 20.7 semitones
+    //
+    // Robot is not zero and cannot be: the phrase contour is f0a/f0b/f0c, which belong to "how
+    // big" rather than to this question, so the flattest this can go is a voice with no accents
+    // and no declination still walking its own register. `pert:0` takes out the last of the
+    // wobble. The label says "no range" and means "none that this question controls".
+    ['Robot',   'as flat as it goes', { acc:0, decl:0, wklev:1.0, pert:0 }],
     ['Calm',    'a little',  { acc:2,   decl:0.4, wklev:0.8  }],
     ['Normal',  'even',      { acc:7, decl:0.6, wklev:0.65 }],
-    ['Bouncy',  'lots',      { acc:6,   decl:1.2, wklev:0.45 }],
-    ['Wild',    'all of it', { acc:8,   decl:1.8, wklev:0.35 }],
+    ['Bouncy',  'lots',      { acc:10,  decl:1.6, wklev:0.45 }],
+    ['Wild',    'all of it', { acc:14,  decl:2.6, wklev:0.35 }],
   ]},
   { id:'q3', key:'tone', opts:[
     ['Breathy', 'whispery',  { rd:1.9,  brth:0.55, press:0.1 }],

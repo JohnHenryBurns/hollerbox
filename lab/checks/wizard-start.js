@@ -67,6 +67,42 @@ check("the wizard can start from any voice, and says which", () => {
     }
   }
 
+  // THE LIVELINESS LADDER RUNS ONE WAY TOO, and reaches the top. Bouncy sat at acc 6 against
+  // Normal's 7 — 13.3 semitones of pitch range against 14.5, so the fourth option was flatter
+  // than the third and the question ran backwards in the middle. And Wild reached 15.2 st where
+  // the parameters allow 20.7: 73% of what the engine can do, in the option whose whole job is
+  // to be the extreme.
+  //
+  // Measured on the CONTOUR rather than on `acc`, because three parameters move together here
+  // and the one that reads highest is not always the one that sounds liveliest.
+  const S2 = require("../../engine/spelling.js");
+  const life = Q.find(q => q.key === "life" || q.id === "q2");
+  if (life) {
+    const BASE2 = { ...P.defaultVoice(), ...(P.VOICES.john.v || {}) };
+    const range = over => {
+      const v = { ...BASE2, ...over };
+      const r = S2.g2p("she sells sea shells by the shore");
+      const D = Math.max(0.35, P.phraseTime(r.ph.length, v.per));
+      const W = P.buildWord(r.ph, { D, rate: P.rateFor(r.ph, D, v), n: Math.round(v.sect),
+                            stress: r.stress, pros: v, glide: v.glide,
+                            stopHold: v.stopT, drawl: v.drawl });
+      const hz = P.buildF0(W.end, v, { stress: r.stress, seg: W.seg })
+                  .map(x => x.v || x.f || x[1]).filter(x => x > 0);
+      if (!hz.length) return 0;
+      const st = hz.map(x => 12 * Math.log2(x / hz[0]));
+      return Math.max(...st) - Math.min(...st);
+    };
+    let prev = -1, top = 0;
+    for (const [label, , patch] of life.opts) {
+      const r = range(patch);
+      if (r < prev - 0.2) bad.push(`liveliness/${label} is flatter than the option above it`);
+      prev = r; top = r;
+    }
+    const ceiling = range({ acc: 14, decl: 4, wklev: 0.35 });
+    if (top < ceiling * 0.9)
+      bad.push(`the liveliest option reaches ${top.toFixed(1)} st of a possible ${ceiling.toFixed(1)}`);
+  }
+
   return { ok: bad.length === 0,
            note: bad.slice(0,3).join("  ") ||
                  `${Object.keys(P.VOICES).filter(k => P.VOICES[k].v).length} starting voices, ` +

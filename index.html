@@ -908,6 +908,16 @@ let ENGINE_URL = new URL('engine/tract-worklet.js', document.baseURI).href;
 // ─────────────────────────────────────────────────────────────────────────────
 let ctx=null, node=null, analyser=null, gainNode=null, N=44, started=false;
 let wakeAudio=null;   // resumes a context the browser suspended while the tab was hidden
+
+// ── THE URL CARRIES WHAT YOU CHOSE, NOT WHAT THE PAGE OPENED WITH ─────────
+//
+// setVoice and soundOut both run during boot, and both wrote the URL — so simply arriving
+// stamped an eighty-four character seed and the opening phrase into the address bar without
+// anybody touching anything. Worse, it fed itself: reload, and readURL found that seed, and a
+// seed is not a preset name, so the voice came back as "Custom" having never been customised.
+//
+// Nothing writes until the page has finished starting up.
+let settled = false;
 let energy=null, liveDiam=null, voicedNow=false, voicing=0;
 let nOpen=0, nEnergy=null, bOpenLive=0, bEnergy=null;
 let curShape=null, sequencing=false;      // the tube exists before the wind does
@@ -1417,7 +1427,7 @@ function soundOut(raw){
   // rather than two unrelated ones on opposite sides of the screen.
   const sv=document.getElementById('sayVal');
   if(sv) sv.textContent = raw.length>28 ? raw.slice(0,27).trimEnd()+'\u2026' : raw;
-  if(window.HOLLER_SESSION){ HOLLER_SESSION.writeURL({phrase:raw}); linkUp(); }
+  if(settled && window.HOLLER_SESSION){ HOLLER_SESSION.writeURL({phrase:raw}); linkUp(); }
   const r=g2p(raw);
   // A sound the model can say is not only a posture in ART — diphthongs live in DIPH and a
   // pause is its own thing. Filtering on ART alone silently dropped every diphthong, which
@@ -1555,7 +1565,7 @@ function setVoice(name){
   if(V.v) champion={...defaultVoice(), ...V.v};    // a preset IS a complete voice
   // Carried in the URL so the voice travels to the bench and the wizard. Guarded because
   // setVoice runs during boot, before session.js has necessarily finished loading.
-  if(window.HOLLER_SESSION){ HOLLER_SESSION.writeURL({voice:champion}); linkUp(); }
+  if(settled && window.HOLLER_SESSION){ HOLLER_SESSION.writeURL({voice:champion}); linkUp(); }
   // The button says whose voice it is, so the dock answers its own question without being opened
   const lb=document.getElementById('voiceLb');
   if(lb) lb.textContent = (VOICES[name] && VOICES[name].label) || name;
@@ -2211,16 +2221,32 @@ function linkUp(){
 optional('the shared state', () => {
   const inbound = window.HOLLER_SESSION ? HOLLER_SESSION.readURL() : {};
   if(inbound.voice){
-    // An arriving seed becomes the custom voice rather than overwriting a named preset, so the
-    // presets stay what they are and the dropdown still tells the truth about which is selected.
-    VOICES.custom.v = { ...inbound.voice };
-    setVoice('custom');
+    // A SEED THAT IS A PRESET SELECTS THAT PRESET. Every arriving seed used to become "Custom",
+    // so a link to Man came back as a voice with no name — and because the page also wrote the
+    // URL on load, simply reloading turned Man into Custom without anybody choosing anything.
+    //
+    // Compared on the parameters rather than on the string: a seed round-trips through a
+    // quantiser, so Man encoded and decoded is not bit-identical to Man, and a string comparison
+    // would call it Custom for a rounding error in the fourth decimal place.
+    const near = Object.keys(VOICES).find(k => {
+      if(k === 'custom' || !VOICES[k].v) return false;
+      const P = {...defaultVoice(), ...VOICES[k].v};
+      return HOLLER.VOICE_SPEC.every(sp => {
+        const span = (sp.hi - sp.lo) || 1;
+        return Math.abs((inbound.voice[sp.k] ?? P[sp.k]) - P[sp.k]) / span < 0.005;
+      });
+    });
+    if(near) setVoice(near);
+    else { VOICES.custom.v = { ...inbound.voice }; setVoice('custom'); }
   }
   if(inbound.phrase){
     document.getElementById('wordIn').value = inbound.phrase;
     soundOut(inbound.phrase);
   }
-  linkUp();
+  // Everything the page opens with is in place. From here a change is somebody's choice, and
+  // only from here does it go in the URL.
+  settled = true;
+  if(inbound.voice || inbound.phrase) linkUp();
 });
 pushShape(false);
 paintBtn();                 // set the resting state of every control

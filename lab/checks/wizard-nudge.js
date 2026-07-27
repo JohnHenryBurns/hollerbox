@@ -100,6 +100,19 @@ check("a nudge stays in bounds and stays near its answer", () => {
   }
   if (broke) bad.push(`${broke} of 4 nudged voices came out silent or NaN`);
 
+  // ── AND IT HAS TO BE FINDABLE ────────────────────────────────────────────
+  // The nudge was a fifth button in every question — equal weight to the four things the
+  // question actually asks, and nothing said which answer it would vary. It lives on the chosen
+  // answer now, which is where the relationship is obvious. An affordance nobody can see is not
+  // an affordance, so the chosen option says what a second tap does.
+  if (/opt nudge/.test(page)) bad.push("the nudge is still a button of its own");
+  if (!/tap again to vary/.test(page)) bad.push("nothing tells you a second tap varies the answer");
+  // a tap that changes a number you cannot see is indistinguishable from one that did nothing
+  if (!/@keyframes hb-shimmy/.test(page)) bad.push("no acknowledgement that the tap did anything");
+  if (!/prefers-reduced-motion/.test(page)) bad.push("the shimmy ignores prefers-reduced-motion");
+  // and a varied answer must look different from an untouched one, or the state is invisible
+  if (!/\.opt\.varied/.test(page)) bad.push("a varied answer looks the same as an untouched one");
+
   return { ok: bad.length === 0,
            note: bad.slice(0,3).join("  ") ||
                  `${Object.keys(OWNS).length} questions reach ${reach} of ${P.VOICE_SPEC.length} ` +

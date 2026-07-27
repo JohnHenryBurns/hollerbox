@@ -217,19 +217,11 @@ input[type=range]:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
 .sellabel:after{content:"";width:0;height:0;border-left:4px solid transparent;
   border-right:4px solid transparent;border-top:5px solid var(--dim);margin-top:1px}
 .selwrap select{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
-#voiceSel{flex:1 1 auto;min-width:0;font-family:var(--sans);font-size:.86rem;
-  background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;
-  padding:.6rem .5rem;-webkit-appearance:none;appearance:none;cursor:pointer;
-  background-image:linear-gradient(45deg,transparent 50%,var(--dim) 50%),
-                   linear-gradient(135deg,var(--dim) 50%,transparent 50%);
-  background-position:calc(100% - 15px) 1.15rem, calc(100% - 10px) 1.15rem;
-  background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:1.6rem}
 @media(max-width:420px){
   #dock{gap:.3rem;padding:.5rem .5rem}
   #dock .btn{font-size:.78rem;padding:.6rem .4rem}
   .icn{width:2.4rem}
-  #voiceSel{font-size:.8rem}
-}
+  }
 aside section{display:block}
 #scrim{display:none;position:fixed;inset:0;background:rgba(6,9,11,.55);z-index:30}
 
@@ -330,6 +322,16 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
 .icn.play.solid,.btn.solid{background:var(--hot);border-color:var(--hot);color:#120a06}
 a{color:var(--hot)}
 :focus-visible{outline:2px solid var(--hot);outline-offset:2px}
+
+/* ── THE TWO QUESTIONS ────────────────────────────────────────────────────
+   Everything else in the dock is a verb — sustain, play. These two are the nouns: what it says
+   and who says it. They carry the weight because they are what the page is asking, and a person
+   who presses nothing else should still see the two choices they have. */
+.btn.big{display:inline-flex;align-items:center;gap:.42rem;padding:.5rem .8rem;
+  font-size:.98rem;font-weight:600;background:var(--panel2);border-color:var(--line)}
+.btn.big .gl{font-size:1.05rem;line-height:1;color:var(--hot);opacity:.92}
+.btn.big .lb{letter-spacing:.01em}
+.btn.big:hover,.btn.big:focus-visible{border-color:var(--hot-line);background:var(--hot-soft)}
 </style>
 </head>
 <body>
@@ -469,10 +471,14 @@ a{color:var(--hot)}
   <button class="icn" id="holdBtn" title="Sustain the shape the tract is in"
           aria-label="Sustain">&#8767;</button>
   <button class="icn play" id="playBtn" title="Play the word" aria-label="Play">&#9654;</button>
-  <button class="btn" id="sayBtn" title="What it says">Say&nbsp;&#8230;</button>
-  <span class="selwrap"><span class="sellabel">Voice</span>
-    <select id="voiceSel" aria-label="Voice"></select></span>
-  <button class="btn" id="advBtn">Advanced</button>
+  <!-- The two questions the front door asks. Everything else in this bar is a verb; these two
+       are the nouns, so they are wider, brighter and carry a mark. A quotation for what it says,
+       a wave for who says it — both monochrome, both in every font, neither an emoji that would
+       arrive in somebody else's colours. -->
+  <button class="btn big" id="sayBtn" title="What it says">
+    <span class="gl">&#10077;</span><span class="lb">Say</span></button>
+  <button class="btn big" id="voiceBtn" title="Who says it">
+    <span class="gl">&#8767;</span><span class="lb" id="voiceLb">Voice</span></button>
 </div>
 <div id="specWrap"><canvas id="spectro"></canvas><span id="specTag">spectrogram · 0–10 kHz</span></div>
 <div id="scrim"></div>
@@ -877,14 +883,14 @@ function paintBtn(){
   playBtn.classList.toggle('solid', !!sequencing);
   const sp=document.getElementById('sheetPlay');
   if(sp){ sp.textContent = sequencing ? 'Stop' : 'Play'; sp.classList.toggle('solid', !!sequencing); }
-  const vs=document.getElementById('voiceSel');
-  if(vs && vs.value!==voiceName) vs.value=voiceName;
+  const vl=document.getElementById('voiceLb');
+  if(vl && VOICES[voiceName]) vl.textContent=VOICES[voiceName].label;
   const sv=document.getElementById('stageVoice');
   if(sv && VOICES[voiceName]) sv.innerHTML='voice · <b>'+VOICES[voiceName].label+'</b>';
   const panel=document.querySelector('aside');          // looked up, not closed over
   const open = panel && panel.classList.contains('open');
   const shown = panel ? panel.dataset.show : '';
-  const wb=document.getElementById('wordBtn'), ab=document.getElementById('advBtn');
+  const wb=document.getElementById('wordBtn'), ab=null;   // both live in sheets now
   const q=document.getElementById('quick');
   if(wb) wb.classList.toggle('solid', (!!open && shown==='word') || (q && !q.hidden));
   const qp=document.getElementById('quickPlay');
@@ -1214,7 +1220,21 @@ if(firstVisit) showAbout(true);
 const _closeAbout=showAbout;
 showAbout=function(v){ _closeAbout(v); if(!v && firstVisit){ firstVisit=false; openQuick(true); } };
 
-document.getElementById('advBtn').addEventListener('click',()=>openSheet('adv'));
+// WHO SAYS IT, as a sheet. Every voice carries a note explaining what it is — "a shorter tract
+// lifts every formant, that and not pitch is what makes it sound like a woman" — and a dropdown
+// showed none of it. That is the most interesting writing in the project and it was invisible.
+//
+// Advanced sits at the bottom of the same sheet. Tuning a voice is the last thing you do TO a
+// voice, so it belongs where the voices are, and the dock is a button lighter for it.
+document.getElementById('voiceBtn').addEventListener('click', () => {
+  if(!window.HOLLER_SESSION) return;
+  HOLLER_SESSION.menuStyle();
+  HOLLER_SESSION.voiceMenu({
+    current: voiceName,
+    onPick: k => { setVoice(k); playWord(); },
+    onAdvanced: () => openSheet('adv'),
+  });
+});
 scrim.addEventListener('click',()=>sheet(null));
 document.getElementById('sheetClose').addEventListener('click',()=>sheet(null));
 document.getElementById('sheetPlay').addEventListener('click',()=>{
@@ -1401,7 +1421,9 @@ function setVoice(name){
   // Carried in the URL so the voice travels to the bench and the wizard. Guarded because
   // setVoice runs during boot, before session.js has necessarily finished loading.
   if(window.HOLLER_SESSION){ HOLLER_SESSION.writeURL({voice:champion}); linkUp(); }
-  const sel=document.getElementById('voiceSel'); if(sel) sel.value=name;
+  // The button says whose voice it is, so the dock answers its own question without being opened
+  const lb=document.getElementById('voiceLb');
+  if(lb) lb.textContent = (VOICES[name] && VOICES[name].label) || name;
   const el=document.getElementById('voiceNote'); if(el) el.textContent=V.note;
   const sv=document.getElementById('stageVoice');
   if(sv) sv.innerHTML='voice · <b>'+V.label+'</b>';
@@ -1431,15 +1453,6 @@ function setTiming(dur,drawl){
 }
 const GOAL_WORD=['g','o','l'];   // one gliding vowel, not two — the opening does the rest
 
-(() => {
-  const sel=document.getElementById('voiceSel');
-  for(const [k,V] of Object.entries(VOICES)){
-    const o=document.createElement('option');
-    o.value=k; o.textContent=V.label;
-    sel.appendChild(o);
-  }
-  sel.addEventListener('change',()=>setVoice(sel.value));
-})();
 
 
 // ── one player for any word ─────────────────────────────────────────────

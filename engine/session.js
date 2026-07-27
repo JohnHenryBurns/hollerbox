@@ -428,7 +428,7 @@
   // makes every page look like a different app.
   const ROOMS = [
     { href: 'index.html',     name: 'Throat',       why: 'watch it speak' },
-    { href: 'wizard.html',    name: 'Make a voice', why: 'four questions and a walk' },
+    { href: 'wizard.html',    name: 'Make a Voice', why: 'four questions and a walk' },
     { href: 'lab/bench.html', name: 'Lab',          why: 'the workbench: sweeps, pairs, every knob' },
     // About is a room too, and was a button sitting outside the nav pretending not to be one.
     // It lives as a dialog on the throat page rather than as a file, so the room is a MARKER in

@@ -292,10 +292,22 @@ const BASE = { ...HOLLER.defaultVoice(), ...(HOLLER.VOICES.john.v || {}) };  // 
 // changes is that it is now written down, and an option means the same thing however you
 // arrived.
 const Q = [
+  // A LADDER OF MEASURED VOICES, not four guesses around a middle. "Grown up" was John — a
+  // particular man rather than the idea of one — and there was no way to ask for a woman at all,
+  // which is the single most obvious thing to want from a question about size.
+  //
+  // The values are the presets' own. That also fixed something that had been wrong since this
+  // question was written: "A kid" sat at f0 210, which is a woman's pitch, not a child's. The
+  // measured child is 268. The old option was a woman labelled as a child, and adding a woman is
+  // what made that visible.
+  //
+  // Tract length is what makes a voice a man, a woman or a child — not pitch — so these run
+  // 10.3 cm to 21.4 cm and the pitch follows rather than leads.
   { id:'q1', key:'size', opts:[
     ['Tiny',    'a mouse',   { sect:26, f0a:300, f0b:340, f0c:250 }],
-    ['A kid',   'small',     { sect:33, f0a:210, f0b:240, f0c:180 }],
-    ['Grown up','normal',    { sect:44, f0a:88, f0b:99, f0c:78 }],
+    ['A kid',   'a child',   { sect:31, f0a:268, f0b:310, f0c:244 }],
+    ['A woman', 'shorter',   { sect:37, f0a:200, f0b:232, f0c:178 }],
+    ['A man',   'longer',    { sect:46, f0a:96,  f0b:112, f0c:84  }],
     ['A giant', 'huge',      { sect:54, f0a:70,  f0b:80,  f0c:60  }],
   ]},
   { id:'q2', key:'life', opts:[

@@ -402,7 +402,7 @@ const VOICE_SPEC=[
   // below his own declared minimum, and a seed round-trip would have clamped his tempo back up.
   // Real connected speech averages 70 to 80 milliseconds a sound, so the floor was wrong on its
   // own terms as well.
-  {k:'per',  lo:0.04,   hi:0.80,    d:0.075},   // seconds per sound
+  {k:'per',  lo:0.04,   hi:0.80,    d:0.0496},   // seconds per sound
   {k:'folds',lo:0,      hi:1,       d:0, off:0,},      // 0 = LF waveform, 1 = two-mass oscillator
   // ---- the prosody layer, Phase 8 ----
   // These were module constants until now, which meant the one part of the model that most
@@ -571,7 +571,7 @@ const VOICES = {
 VOICES.john = {
   label: 'John',
   v: { rd: 1.26, press: 0.18, brth: 0.19, f0a: 88, f0b: 99, f0c: 78,
-       drawl: 0.08, sect: 44, per: 0.075, artT: 0.020 },
+       drawl: 0.08, sect: 44, per: 0.0496, artT: 0.020 },
   note: 'Rebuilt off man: his measured pitch and voice quality on the shared postures, at a '
       + 'tract length that agrees with his pitch. The fitted version is `johnfit`.'
 };
@@ -850,13 +850,31 @@ function closureFor(sym, stopHold, ratio){
 // and one nobody had thought to look for here, because nothing longer than a probe was ever
 // tested until the passages went into the phrase list.
 //
-// D = per x n x (40/n)^0.285 fits all three within five per cent. Forty sounds is roughly a
-// short sentence and is where the exponent does nothing, so `per` keeps meaning what it meant
-// for anything sentence-sized.
-const LEN_REF = 40, LEN_K = 0.285;
+// A FIXED COST PLUS A RATE, not a power law. The first version here was
+// D = per x n x (40/n)^0.285, fitted on three points paired to texts BY DURATION, because the
+// reading order was unknown. Told the order, the pairing changed and so did the shape:
+//
+//   15 sounds  1.65 s   0.110 s a sound
+//   18         1.77     0.098
+//   37         2.56     0.069
+//   46         2.83     0.061
+//   47         2.71     0.058
+//   87         5.28     0.061
+//
+// It FLATTENS above about forty rather than continuing to fall — 87 sounds costs the same per
+// sound as 46. A power law cannot do that. It keeps decreasing, and it under-ran the longest
+// phrase by 14% while over-running the shortest by the same.
+//
+// Least squares on all six: 735 ms of fixed cost per utterance plus 49.6 ms a sound. Worst point
+// 13%, against 24% for the power law and 60% for the constant `per` before either. It is also
+// the more sensible shape — an utterance has a beginning and an end that cost time regardless of
+// how much lies between them, and that is what a constant term is.
+//
+// `per` is the rate now. The fixed part is expressed in units of it, so a slow voice is slow
+// throughout rather than slow in the middle and brisk at the edges.
+const LEN_FIXED = 14.8;      // 735 ms of fixed cost, in units of the 49.6 ms rate
 function phraseTime(n, per){
-  const c = Math.max(1, n);
-  return per * c * Math.pow(LEN_REF / c, LEN_K);
+  return per * (LEN_FIXED + Math.max(1, n));
 }
 
 function rateFor(chain, D, v){

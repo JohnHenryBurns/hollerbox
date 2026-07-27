@@ -214,7 +214,7 @@ const ART = {
   "bodyHi": 0.28,
   "tipPos": 0.85,
   "tipHi": 0.85,
-  "lip": 0.975
+  "lip": 0.931
  },
  "ʃ": {
   "jaw": 0.45,
@@ -276,9 +276,9 @@ const ART = {
   "jaw": 0.45,
   "bodyPos": 0.55,
   "bodyHi": 0.28,
-  "tipPos": 0.862,
+  "tipPos": 0.842,
   "tipHi": 0.86,
-  "lip": 0.677
+  "lip": 0.452
  },
  "θ": {
   "jaw": 0.43,
@@ -294,7 +294,7 @@ const ART = {
   "bodyHi": 0.2,
   "tipPos": 0.93,
   "tipHi": 0.8,
-  "lip": 0.759
+  "lip": 0.86
  }
 };
 

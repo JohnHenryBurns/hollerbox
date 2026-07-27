@@ -904,6 +904,7 @@ let ENGINE_URL = new URL('engine/tract-worklet.js', document.baseURI).href;
 
 // ─────────────────────────────────────────────────────────────────────────────
 let ctx=null, node=null, analyser=null, gainNode=null, N=44, started=false;
+let wakeAudio=null;   // resumes a context the browser suspended while the tab was hidden
 let energy=null, liveDiam=null, voicedNow=false, voicing=0;
 let nOpen=0, nEnergy=null, bOpenLive=0, bEnergy=null;
 let curShape=null, sequencing=false;      // the tube exists before the wind does
@@ -940,6 +941,15 @@ async function start(){
     // The tube is drawn from these. Without them `liveDiam` stays null, the tube falls back to
     // the static shape, and it neither moves nor colours.
     onMessage: e => {
+      // A state message carries no picture — only whether the tract is speaking, and it arrives
+      // the moment that changes rather than on the next 1.49-second tick. Taking the picture
+      // fields from it would blank the tube between frames.
+      if(e.data.state){
+        const changed = (e.data.seq!==sequencing) || (e.data.v!==voicing);
+        voicedNow=e.data.on; sequencing=e.data.seq; voicing=e.data.v;
+        if(changed) paintBtn();
+        return;
+      }
       energy=e.data.e; liveDiam=e.data.d; voicedNow=e.data.on;
       nOpen=e.data.nOpen||0; nEnergy=e.data.nE||null;
       bOpenLive=e.data.bOpen||0; bEnergy=e.data.bE||null;
@@ -954,7 +964,7 @@ async function start(){
       nd.connect(analyser); analyser.connect(gainNode); gainNode.connect(c.destination);
     }
   });
-  ctx = a.ctx; node = a.node;
+  ctx = a.ctx; node = a.node; wakeAudio = a.wake;
   // TAKE THE TRACT LENGTH THE WORKLET ACTUALLY GOT. startAudio derives it from the device's
   // sample rate when the caller does not say — 44 sections at 44.1 kHz and 48 at 48 — and this
   // page then went on building keyframes at its own N. On a 48 kHz device the first word was
@@ -1249,6 +1259,7 @@ function applyVoice(v){
 }
 async function speakWith(v){
   await start();
+  if(wakeAudio) wakeAudio();
   if(!node){ engineDown(); return; }    // audio never came up — say so rather than nothing
   applyVoice(v);
   // One speak path, shared with the bench and the wizard. The slider is a STRETCH now rather
@@ -1585,6 +1596,7 @@ const isDiph=sym=>!!DIPH[sym];
 async function playWord(){
   if(!chain.length) return;
   await start();
+  if(wakeAudio) wakeAudio();
   if(!node) return;
   // The voice owns the pitch, and now the shared path owns everything else. The drawl slider
   // still applies, through the voice rather than as a loose argument — which is the drift this

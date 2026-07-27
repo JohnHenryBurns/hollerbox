@@ -160,7 +160,23 @@
     // quietly dropping a line out of a function body.
     if (o.onMessage) node.port.onmessage = o.onMessage;
     await new Promise(r => setTimeout(r, o.warm === undefined ? 300 : o.warm));
-    return { ctx, node, n };
+
+    // ── COMING BACK TO THE TAB ──────────────────────────────────────────
+    //
+    // A browser suspends an AudioContext when its tab is hidden, and does not resume it on the
+    // way back. Nothing here resumed it either — the wizard did, but only inside speak(), and
+    // index.html did not at all — so switching tabs and returning left the page silent until it
+    // was reloaded. The engine was fine; it simply was not being run.
+    //
+    // Resumed on the way back, and again before anything is spoken, because a context can also
+    // be suspended at birth: a browser will not start one until it has seen a gesture, and the
+    // first Play IS that gesture.
+    const wake = () => { if (ctx.state === 'suspended') ctx.resume().catch(() => {}); };
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
+    root.addEventListener('focus', wake);
+    root.addEventListener('pageshow', wake);
+
+    return { ctx, node, n, wake };
   }
 
   // ── ONE LIBRARY OF THINGS TO SAY ────────────────────────────────────────

@@ -477,12 +477,16 @@
       '.hb-row{display:block;width:100%;text-align:left;background:none;border:0;',
       '  color:#f1f5f7;padding:.62rem 1.1rem;cursor:pointer;font:inherit}',
       '.hb-row:hover,.hb-row:focus{background:#212930;outline:none}',
+      '.hb-row:focus-visible{box-shadow:inset 3px 0 0 #e2622e}',
       '.hb-row b{display:block;font-weight:600;font-size:.98rem}',
       '.hb-row small{display:block;color:#8b969c;font:.76rem/1.45 ui-monospace,monospace;',
       '  margin-top:.1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-      '.hb-row.on b:after{content:" \\2713";color:#cfe3ff}',
+      // The accent, spelled out rather than read from a variable: this stylesheet is injected
+      // into whichever page asks, and a page that has not declared --hot would get nothing.
+      '.hb-row.on b{color:#e2622e}',
+      '.hb-row.on b:after{content:" \\2713"}',
       '.hb-row-action{border-bottom:1px solid #2f373d;margin-bottom:.2rem}',
-      '.hb-row-action b{color:#cfe3ff}',
+      '.hb-row-action b{color:#e2622e}',
     ].join('');
     document.head.appendChild(st);
   }

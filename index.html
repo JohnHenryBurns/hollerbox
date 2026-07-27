@@ -413,6 +413,17 @@ header{border-bottom:1px solid var(--hot-line)}
   font-size:.78rem;font-weight:400;padding:.35rem .45rem}
 .btn.quiet:hover,.btn.quiet:focus-visible{color:var(--ink);border-color:var(--line);background:none}
 .btn.quiet.here{background:var(--hot);color:var(--hot-ink);border-color:var(--hot);font-weight:600}
+
+/* A tap that restarts a phrase is indistinguishable from one that was ignored: the button already
+   says Stop and the sound just begins again. A single flash says it landed. This is what the
+   instinct to disable the button is really after — acknowledgement — and it costs nothing and
+   takes nothing away. */
+@keyframes hb-tapped{
+  0%  {box-shadow:0 0 0 0 var(--hot)}
+  100%{box-shadow:0 0 0 9px rgba(255,138,76,0)}
+}
+.icn.play.tapped{animation:hb-tapped .32s ease-out}
+@media (prefers-reduced-motion:reduce){ .icn.play.tapped{animation:none} }
 </style>
 </head>
 <body>
@@ -1271,9 +1282,11 @@ function applyVoice(v){
   node.port.postMessage({type:'voice', v});
 }
 async function speakWith(v){
+  const mine = ++turn;
   await start();
   if(wakeAudio) wakeAudio();
   if(!node){ engineDown(); return; }    // audio never came up — say so rather than nothing
+  if(mine !== turn) return;             // superseded by a later tap while the audio was starting
   applyVoice(v);
   // One speak path, shared with the bench and the wizard. The slider is a STRETCH now rather
   // than a target duration in seconds — which is what it should always have been, and is why
@@ -1609,11 +1622,22 @@ const DIPH = HOLLER.DIPH;
 const isDiph=sym=>!!DIPH[sym];
 // Delegates to the shared layer. The app's call sites are unchanged; what used to be
 // closed-over state (N, and the voice's own postures) is passed explicitly.
+// ── ONE UTTERANCE AT A TIME, AND THE LAST TAP WINS ────────────────────────
+// Every call takes a ticket. After the await that starts the audio, a call whose ticket is stale
+// stops before it posts anything, so a second tap supersedes the first rather than racing it.
+//
+// Deliberately not disabling the controls while a phrase plays. A passage is five seconds, and
+// locking them for it means you cannot stop, cannot change your mind, and cannot compare two
+// voices without waiting the first one out. The engine supports interruption — a new goal
+// replaces the old and blends from wherever the tract is — so being interrupted is a supported
+// thing rather than a hazard to be fenced off.
+let turn = 0;
 async function playWord(){
   if(!chain.length) return;
+  const mine = ++turn;
   await start();
   if(wakeAudio) wakeAudio();
-  if(!node) return;
+  if(!node || mine !== turn) return;          // superseded while the audio was starting
   // The voice owns the pitch, and now the shared path owns everything else. The drawl slider
   // still applies, through the voice rather than as a loose argument — which is the drift this
   // was: three call sites each choosing which of buildWord's options to pass.
@@ -1623,6 +1647,11 @@ async function playWord(){
   artTrack={t0:performance.now(), keys:seq.word.art, end:seq.end};
   playSeg={t0:performance.now(), seg:seq.seg};       // the picture follows the same plan
   sequencing=true; paintBtn();          // respond immediately, the engine confirms in a few ms
+  // A tap that RESTARTS a phrase looks identical to one that was ignored, because the button was
+  // already showing Stop and the sound simply begins again. One frame of the accent says the tap
+  // landed — which is the whole reason to consider disabling the button, without disabling it.
+  const pb = document.getElementById('playBtn');
+  if(pb){ pb.classList.remove('tapped'); void pb.offsetWidth; pb.classList.add('tapped'); }
 }
 playBtn.addEventListener('click', ()=>{
   if(sequencing){                       // cut it short

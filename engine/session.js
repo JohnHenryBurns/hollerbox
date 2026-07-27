@@ -349,7 +349,12 @@
     for (const a of document.querySelectorAll('a[href]')) {
       const href = a.getAttribute('href') || '';
       if (!/\.html(\?|#|$)/.test(href)) continue;          // only our own pages
-      a.setAttribute('href', href.split('#')[0] + tail);
+      // A room may carry a marker of its own in the hash — About does. State is written onto
+      // every link, and a naive rewrite dropped it, so the About link silently became a link to
+      // the throat. Its own key goes back on the front.
+      const mark = a.dataset && a.dataset.mark;
+      a.setAttribute('href', href.split('#')[0] +
+        (mark ? (tail ? tail + '&' + mark : '#' + mark) : tail));
     }
   }
 
@@ -402,6 +407,11 @@
     { href: 'wizard.html',    name: 'Make a voice', why: 'four questions and a walk' },
     { href: 'lab/bench.html', name: 'Lab',          why: 'the workbench: sweeps, pairs, every knob',
       quiet: true },
+    // About is a room too, and was a button sitting outside the nav pretending not to be one.
+    // It lives as a dialog on the throat page rather than as a file, so the room is a MARKER in
+    // the hash: every page links to it, index opens it on arrival, and it is shareable like any
+    // other state. `mark` is what carryState has to preserve — see there.
+    { href: 'index.html',     name: 'About',        why: 'what this is and why', mark: 'about' },
   ];
 
   /** Render the navigation into an element. `here` is the file this page is, so it can mark
@@ -413,12 +423,15 @@
     const up = /\//.test(here) ? '../' : '';
     host.innerHTML = '';
     for (const r of ROOMS) {
-      const mine = r.href.replace(/^.*\//, '') === here.replace(/^.*\//, '');
+      // A marker room is never "here": About is a thing you open, not a place you are, and
+      // marking it current on the page it opens over would be a lie.
+      const mine = !r.mark && r.href.replace(/^.*\//, '') === here.replace(/^.*\//, '');
       const a = document.createElement(mine ? 'span' : 'a');
       a.className = 'btn' + (mine ? ' here' : '') + (r.quiet ? ' quiet' : '');
       a.textContent = r.name;
       a.title = r.why;
-      if (!mine) a.setAttribute('href', up + r.href);
+      if (!mine) a.setAttribute('href', up + r.href + (r.mark ? '#' + r.mark : ''));
+      if (r.mark) a.dataset.mark = r.mark;
       host.appendChild(a);
     }
     if (state) carryState(state);

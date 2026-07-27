@@ -328,7 +328,29 @@
     }
   }
 
-  root.HOLLER_SESSION = { planWord, planSpeech, chainFor, loadEngine, startAudio,
+  // ── THE TRACT LENGTH THE WORKLET ACTUALLY HAS ───────────────────────────
+  //
+  // A `voice` message does NOT resize the tract; only a `tract` message does. Build keyframes for
+  // one length and hand them to a processor at another and the tail of every frame is undefined:
+  // measured, a 26-section word played on a 44-section tract gives 72,064 non-finite samples.
+  // NaN, and silence rather than a crash, which is the hardest kind of fault to trace.
+  //
+  // The bench knew this and kept a `workletN`. index.html knew it. The wizard did not, and its
+  // first question changes `sect` — so the one page most likely to change tract length was the
+  // one page not guarding it. Kept here so that a page cannot be written without the guard.
+  let liveN = 0;
+  function tractFor(node, voice, hint) {
+    const P = eng();
+    const want = Math.max(14, Math.min(72, Math.round((voice && voice.sect) || hint || 44)));
+    if (node && want !== liveN) {
+      node.port.postMessage({ type: 'tract', n: want,
+        diam: P.articulate((voice && voice.art && voice.art['ə']) || P.ART['ə'], want) });
+      liveN = want;
+    }
+    return want;
+  }
+
+  root.HOLLER_SESSION = { planWord, planSpeech, chainFor, loadEngine, startAudio, tractFor,
                           PHRASES, mountSelector, readURL, writeURL, carryState };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 

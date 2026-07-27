@@ -199,15 +199,20 @@ const start = async () => {
   ctx = a.ctx; node = a.node; N = a.n;
 };
 
-let speakAs = null;
-async function speak(text){
+// The voice is an ARGUMENT, not a global a caller sets and clears around the call. It used to be
+// `speakAs = battle.A; speak(...); speakAs = null` — and speak is async, so the clear ran before
+// the read and both buttons played whatever the questions currently said. The A/B comparison has
+// never worked. Then a later edit dropped the listeners entirely and it stopped doing anything at
+// all, which is the "fragile, stops speaking" report.
+async function speak(text, who){
   await start();
   if (!node) return;
   if (ctx.state === 'suspended') await ctx.resume();
-  const v = speakAs || current();
-  const want = Math.round(v.sect || 44);
-  if (want !== N) { N = want; node.port.postMessage({ type:'tract', n:N,
-                    diam: HOLLER.articulate(HOLLER.ART['ə'], N) }); }
+  const v = who || current();
+  // The resize lives in session.js, which tracks what the worklet actually has. This page used
+  // to compare against its own local N and assume they matched — and it is the page whose first
+  // question changes tract length.
+  N = SESSION.tractFor(node, v, N);
   node.port.postMessage({ type:'voice', v });
   const { ph, stress: st } = SESSION.chainFor(text, SPELL);
   if (!ph.length) return;
@@ -328,6 +333,29 @@ function linkUp(){ SESSION.carryState({ voice: current(), phrase: picker.phrase(
 /** What every button on this page plays: whatever the shared selector currently holds. */
 const sample = () => picker.phrase();
 document.getElementById('readIt').addEventListener('click', () => speak(sample()));
+
+// ── the walk's controls, which had no listeners at all ────────────────────
+document.getElementById('playA').addEventListener('click', () => {
+  if (!battle) startBattle();
+  speak(sample(), battle.A);
+});
+document.getElementById('playB').addEventListener('click', () => {
+  if (!battle) startBattle();
+  speak(sample(), battle.B);
+});
+document.getElementById('keepA').addEventListener('click', () => {
+  if (!battle) return;
+  battle.keep = battle.A; startBattle(); linkUp(); speak(sample(), battle.keep);
+});
+document.getElementById('keepB').addEventListener('click', () => {
+  if (!battle) return;
+  battle.keep = battle.B; startBattle(); linkUp(); speak(sample(), battle.keep);
+});
+document.getElementById('battleOff').addEventListener('click', () => {
+  battle = null; round = 0;
+  document.getElementById('battleCount').textContent = '';
+  showSeed(); speak(sample());
+});
 document.getElementById('vname').addEventListener('input', showSeed);
 document.getElementById('save').addEventListener('click', async () => {
   const b = document.getElementById('save');

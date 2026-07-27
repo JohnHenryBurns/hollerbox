@@ -1860,6 +1860,39 @@ check("the fricative pairs share a place of articulation", () => {
                  `s/z ${seen["s"].toFixed(0)}/${seen["z"].toFixed(0)} Hz` };
 });
 
+// ── every control on every page does something ────────────────────────────
+check("no button or input is left unwired", () => {
+  // Five of the wizard's controls — playA, playB, keepA, keepB, battleOff — had no event
+  // listeners at all. The whole walk rendered and did nothing, and it was reported as the page
+  // being fragile and the voice stopping, because a button that does nothing is indistinguishable
+  // from one that failed.
+  //
+  // Introduced by a regex rewiring the phrase picker, which swallowed the block that wired the
+  // battle. NOTHING IN THIS FILE COULD SEE IT: every check reads the engine or a page's data, and
+  // none reads a page for whether its own markup is connected to its own script.
+  const fs = require("fs"), bad = [];
+  const PAGES = ["index.html", "wizard.html", "lab/bench.html"];
+  for (const page of PAGES) {
+    const t = fs.readFileSync(__dirname + "/../" + page, "utf8");
+    // an interactive element with an id is a promise that something happens
+    const ids = [...t.matchAll(/<(button|input|select)\b[^>]*\bid="([a-zA-Z0-9_]+)"/g)].map(m => m[2]);
+    const dead = [];
+    for (const id of new Set(ids)) {
+      // wired directly, looked up by id anywhere, or referenced as a bare global (some pages
+      // rely on the implicit window[id] binding, which is ugly and legal and in use)
+      const used = new RegExp("getElementById\\(['\"]" + id + "['\"]\\)|" +
+                              "querySelector\\([^)]*#" + id + "|" +
+                              "\\b" + id + "\\s*\\.(addEventListener|value|checked|textContent|onclick)")
+                     .test(t);
+      if (!used) dead.push(id);
+    }
+    if (dead.length) bad.push(`${page}: ${dead.join(" ")}`);
+  }
+  return { ok: bad.length === 0,
+           note: bad.length ? bad.join("  |  ")
+               : `${PAGES.length} pages, every button, input and select reachable from script` };
+});
+
 // ── magic e, and what comes before a rule ─────────────────────────────────
 check("a magic e makes the vowel English actually has", () => {
   // Every magic-e vowel in the table produced what English has — a gives eɪ, i gives aɪ — except

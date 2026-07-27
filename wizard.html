@@ -138,15 +138,27 @@ main{max-width:44rem;margin:0 auto;padding:1rem 1rem 4rem}
 (async () => {
 // The engine is fetched, not linked, for the same reason index.html does it: all of it at once,
 // no version tokens to keep in step.
-// ONE BOOTSTRAP. Everything else — finding the engine, fetching it, starting the audio, warming
-// it up — lives in session.js, which the other two pages load the same way. This page used to
-// carry a near-copy of index.html's loader, written by copying it, and the two had already begun
-// to drift.
-await new Promise((res, rej) => {
-  const t = document.createElement('script');
-  t.src = 'engine/session.js'; t.onload = res; t.onerror = rej;
-  document.head.appendChild(t);
-});
+// ONE BOOTSTRAP, AND IT IS FETCHED LIKE EVERYTHING ELSE.
+//
+// This used to be a plain <script src="engine/session.js"> — the one file in the project loaded
+// with a tag while the rest is fetched no-store. That reintroduced exactly the version skew the
+// fetching was for: a browser holding a cached session.js gets a NEW page calling a function an
+// OLD module does not have, the call throws, and the boot dies where it stands. Reported as the
+// tract not rendering, the chain stuck on its placeholder and the navigation missing — all one
+// throw, because everything after it never ran.
+async function bootSession(){
+  const url = 'engine/session.js';
+  try {
+    const r = await fetch(url, { cache: 'no-store' });
+    if (r.ok) { new Function(await r.text())(); return; }
+  } catch (e) { /* file://, offline — fall through */ }
+  await new Promise((res, rej) => {
+    const t = document.createElement('script');
+    t.src = url; t.onload = res; t.onerror = rej;
+    document.head.appendChild(t);
+  });
+}
+await bootSession();
 await window.HOLLER_SESSION.loadEngine();
 
 const HOLLER = window.HOLLER, SPELL = window.HOLLER_SPELL, SESSION = window.HOLLER_SESSION;

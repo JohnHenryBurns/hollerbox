@@ -323,7 +323,7 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
 
   <aside data-show="word">
     <div class="sheethead">
-      <span id="sheetTitle">Word</span>
+      <span id="sheetTitle">Phrase</span>
       <button class="btn" id="sheetPlay">Play</button>
       <button class="btn" id="sheetClose">Close</button>
     </div>
@@ -434,7 +434,6 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
     <span id="phrasePick"></span></span>
   <span class="selwrap"><span class="sellabel">Voice</span>
     <select id="voiceSel" aria-label="Voice"></select></span>
-  <button class="btn" id="wordBtn">Word</button>
   <button class="btn" id="advBtn">Advanced</button>
 </div>
 <div id="specWrap"><canvas id="spectro"></canvas><span id="specTag">spectrogram · 0–10 kHz</span></div>
@@ -519,7 +518,7 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
         now makes. A nasal shape gives you a hum; a stop gives you silence, because a sealed
         tube has nothing to radiate. <b>▶</b> is the other thing entirely — a whole word,
         articulated in sequence. One is a note, the other is a melody. The <b>voice</b> picker
-        changes who is talking, <b>Word</b> is where a word comes from, and <b>Advanced</b>
+        changes who is talking, <b>Phrase</b> is where the words come from, and <b>Advanced</b>
         holds the articulators, the timing, the tract length and the Lab.</p>
 
         <p><b>Play word</b> speaks the word you have built. It opens on <i>goal</i>.
@@ -532,7 +531,7 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
         voice at the same pitch rings a tube that is acoustically half the size. You can hear
         source and filter come apart.</p>
 
-        <p><b>Word</b> is where a word comes from. Type one and it is sounded out for you;
+        <p><b>Phrase</b> is where the words come from. Type anything and it is sounded out for you;
         tap the sounds it chose and a phoneme keyboard opens, with a backspace, so you can
         correct it the way you would correct a spelling. <b>New word</b> starts clean. The
         timing sliders set how long the word takes and how much the first vowel is stretched.</p>
@@ -724,15 +723,27 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
  * Falls back to a plain script tag if fetch cannot work, which is the file:// case.
  */
 (async () => {
-// ONE BOOTSTRAP. Finding the engine, fetching it, starting the audio and warming it up all live
-// in session.js, which the bench and the wizard load the same way. There were three loaders and
-// three starts before this, and that code had already produced two bugs on its own — the version
-// token skew and the start race — both fixed once, in one copy of three.
-await new Promise((res, rej) => {
-  const t = document.createElement('script');
-  t.src = 'engine/session.js'; t.onload = res; t.onerror = rej;
-  document.head.appendChild(t);
-});
+// ONE BOOTSTRAP, AND IT IS FETCHED LIKE EVERYTHING ELSE.
+//
+// This used to be a plain <script src="engine/session.js"> — the one file in the project loaded
+// with a tag while the rest is fetched no-store. That reintroduced exactly the version skew the
+// fetching was for: a browser holding a cached session.js gets a NEW page calling a function an
+// OLD module does not have, the call throws, and the boot dies where it stands. Reported as the
+// tract not rendering, the chain stuck on its placeholder and the navigation missing — all one
+// throw, because everything after it never ran.
+async function bootSession(){
+  const url = 'engine/session.js';
+  try {
+    const r = await fetch(url, { cache: 'no-store' });
+    if (r.ok) { new Function(await r.text())(); return; }
+  } catch (e) { /* file://, offline — fall through */ }
+  await new Promise((res, rej) => {
+    const t = document.createElement('script');
+    t.src = url; t.onload = res; t.onerror = rej;
+    document.head.appendChild(t);
+  });
+}
+await bootSession();
 await window.HOLLER_SESSION.loadEngine();
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -802,7 +813,13 @@ async function start(){
       nd.connect(analyser); analyser.connect(gainNode); gainNode.connect(c.destination);
     }
   });
-  ctx = a.ctx; node = a.node; N = a.n;
+  ctx = a.ctx; node = a.node;
+  // TAKE THE TRACT LENGTH THE WORKLET ACTUALLY GOT. startAudio derives it from the device's
+  // sample rate when the caller does not say — 44 sections at 44.1 kHz and 48 at 48 — and this
+  // page then went on building keyframes at its own N. On a 48 kHz device the first word was
+  // built for a tract the worklet did not have, and only came right once something resized it.
+  // Reported as the opening line playing very fast the first time and correctly afterwards.
+  N = HOLLER_SESSION.tractFor(node, champion, a.n);
   started = true;
   applyVoice(champion);
   pushShape(true);
@@ -1023,7 +1040,7 @@ CONS_KEYS.forEach(k=>makeKey(k, document.getElementById('ckeys')));
 
 // ── two sheets: what to say, and how the instrument behaves ──
 const aside=document.querySelector('aside'), scrim=document.getElementById('scrim');
-const SHEET_TITLE={word:'Word', adv:'Advanced'};
+const SHEET_TITLE={word:'Phrase', adv:'Advanced'};
 function sheet(name){                     // name = 'word' | 'tract' | 'lab' | null
   if(name){
     aside.dataset.show=name;
@@ -1158,9 +1175,6 @@ if(firstVisit) showAbout(true);
 const _closeAbout=showAbout;
 showAbout=function(v){ _closeAbout(v); if(!v && firstVisit){ firstVisit=false; openQuick(true); } };
 
-document.getElementById('wordBtn').addEventListener('click',()=>{
-  if(!quick.hidden) openQuick(false); else { sheet(null); openQuick(true); }
-});
 document.getElementById('advBtn').addEventListener('click',()=>openSheet('adv'));
 scrim.addEventListener('click',()=>sheet(null));
 document.getElementById('sheetClose').addEventListener('click',()=>sheet(null));
@@ -1195,6 +1209,9 @@ function mountPhrases(){
   const p = HOLLER_SESSION.mountSelector(host, {
     voices: [],                                   // the dock has its own voice dropdown
     onPhrase: t => { document.getElementById('wordIn').value = t; soundOut(t); playWord(); },
+    // "Write your own" opens the editor that used to be behind its own button. It is the same
+    // question — what should it say — so it belongs in the same control.
+    onCustom: () => { sheet(null); openQuick(true); },
   });
   // In the dock, so the front door is: a throat, what it says, whose voice. The typing box and
   // the phoneme keyboard live behind Word, where somebody who wants them will look.
@@ -1308,14 +1325,21 @@ function applyDelivery(){
   const n=Math.max(1,chain.length);
   const per=champion.per||0.17;
   setTiming(Math.max(0.35, Math.min(5, n*per)), champion.drawl);
-  const want=Math.round(champion.sect||44);
+  // Through the guard, which tracks what the worklet actually has. This compared against a local
+  // N and posted its own resize — and startAudio picks the length from the DEVICE SAMPLE RATE
+  // when the caller does not say, so on a 48 kHz machine the two disagreed from the first frame.
+  const want = window.HOLLER_SESSION
+             ? HOLLER_SESSION.tractFor(node, champion, N)
+             : Math.round(champion.sect||44);
   if(want!==N){
     N=want;
     curShape=articulate(curArt,N);
-    if(node) node.port.postMessage({type:'tract', n:N, diam:curShape});
     buildTubes();
+    // The length in centimetres does not need the audio context, only a sample rate — and this
+    // waited for one, so before the first play it read "— cm" and looked broken. 44100 until the
+    // context exists and can say otherwise; the number is then corrected on the next shape.
     const lc=document.getElementById('lenCm');
-    if(lc && ctx) lc.textContent=(N*350/(ctx.sampleRate*2)*100).toFixed(1);
+    if(lc) lc.textContent=(N*350/((ctx?ctx.sampleRate:44100)*2)*100).toFixed(1);
     const sc=document.getElementById('secCount'); if(sc) sc.textContent=N;
   }
   applyVoice(champion);
@@ -1930,10 +1954,23 @@ lastTyped='goal'; chainSource='built in';   // the markup already carries the wo
 // recognisable sentence in English. Armstrong gives /smæl/ for "small" and Apollo gives /haʊstən/
 // for "Houston" — neither can be the thing a stranger hears first.
 setVoice('man');
-mountPhrases();                    // the shared list, once the engine is up
-HOLLER_SESSION.mountNav('nav', 'index.html');
+
+// ── THE BOOT DOES NOT DIE ON A DECORATION ─────────────────────────────────
+// The tract, the chain and the voice are what this page IS. The phrase list and the navigation
+// are things it also has. They used to run in the same straight line, so a session.js that was
+// one version behind — cached, while the page was fresh — threw on a function it did not have
+// and took the tract down with it. The page rendered its header and nothing else.
+//
+// Anything below is allowed to fail alone and say so. Nothing below is allowed to stop the
+// tract from drawing.
+const optional = (what, fn) => {
+  try { fn(); } catch (e) { console.warn('hollerbox: ' + what + ' unavailable — ' + e.message); }
+};
+optional('the phrase list', () => mountPhrases());
+optional('the navigation',  () => HOLLER_SESSION.mountNav('nav', 'index.html'));
 // and the chain is the opening line, not a hand-built one — so the door opens on something a
 // stranger recognises rather than on three phonemes spelling "goal"
+// The opening line, and the chain that draws it. NOT optional — this is the page.
 soundOut(document.getElementById('wordIn').value);
 drawChain();
 
@@ -1943,7 +1980,7 @@ drawChain();
 function linkUp(){
   if(window.HOLLER_SESSION) HOLLER_SESSION.carryState({ voice: champion, phrase: lastTyped });
 }
-{
+optional('the shared state', () => {
   const inbound = window.HOLLER_SESSION ? HOLLER_SESSION.readURL() : {};
   if(inbound.voice){
     // An arriving seed becomes the custom voice rather than overwriting a named preset, so the
@@ -1956,7 +1993,7 @@ function linkUp(){
     soundOut(inbound.phrase);
   }
   linkUp();
-}
+});
 pushShape(false);
 paintBtn();                 // set the resting state of every control
 resize(); frame();

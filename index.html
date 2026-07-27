@@ -1837,13 +1837,29 @@ function artNow(){
 let lastBounce=-2;
 function bounceWord(){
   let idx=-1;
-  if(playSeg && sequencing){
+  // The highlight follows the plan too, for the same reason: a late or stale "not speaking"
+  // from the worklet should not blank the chips while the voice is still saying them.
+  if(playSeg){
     const t=(performance.now()-playSeg.t0)/1000;
     for(let i=0;i<playSeg.seg.length;i++){
       const g=playSeg.seg[i];
       if(t>=g.a-0.02 && t<=g.b+0.02){ idx=i; break; }
     }
-  } else if(!sequencing) playSeg=null;
+  }
+  // PLAYSEG EXPIRES ON ITS OWN CLOCK. It used to be nulled the moment `sequencing` went false —
+  // but it is only ever SET by playWord, so anything that cleared it early destroyed the track
+  // for good and no later "speaking" message could bring it back. The karaoke then had nothing
+  // to follow while the voice carried on, which is what changing views and then changing phrases
+  // could produce: the worklet reports state on change, and a `false` in flight from the end of
+  // the previous word lands after the new one has already started.
+  //
+  // It knows its own length. When the clock passes the end of the plan the word is over, whoever
+  // else has an opinion.
+  if(playSeg){
+    const t=(performance.now()-playSeg.t0)/1000;
+    const last=playSeg.seg[playSeg.seg.length-1];
+    if(t > (last ? last.b : 0) + 0.25) playSeg=null;
+  }
 
   // ── THE PLAYHEAD DOES NOT MOVE; THE WORD DOES ────────────────────────────
   //
@@ -1865,7 +1881,9 @@ function bounceWord(){
       const chips=kar.querySelectorAll('.chip,.gap');
       const mid=c=>c.offsetLeft + c.offsetWidth/2;
       let want=null;
-      if(playSeg && sequencing && chips.length){
+      // Driven by the plan, not by the flag. `sequencing` is the worklet's opinion and it arrives
+      // late and can arrive stale; the plan is what the page asked for and it has a clock.
+      if(playSeg && chips.length){
         const t=(performance.now()-playSeg.t0)/1000;
         // which segment, and how far through it
         let i=0; while(i<playSeg.seg.length-1 && t>playSeg.seg[i].b) i++;

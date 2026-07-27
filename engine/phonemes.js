@@ -568,12 +568,21 @@ const VOICES = {
   custom:{ label:'Custom', note:'Yours. Tune it in the Lab, then copy the seed — a seed is the whole voice, tract length and timing included.', v:null },
 };
 
+// Tuned by ear in the wizard and sent as a seed. Pressed rather than modal, with real jitter and
+// a shorter tract than the pitch alone would suggest — 15.8 cm against the 17.5 that 96 Hz would
+// imply, which is what makes it sound like a particular person rather than a size.
+//
+// `per` IS NOT FROM THE SEED. The seed carried 0.0952, which was this preset's value until the
+// duration law was fitted against a recording the same morning — so it predates the fix and would
+// have undone it: 4.93 s for the Hamlet line against the 2.56 s it was actually read in, nearly
+// twice too slow. Everything else in the seed is voice quality and is taken as sent.
 VOICES.john = {
   label: 'John',
-  v: { rd: 1.26, press: 0.18, brth: 0.19, f0a: 88, f0b: 99, f0c: 78,
-       drawl: 0.08, sect: 44, per: 0.0496, artT: 0.020 },
-  note: 'Rebuilt off man: his measured pitch and voice quality on the shared postures, at a '
-      + 'tract length that agrees with his pitch. The fitted version is `johnfit`.'
+  v: { rd: 1.26, press: 0.70, brth: 0.30, jit: 3, f0a: 96, f0b: 112, f0c: 84,
+       drawl: 0.08, sect: 39.76, per: 0.0496, artT: 0.020,
+       wklev: 0.45, acc: 6, decl: 1.202 },
+  note: 'Tuned by ear: pressed, with jitter and a short tract for its pitch. Timing is calibrated '
+      + 'against a recording rather than taken from the seed.'
 };
 const defaultVoice = () => Object.fromEntries(VOICE_SPEC.map(p => [p.k, p.d]));
 

@@ -217,7 +217,10 @@ function formants(sym, { n = 44, order = 12, art = null } = {}) {
   // measurement taken at a length other than 44 was of a tract that was not that length.
   const t = new Tract(n);
   // `art` overrides a posture. Without it this could only ever measure the shared ART table,
-  // so a voice with FITTED postures — john and johncry, the only two — had never been checked
+  // so a voice with FITTED postures had never been checked. Both such voices, johnfit and
+  // johncry, have since been removed — their postures were measured but wrong, and the
+  // generic set has been calibrated past them. The path is still here and still exercised
+  // by any voice that declares `art`.
   // against any target at all. Which is a poor place for the one voice measured from a real
   // person to be, and it is the one reported as the worst of the set.
   t.diam.set(P.articulate((art && art[sym]) || P.ART[sym], n));

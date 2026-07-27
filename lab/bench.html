@@ -402,14 +402,18 @@ async function boot(src){
     tChamp = null;
     if(typeof mode !== 'undefined' && mode === 'tourney') drawTourney();
   };
+  // THE WAY OUT GOES UP FIRST. This was the last line of boot, after the engine had loaded and
+  // the page had been built — so anything that threw on the way left a page you could reach and
+  // not leave, which is the exact fault the navigation was added to fix. It depends on nothing
+  // but session.js, so it goes before everything that can fail, and it is wrapped because a
+  // navigation that throws must not take the bench down with it.
+  try { window.HOLLER_SESSION.mountNav('nav', 'lab/bench.html'); } catch (e) {}
   document.getElementById('boot').textContent =
     'engine from ' + (ENGSRC.length>52 ? '…'+ENGSRC.slice(-49) : ENGSRC) +
     ' · ' + Object.keys(VOICES).length + ' voices · ' + CONS.length + ' consonants';
   document.getElementById('pick').classList.add('hidden');
   build();
   stateIn();          // a voice or a phrase arriving from another page, and the links back out
-  // and a way out. This page had no navigation at all — reachable and not leavable.
-  window.HOLLER_SESSION.mountNav('nav', 'lab/bench.html');
 }
 function setVoice(k){
   const d = Object.fromEntries(ENG.VOICE_SPEC.map(p=>[p.k,p.d]));

@@ -375,6 +375,8 @@
       tail = '#' + h.toString();
     } catch (e) { return; }
     for (const a of document.querySelectorAll('a[href]')) {
+      // the wordmark is the one link that carries nothing — see mountNav
+      if (a.dataset && a.dataset.clean) continue;
       const href = a.getAttribute('href') || '';
       if (!/\.html(\?|#|$)/.test(href)) continue;          // only our own pages
       // A room may carry a marker of its own in the hash — About does. State is written onto
@@ -458,6 +460,12 @@
     const st = document.createElement('style');
     st.id = 'hb-nav-css';
     st.textContent = [
+      // The wordmark is the name of the thing, not a fifth room, so it is set apart:
+      // heavier, in the accent, with a divider after it. Somebody scanning for places to
+      // go should not find one more.
+      '.hb-nav .hb-mark{font-weight:700;color:var(--hot);text-decoration:none;' +
+        'padding-right:.7rem;margin-right:.35rem;border-right:1px solid var(--line)}',
+      '.hb-nav .hb-mark:hover{text-decoration:underline}',
       '.hb-nav{display:flex;gap:.4rem;align-items:center;flex-wrap:nowrap;overflow-x:auto;',
       '  scrollbar-width:none}',
       '.hb-nav::-webkit-scrollbar{display:none}',
@@ -480,6 +488,23 @@
     // depth matters: lab/bench.html has to climb out to reach the other two
     const up = /\//.test(here) ? '../' : '';
     host.innerHTML = '';
+
+    // ── A WAY BACK TO NOTHING ───────────────────────────────────────────
+    //
+    // Every other link here carries the current voice and phrase, which is right: moving between
+    // rooms should not lose what you were working on. But there was no way to PUT IT DOWN. A
+    // voice you were only trying followed you everywhere, and the only escape was editing the
+    // address bar.
+    //
+    // The wordmark goes home with nothing. `carryState` skips it — that is what `data-clean` is
+    // for — so it is the one link that means "start again".
+    const home = document.createElement('a');
+    home.className = 'hb-mark';
+    home.textContent = 'Hollerbox';
+    home.title = 'Back to the start, with no voice or phrase';
+    home.setAttribute('href', up + 'index.html');
+    home.dataset.clean = '1';
+    host.appendChild(home);
     for (const r of ROOMS) {
       // A marker room is never "here": About is a thing you open, not a place you are, and
       // marking it current on the page it opens over would be a lie.

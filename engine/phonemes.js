@@ -855,6 +855,21 @@ function buildWord(chain, opts){
   const apw = P_('apw', 0.34) * APPROX_REF;
   const gcap = P_('gcap', 0.5);
   const wgap = P_('wgap', 0.045);
+  // The spread on that gap, seeded from the chain itself. Same words, same rhythm — so a phrase
+  // sounds the same twice running and two voices can be compared on it — while different phrases
+  // get different patterns, which is the whole point. A counter-based hash rather than a running
+  // generator, so a gap's value does not depend on how many gaps came before it.
+  const gapSeed = (() => {
+    let h = 2166136261 >>> 0;
+    for (const c of chain) { const t = String(c);
+      for (let k = 0; k < t.length; k++) { h ^= t.charCodeAt(k); h = Math.imul(h, 16777619) >>> 0; } }
+    return h;
+  })();
+  function gapNoise(i){
+    let x = (gapSeed ^ Math.imul(i + 1, 2654435761)) >>> 0;
+    x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0;
+    return x / 4294967296;
+  }
   // /h/ HAS NO SHAPE OF ITS OWN. It is a voiceless version of whatever vowel is beside it — the
   // tongue is already in position for the "ee" in "he" and the "oo" in "who" while the /h/ is
   // still going, which is why those two /h/ sounds are audibly different. A fixed posture put a
@@ -964,7 +979,51 @@ function buildWord(chain, opts){
       // to trigger it, and punctuation does not currently survive the speller — filed under
       // 8.4 step 4, which is blocked on the same gap.
       const nextSym=chain[i+1];
-      const gap=Math.max(0.015, Math.min(0.60, wgap*(1+drawl)*(BREAK_GAP[sym]||1)));
+      // ── A WORD GAP IS NOT A CONSTANT ─────────────────────────────────────
+      //
+      // It was one number at every boundary in the phrase, and that is the most obviously
+      // unnatural thing left in the model — not the wrong length, the SAME length. Measured
+      // against 48 seconds of a person reading these phrases: 65 within-phrase gaps, median
+      // 50 ms, quartiles 40 and 80, range 20 to 290. The model played 49 at every one of them.
+      // The mean was already right. The variance was zero.
+      //
+      // AND IT IS SAMPLED RATHER THAN PREDICTED, which is the opposite of what I set out to
+      // build. The plan was a rule — function words bind, content words separate — and the
+      // recording refuses it: the same phrase read twice puts its gaps in DIFFERENT PLACES,
+      // positional correlation −0.32. A 260 ms pause at position 8 in one take is 30 ms in the
+      // other. Whatever put it there once did not do it again. A context rule would have fitted
+      // one take and contradicted the other, and measured beautifully against whichever one it
+      // was calibrated on.
+      //
+      // What the two takes DO agree on is the distribution — medians 45 and 40, quartiles 40/70
+      // and 30/60. So that is what gets reproduced: the right spread, in an order nobody can
+      // predict, because the person could not either.
+      //
+      // Seeded from the utterance, so a phrase sounds the same twice running and two voices can
+      // still be compared on it. Real speech varies between takes; an A/B test that varies
+      // between takes is not a test.
+      const gBase = wgap*(1+drawl)*(BREAK_GAP[sym]||1);
+      let gap;
+      if (BREAK_GAP[sym]) {
+        // punctuation is structure, not spread — a full stop is a decision, not a wobble
+        gap = Math.max(0.015, Math.min(0.60, gBase));
+      } else {
+        // ASYMMETRIC, because the measured distribution is. Quartiles sit at 40 and 80 around a
+        // median of 50 — that is 0.8x below and 1.6x above, so a gap is far freer to stretch
+        // than to shorten. A symmetric spread in log space gave 34/51 against the measured
+        // 40/80: the right median and half the room above it, which still reads as even.
+        //
+        // The 1.02 lifts the median onto the measured 50 ms. It was 1.17, tuned against 57 gaps
+        // from a dozen phrases — which put the median at 57 rather than 50. Over four thousand
+        // draws the sampler's own distribution is visible and the number falls out directly; a
+        // few dozen samples of a heavy-tailed thing is not enough to see its middle, let alone
+        // its quartiles. wgap's default stays 45, since that is the knob a voice tunes and
+        // moving it would move every preset.
+        const u = gapNoise(i);
+        const z = u*2 - 1;
+        const shape = 1.02 * Math.exp(z * (z < 0 ? 0.45 : 1.00));
+        gap = Math.max(0.015, Math.min(0.60, gBase * shape));
+      }
       // A real pause is silent. A word boundary is not — connected speech does not stop
       // between words — but a comma or a full stop is exactly the thing that does.
       const quiet=(BREAK_GAP[sym] ? 1 : (wgap>=0.09 ? 1 : 0));

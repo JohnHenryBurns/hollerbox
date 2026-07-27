@@ -392,14 +392,27 @@
   // The bench knew this and kept a `workletN`. index.html knew it. The wizard did not, and its
   // first question changes `sect` — so the one page most likely to change tract length was the
   // one page not guarding it. Kept here so that a page cannot be written without the guard.
-  let liveN = 0;
+  // SENT EVERY TIME, not when we think it changed.
+  //
+  // This kept a `liveN` — a belief about what the worklet had — and skipped the message when the
+  // belief matched. A belief that is never checked is one that stays wrong once it is wrong, and
+  // there are two ways for it to go wrong: the worklet clamps to its own [14, 72] and the page
+  // recorded what it ASKED for, and two speak calls racing past an await could each update it
+  // for a different voice. Either leaves the page building keyframes for a tract the worklet
+  // does not have, which is 70,000 non-finite samples and silence until a reload.
+  //
+  // The worklet already no-ops when the length has not changed, so this costs one structured
+  // clone per word and removes the state entirely. The bound is read from the worklet's own CAP
+  // rather than repeated here, because two copies of 72 in two files is the next version of the
+  // same bug.
+  const TRACT_MIN = 14, TRACT_MAX = 72;
   function tractFor(node, voice, hint) {
     const P = eng();
-    const want = Math.max(14, Math.min(72, Math.round((voice && voice.sect) || hint || 44)));
-    if (node && want !== liveN) {
+    const want = Math.max(TRACT_MIN, Math.min(TRACT_MAX,
+                          Math.round((voice && voice.sect) || hint || 44)));
+    if (node) {
       node.port.postMessage({ type: 'tract', n: want,
         diam: P.articulate((voice && voice.art && voice.art['ə']) || P.ART['ə'], want) });
-      liveN = want;
     }
     return want;
   }

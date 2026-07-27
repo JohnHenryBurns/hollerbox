@@ -509,7 +509,18 @@ const VOICE_SPEC=[
   // quieter than a vowel — the constriction raises the pressure above the folds and the flow
   // across them nearly stops — and `squeeze` alone was not cutting nearly enough, leaving /ð/
   // at 99% voice and /ʒ/ at 83%.
-  {k:'fricDuck',lo:0,     hi:0.95,   d:0.88,  off:0,},
+  // 0.88 removed almost all the voicing from a voiced fricative, and voicing is the ENTIRE cue
+  // that separates /v/ from /f/. Measured: /v/ came out 5.8 dB QUIETER than /f/ — backwards for
+  // a sound that has voicing energy added — with 48% of its energy down where voicing lives
+  // against /ʒ/'s 19%. Reported as "the v in heavens is more f than v", which is exactly right.
+  //
+  // At 0.55 the three voiced fricatives keep 76 to 82% of their energy low, /v/ pulls level with
+  // /f/ (-0.1 dB) and /ʒ/ goes 2.1 dB above /ʃ/, which is what a voiced fricative should do.
+  //
+  // Not lower. At 0.40 they reach 87 to 93%, and that is the failure this knob exists to prevent
+  // — the comment in the worklet records /ð/ at 99% being heard as "a loo a", a hum with a trace
+  // of noise on it rather than a fricative.
+  {k:'fricDuck',lo:0,     hi:0.95,   d:0.55,  off:0,},
 ];
 // John, rebuilt off `man` rather than off the fit.
 //

@@ -61,6 +61,8 @@ const G2P_RULES = [
   // `ea` before a v is /ɛ/: heaven, heavy, leaven. The short-/ɛ/ rule already covered head,
   // bread, dead and breath, and stopped at the consonant it happened to be written for.
   [/^ea(?=v)/,   ['ɛ']],
+  // `al` before d as well as k, m and t: Baldwin, bald, scald
+  [/^a(?=l[dkmt])/, ['ɔ']],
   [/^ea/,        ['i']],
   // `a` before a doubled l is /ɔ/: all, ball, call, fall, hall, small, tall. Only "wall" and
   // "walk" were right, and by accident — the `wa` rule above happened to catch them.
@@ -585,6 +587,22 @@ function g2pWord(word){
 }
 
 const BUILTIN_DICT = {
+  // ── THE PEOPLE THE FOOTBALL SIMULATOR NAMES ─────────────────────────────
+  // Family and friends, who are the whole reason the thing narrates itself. A name is not a
+  // spelling problem with a rule waiting to be found — it is a fact about a person, and the
+  // dictionary is where facts go. These are built in rather than taught per-browser, because
+  // another program needs them and its users are not going to type them again.
+  niboaur:  ['n','aɪ','b','aʊ','ɝ'],          // nye-BOW-er
+  amos:     ['eɪ','m','ə','s'],
+  george:   ['d','ʒ','ɔ','r','d','ʒ'],
+  gingrich: ['g','ɪ','ŋ','g','r','ɪ','t','ʃ'],  // hard g, and the second one was missing
+  owen:     ['oʊ','ə','n'],
+  reese:    ['r','i','s'],
+  wyatt:    ['w','aɪ','ə','t'],
+  ellars:   ['ɛ','l','ɝ','z'],
+  tillo:    ['t','ɪ','l','oʊ'],
+  sloan:    ['s','l','oʊ','n'],
+
   // ── `ea` THAT IS TWO SYLLABLES ──────────────────────────────────────────
   // In create, the e and the a belong to different syllables: /kri-EYT/, not /kreet/. No rule
   // separates that from the ea of eat, sea and each, because nothing in the spelling says so —
@@ -675,15 +693,19 @@ const BUILTIN_DICT = {
   their:['ð','ɛ','r'], they:['ð','eɪ'], though:['ð','oʊ'], than:['ð','æ','n'],
   with:['w','ɪ','θ'], mother:['m','ʌ','ð','ɝ'], father:['f','ɑ','ð','ɝ'],
   brother:['b','r','ʌ','ð','ɝ'], other:['ʌ','ð','ɝ'], measure:['m','ɛ','ʒ','ɝ'],
-  goal:['g','o','l'],
+  // A BARE /o/, IN THE ONE WORD THE PROJECT EXISTS TO SHOUT. English does not have that vowel
+  // here — it is /oʊ/ — and the `oa` rule has always said so, but a dictionary entry outranks a
+  // rule and this one predates every piece of vowel work done since. It shipped in the demo, in
+  // the story, and in the name of the thing.
+  goal:['g','oʊ','l'],
   maximus:['m','æ','k','s','ɪ','m','ə','s'],  max:['m','æ','k','s'],
   jupiter:['d','ʒ','u','p','ɪ','t','ɝ'],
-  solana:['s','o','l','ɑ','n','ə'],
+  solana:['s','ə','l','ɑ','n','ə'],
   orion:['ɔ','r','aɪ','ə','n'],
   atlas:['æ','t','l','ə','s'],
   rachel:['r','eɪ','t','ʃ','ə','l'],
-  john:['d','ʒ','ɑ','n'],           bo:['b','o'],
-  momo:['m','o','m','o'],           cliff:['k','l','ɪ','f'],
+  john:['d','ʒ','ɑ','n'],           bo:['b','oʊ'],
+  momo:['m','oʊ','m','oʊ'],           cliff:['k','l','ɪ','f'],
   gloria:['g','l','ɔ','r','i','ə'], greg:['g','r','ɛ','g'],
   bridget:['b','r','ɪ','d','ʒ','ɪ','t'],
   eric:['ɛ','r','ɪ','k'],           dan:['d','æ','n'],

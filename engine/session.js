@@ -487,11 +487,65 @@
       '.hb-row.on b:after{content:" \\2713"}',
       '.hb-row-action{border-bottom:1px solid #2f373d;margin-bottom:.2rem}',
       '.hb-row-action b{color:#e2622e}',
+      '.hb-row-foot{border-top:1px solid #2f373d;border-bottom:0;margin:.3rem 0 0}',
     ].join('');
     document.head.appendChild(st);
   }
 
+  // ── THE SAME SHEET, FOR VOICES ──────────────────────────────────────────
+  //
+  // Every voice carries a label and a note explaining what it is — "a shorter tract lifts every
+  // formant, that and not pitch is what makes it sound like a woman", "same voice, same pitch,
+  // sound just travels faster". A native <select> shows none of that. It is the most interesting
+  // writing in the project and it was invisible.
+  //
+  // `Advanced` lives at the bottom of this sheet rather than in the dock. Tuning a voice is the
+  // last thing you do to a voice, so it belongs where the voices are — and the front door is two
+  // buttons lighter for it.
+  function voiceMenu(opts) {
+    const o = opts || {};
+    const P = eng();
+    const back = document.createElement('div');
+    back.className = 'hb-sheet-back';
+    const sheet = document.createElement('div');
+    sheet.className = 'hb-sheet';
+    back.appendChild(sheet);
+
+    const close = () => { back.remove(); document.removeEventListener('keydown', esc); };
+    const esc = e => { if (e.key === 'Escape') close(); };
+    document.addEventListener('keydown', esc);
+    back.addEventListener('click', e => { if (e.target === back) close(); });
+
+    const h = document.createElement('div');
+    h.className = 'hb-head'; h.textContent = 'Voices';
+    sheet.appendChild(h);
+
+    for (const k of Object.keys(P.VOICES)) {
+      if (o.skip && o.skip.includes(k)) continue;
+      const V = P.VOICES[k];
+      const b = document.createElement('button');
+      b.className = 'hb-row' + (k === o.current ? ' on' : '');
+      b.innerHTML = '<b></b><small></small>';
+      b.firstChild.textContent = V.label || k;
+      b.lastChild.textContent = V.note || '';
+      b.addEventListener('click', () => { close(); if (o.onPick) o.onPick(k); });
+      sheet.appendChild(b);
+    }
+
+    if (o.onAdvanced) {
+      const b = document.createElement('button');
+      b.className = 'hb-row hb-row-action hb-row-foot';
+      b.innerHTML = '<b>Advanced\u2026</b><small>every knob, one at a time</small>';
+      b.addEventListener('click', () => { close(); o.onAdvanced(); });
+      sheet.appendChild(b);
+    }
+
+    document.body.appendChild(back);
+    return { close };
+  }
+
   root.HOLLER_SESSION = { planWord, planSpeech, chainFor, loadEngine, startAudio, tractFor,
+                          voiceMenu,
                           phraseMenu, menuStyle,
                           ROOMS, mountNav,
                           PHRASES, mountSelector, readURL, writeURL, carryState };

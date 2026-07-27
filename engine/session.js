@@ -350,7 +350,44 @@
     return want;
   }
 
+  // ── ONE WAY BETWEEN THE ROOMS ───────────────────────────────────────────
+  //
+  // Three pages had three navigations: index offered "Make a voice · Bench · About", the wizard
+  // offered "Back · Bench", and THE BENCH OFFERED NOTHING AT ALL — a page you could reach and
+  // not leave. "Back" did not say where it went and "Bench" did not say what it was.
+  //
+  // One list, named by what the room is for rather than by what it is called internally, and the
+  // page you are on is marked rather than omitted — a navigation that hides the current page
+  // makes every page look like a different app.
+  const ROOMS = [
+    { href: 'index.html',     name: 'Throat',       why: 'watch it speak' },
+    { href: 'wizard.html',    name: 'Make a voice', why: 'four questions and a walk' },
+    { href: 'lab/bench.html', name: 'Lab',          why: 'sweeps, pairs, the tournament' },
+  ];
+
+  /** Render the navigation into an element. `here` is the file this page is, so it can mark
+   *  itself; the links carry voice and phrase, which is what makes the three feel like one. */
+  function mountNav(el, here, state) {
+    const host = typeof el === 'string' ? document.getElementById(el) : el;
+    if (!host) return null;
+    // depth matters: lab/bench.html has to climb out to reach the other two
+    const up = /\//.test(here) ? '../' : '';
+    host.innerHTML = '';
+    for (const r of ROOMS) {
+      const mine = r.href.replace(/^.*\//, '') === here.replace(/^.*\//, '');
+      const a = document.createElement(mine ? 'span' : 'a');
+      a.className = 'btn' + (mine ? ' here' : '');
+      a.textContent = r.name;
+      a.title = r.why;
+      if (!mine) a.setAttribute('href', up + r.href);
+      host.appendChild(a);
+    }
+    if (state) carryState(state);
+    return host;
+  }
+
   root.HOLLER_SESSION = { planWord, planSpeech, chainFor, loadEngine, startAudio, tractFor,
+                          ROOMS, mountNav,
                           PHRASES, mountSelector, readURL, writeURL, carryState };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 

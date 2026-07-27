@@ -39,9 +39,14 @@ select{font:inherit;background:#171b1e;color:var(--fg);border:1px solid var(--li
 .step{font-size:12px;color:var(--dim);margin-top:12px;font-weight:600}
 .tags button{text-align:center;padding:9px 2px;font-size:13px}
 .status{color:var(--dim);font-size:12px;min-height:16px;margin-top:6px}
+
+/* The room you are in, marked rather than omitted. A navigation that hides the current page
+   makes every page look like a different app. */
+.btn.here{opacity:.55;cursor:default;border-style:dashed}
 </style>
 
 <h1>Consonant bench</h1>
+<div id="nav" style="margin:.4rem 0 .6rem"></div>
 <div class="sub" id="boot">loading the shipping engine…</div>
 <div id="pick" class="hidden" style="margin-bottom:10px">
   <input type="file" id="file" accept=".html,text/html" class="mini">
@@ -385,6 +390,8 @@ async function boot(src){
   document.getElementById('pick').classList.add('hidden');
   build();
   stateIn();          // a voice or a phrase arriving from another page, and the links back out
+  // and a way out. This page had no navigation at all — reachable and not leavable.
+  window.HOLLER_SESSION.mountNav('nav', 'lab/bench.html');
 }
 function setVoice(k){
   const d = Object.fromEntries(ENG.VOICE_SPEC.map(p=>[p.k,p.d]));

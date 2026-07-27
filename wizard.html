@@ -324,10 +324,30 @@ function showSeed(){
 // The shared selector, mounted. Only the phrase half is used here: the four questions ARE this
 // page's voice picker, and offering a second one beside them would be two answers to one
 // question. Passages first, since a voice is judged on something long.
-const picker = SESSION.mountSelector('picker', {
-  kinds: ['passage', 'probe'],
-  onPhrase: t => { SESSION.writeURL({ phrase: t }); linkUp(); speak(t); },
+// The same sheet the throat uses, so the two pages ask the question the same way. The wizard
+// keeps a text box of its own, since typing something and hearing four voices say it is the
+// whole point of the page.
+SESSION.menuStyle();
+let chosen_phrase = '';
+document.getElementById('picker').innerHTML =
+  '<button class="btn" id="sayBtn">Say&nbsp;&#8230;</button>' +
+  '<input id="own" placeholder="or type your own">';
+document.getElementById('sayBtn').addEventListener('click', () => {
+  SESSION.phraseMenu({
+    current: chosen_phrase,
+    kinds: ['passage', 'probe'],
+    onPick: t => { chosen_phrase = t; document.getElementById('own').value = '';
+                   SESSION.writeURL({ phrase: t }); linkUp(); speak(t); },
+  });
 });
+document.getElementById('own').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { const t = e.target.value.trim(); if (t) speak(t); }
+});
+const picker = {
+  phrase: () => document.getElementById('own').value.trim() || chosen_phrase ||
+                (SESSION.PHRASES.find(p => p.kind === 'passage') || {}).text || 'hello world',
+  setPhrase: t => { chosen_phrase = t; },
+};
 
 // ── STATE THAT SURVIVES THE TRIP ──────────────────────────────────────────
 // A voice built here can be carried to the bench and swept, or to the main page and watched.

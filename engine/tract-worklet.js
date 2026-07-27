@@ -806,6 +806,29 @@ class TractProcessor extends AudioWorkletProcessor {
             // End correction: radiation loading makes the cavity acoustically longer than it
             // is geometrically, which lowers the resonance. And a real sibilant is a broad
             // plateau, not a spike — so the resonance is deliberately low-Q.
+            //
+            // ── WHAT DOES *NOT* SET THE SIBILANT BANDWIDTH ────────────────────
+            //
+            // Reported as /ʃ/ sounding "a bit staticy". Measured, both sibilants are far
+            // narrower than real ones: /ʃ/ spans 2250 Hz within 10 dB of its own peak where a
+            // real one spans about 5000, and /s/ spans 1000. A narrow band of noise does not
+            // sound like breath through a gap; it sounds like a tone with hiss added.
+            //
+            // TWO PLAUSIBLE CAUSES, BOTH RULED OUT BY MEASUREMENT, recorded so nobody spends
+            // the afternoon again:
+            //
+            //   this resonator's Q. r from 0.86 to 0.70 triples its own bandwidth on paper —
+            //   2117 Hz to 5007 — and moves the rendered /ʃ/ not at all, still 2250. /s/ gets
+            //   NARROWER, 1000 to 750.
+            //
+            //   tract damping. 0.9995 to 0.9985, the whole legal range, leaves /ʃ/ at 2250
+            //   exactly. /s/ widens 1000 to 1750, which is the only thing that moved at all.
+            //
+            // What is located: the LOW edge is this filter's tracking high-pass below. For /ʃ/
+            // the corner computes to about 1380 Hz and the measured band starts at 1250. The
+            // HIGH edge is not yet explained by anything measured, and that is where to look
+            // next — probably the transfer function from the injection point to the lips
+            // rather than any of the source shaping.
             const w0=2*Math.PI*(fc*0.82)/sampleRate, r=0.86;
             this.fb1=2*r*Math.cos(w0); this.fb2=-r*r; this.fg=(1-r)*1.6;
             this.fcLast=fc;

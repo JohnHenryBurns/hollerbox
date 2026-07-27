@@ -68,6 +68,12 @@ const G2P_RULES = [
   [/^a(?=ll($|[^aeiouy]))/, ['ɔ']],
   // and `al` before another consonant: salt, talk, walk, chalk, calm
   [/^a(?=l[kmt])/, ['ɔ']],
+  // `i` before `nd` is /aɪ/: mind, kind, find, bind, blind, grind, behind. Every one was /ɪ/,
+  // which is why "mind" was heard as something like "mailed" — /mɪnd/ against /maɪnd/.
+  // Only at the end of a word or before another consonant, so "window" and "indeed" are safe.
+  [/^i(?=nd($|[^aeiouy]))/, ['aɪ']],
+  // `o` before `ng` is /ɔ/: long, song, strong, wrong, among.
+  [/^o(?=ng)/,   ['ɔ']],
   // `er` before a VOWEL is two sounds, /ər/, not the single /ɝ/: every, several, general,
   // camera, difference. /ɝ/ is right when the r closes the syllable — her, term, serve — and
   // wrong when it opens the next one, which is what a following vowel means.
@@ -420,6 +426,28 @@ function g2pWord(word){
   // decided from the stem's LAST SOUND rather than its last letter. The distinction matters:
   // "diverged" ends in the letter e but the sound /dʒ/.
   let inflect=null;
+  // ── `-ly` COMES OFF FIRST ────────────────────────────────────────────────
+  // It is not an inflection in the -ed/-s sense — it makes an adverb, and its sound is always
+  // the same two — but it has to be stripped for the same reason: it puts a consonant after a
+  // magic e and the magic e stops working. "Precisely" came out /prəsəsəli/ where the stem
+  // "precise" is /prəsaɪz/, and every -ly adverb built on a magic-e stem was wrong the same way:
+  // nicely, widely, closely, likely, politely, completely, rudely. The stems were all correct.
+  //
+  // Handled here rather than as a rule, because the rules read a suffix at a time and cannot see
+  // that removing two letters would let a third one behave.
+  // ONLY WHEN THE STEM ENDS IN A MAGIC E, which is exactly the case that needs it. A first
+  // attempt stripped -ly whenever the word did not end in a vowel before it, and that excluded
+  // every -ely adverb — precisely, nicely, widely, likely — which are the entire point. It also
+  // wanted to strip "family" and "really", where the l belongs to the stem.
+  //
+  // A stem of the form consonant + e is unambiguous: nice, wide, precise, polite, complete,
+  // rude. Nothing else is stripped, and nothing else needs to be, because -ly only breaks
+  // spelling when it puts a consonant after a magic e.
+  let advLy = false;
+  if(/[a-z]{3,}[^aeiouy][aeiou]?[^aeiouy]?ely$/.test(w) || /[a-z]{2,}[^aeiouy]ely$/.test(w)){
+    const stem = w.slice(0, -2);
+    if(/[^aeiouy]e$/.test(stem)){ advLy = true; w = stem; }
+  }
   if(/[a-z]{3,}ed$/.test(w)){
     inflect='ed';
     // The `e` before `d` belongs to the STEM in two cases and to the ending otherwise. It stays
@@ -461,6 +489,8 @@ function g2pWord(word){
   // Strip the shaped final letter and hold its sound back; the rules run on what is left.
   let tail=null;
   for(const [re,ph] of WORD_SHAPE) if(re.test(w)){ tail=ph; w=w.slice(0,-1); break; }
+  // the adverb's own two sounds go back on after everything else, so the stem spells itself
+  if(advLy) tail = (tail || []).concat(['l','i']);
   // reduce the vowel of a weak first syllable before the rules see it
   let weak=0;
   const m0=w.match(WEAK_FIRST);
@@ -498,7 +528,7 @@ function g2pWord(word){
     out.push(...hit[1]);
     w=w.slice(hit[0]);
   }
-  if(tail) out.push(tail);
+  if(tail) out.push(...[].concat(tail));   // a tail may be one sound or several
   // ---- reattach the inflection, decided by the stem's LAST SOUND ----
   // Which is why it had to be split off before the letter rules ran: "diverged" ends in the
   // letter e and the sound /dʒ/, and it is the sound that chooses.

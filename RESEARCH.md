@@ -162,6 +162,34 @@ contribution.
 has been asking for since 2008.** It is unsolved because it is hard, not because nobody tried. It
 should not be the plan; it should be the thing the plan might earn a look at.
 
+## Running it
+
+**On your machine, not a cloud VM.** One pass over mngu0 is under three seconds and the parameter
+search is under two hours single-core, which any desktop parallelises to minutes. And the corpora
+carry licences: mngu0 and MOCHA both require agreeing to terms before download, and putting the
+data on third-party infrastructure may breach them. Local avoids the question.
+
+**Node for the trajectories, Python for the fitting.** `lab/trajectories.js` emits the model's
+articulator track as CSV; Python does the regression and the plots.
+
+Not a Python port of the engine. A second implementation drifts from the first — which is the
+exact fault this project spent a week removing, three times over — and it carries the extra hazard
+that the model being fitted is not the model anyone has listened to. The trajectory generator has
+to be the engine itself.
+
+    node lab/trajectories.js --in utterances.txt --out tracks.csv --voice john --rate 200
+
+One utterance a line, optionally `id<TAB>text` so the corpus's own identifiers come through. It
+renders no audio: fitting compares trajectories, and skipping the acoustics is what makes a corpus
+pass cost seconds.
+
+**What comes back matters more than how it is run.** Not audio and not the corpus — the
+**per-frame residuals**, measured minus modelled, per articulator, joined to the linguistic
+columns the runner already emits: segment, position within it, stress, position in word, position
+in utterance, segment duration, utterance length. Tens of megabytes of CSV, and everything stage 2
+needs. Fitted parameters and a variance-explained number alone would make the interesting half
+impossible.
+
 ## What I can and cannot do here
 
 **Can:** write and run the fitting, do the statistics, build the instrumentation, argue about

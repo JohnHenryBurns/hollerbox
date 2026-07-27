@@ -384,9 +384,13 @@ const VOICE_SPEC=[
   {k:'damp', lo:0.9985, hi:0.99985, d:0.9995},  // tract losses -> formant bandwidth
   {k:'lipR', lo:-0.95,  hi:-0.62,   d:-0.85},   // radiation at the lips
   {k:'brth', lo:0,      hi:0.34,    d:0.18, off:0,},   // aspiration — the noise BETWEEN harmonics,    // aspiration
-  {k:'f0a',  lo:80,     hi:330,     d:208},     // pitch: onset  (must reach a man at 110
-  {k:'f0b',  lo:90,     hi:380,     d:250},     //        peak     and a child at 310)
-  {k:'f0c',  lo:70,     hi:300,     d:190},     //        fall
+  // The floors were 80, 90 and 70, and Barry White sits at 58, 88 and 48 — below all three. A
+  // preset outside its own bounds cannot survive a seed: encoding clamps it, so a link to Barry
+  // arrived as a higher voice, and the page could not recognise the seed as Barry either.
+  // Lowered to accommodate the deepest voice the set actually contains, with room under it.
+  {k:'f0a',  lo:40,     hi:330,     d:208},     // pitch: onset  (must reach a man at 110
+  {k:'f0b',  lo:45,     hi:380,     d:250},     //        peak     and a child at 310)
+  {k:'f0c',  lo:35,     hi:300,     d:190},     //        fall
   {k:'drawl',lo:0,      hi:1,       d:0.55, off:0,},    // how much the first vowel is stretched
   {k:'glide',lo:0.03,   hi:0.22,    d:0.085},  // transition time between sounds
   {k:'stopT',lo:0.035,  hi:0.15,    d:0.075},  // how long a stop stays sealed

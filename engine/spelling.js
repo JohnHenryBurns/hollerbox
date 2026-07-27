@@ -53,6 +53,14 @@ const G2P_RULES = [
   [/^eo/,        ['i']],         // people
   [/^wa(?=[^aeiouy])/, ['w','ɔ']], // water, want, wash, watch
   [/^ee/,        ['i']],
+  // `ear` before a consonant is /ɝ/, not /ir/: earth, early, earn, learn, search, heard, pearl.
+  // Before a vowel or at the end it stays /ir/ — ear, hear, near, clear, year — which is why the
+  // test is on what FOLLOWS. "Beard" and "weary" are the counterexamples and they are rarer than
+  // the words this gets right.
+  [/^ear(?=[^aeiouy])/, ['ɝ'], null, 3],
+  // `ea` before a v is /ɛ/: heaven, heavy, leaven. The short-/ɛ/ rule already covered head,
+  // bread, dead and breath, and stopped at the consonant it happened to be written for.
+  [/^ea(?=v)/,   ['ɛ']],
   [/^ea/,        ['i']],
   [/^ie/,        ['i']],
   [/^oo/,        ['u']],
@@ -418,6 +426,28 @@ function g2pWord(word){
     w = w.slice(0,-1);
   }
 
+  // ── THE DICTIONARY, AGAIN, ON THE STEM ──────────────────────────────────
+  // It was consulted once, on the whole word, before the inflection came off — so `create` was
+  // known and `created` was not, and every irregular word in the dictionary lost its plural and
+  // its past tense to the letter rules. Asked again here, now that the ending is off, and the
+  // ending is reattached below exactly as it would have been.
+  if(inflect && dict[w]){
+    const out2 = dict[w].slice();
+    const last = out2[out2.length-1];
+    const VOICELESS2 = ['p','t','k','f','θ','s','ʃ'];
+    const SIB2 = ['s','z','ʃ','ʒ'];
+    if(inflect === 'ed'){
+      if(last === 't' || last === 'd') out2.push('ɪ','d');
+      else if(VOICELESS2.includes(last)) out2.push('t');
+      else out2.push('d');
+    } else {
+      if(SIB2.includes(last)) out2.push('ɪ','z');
+      else if(VOICELESS2.includes(last)) out2.push('s');
+      else out2.push('z');
+    }
+    return withStress(spelling, { ph: out2, from: BUILTIN_DICT[w] ? 'built in' : 'remembered' });
+  }
+
   // Strip the shaped final letter and hold its sound back; the rules run on what is left.
   let tail=null;
   for(const [re,ph] of WORD_SHAPE) if(re.test(w)){ tail=ph; w=w.slice(0,-1); break; }
@@ -497,6 +527,17 @@ function g2pWord(word){
 }
 
 const BUILTIN_DICT = {
+  // ── `ea` THAT IS TWO SYLLABLES ──────────────────────────────────────────
+  // In create, the e and the a belong to different syllables: /kri-EYT/, not /kreet/. No rule
+  // separates that from the ea of eat, sea and each, because nothing in the spelling says so —
+  // it is the same three letters doing a different job, which is what the dictionary is for.
+  // The inflections come off before the lookup, so `created` finds `create` and adds its own
+  // ending; `creates` and `creating` need their own entries because -ing is not stripped.
+  create:  ['k','r','i','eɪ','t'],
+  creates: ['k','r','i','eɪ','t','s'],
+  creating:['k','r','i','eɪ','t','ɪ','ŋ'],
+  creation:['k','r','i','eɪ','ʃ','ə','n'],
+
   // ── HARD G BEFORE E, I AND Y ────────────────────────────────────────────
   // The soft-g rule is right for gem, gin, gym, giant and gentle, and wrong for a whole
   // Germanic seam underneath it: get, give, girl, gift, begin. No rule separates them — the

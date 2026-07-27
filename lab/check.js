@@ -2432,17 +2432,37 @@ check("the voice wizard's options actually differ", () => {
   const base = { ...P.defaultVoice(), ...(P.VOICES.john.v || {}) };
   for (const q of Q) {
     if (q.opts.length < 3) bad.push(`${q.key} offers only ${q.opts.length} options`);
-    // exactly one option must be the identity, so there is always an "as it is"
+    // NO OPTION MAY BE THE IDENTITY. This asserted the opposite — that exactly one must patch
+    // nothing, so there was always an "as it is" — and that turned out to be the bug rather than
+    // the invariant. An option that patches nothing means "whatever BASE holds", BASE was
+    // overwritten by any seed arriving in the URL, and the button therefore described a
+    // different voice depending on how you reached the page. Every option states its values now.
+    //
+    // This check went red the moment that changed and stayed red, because the runs after it were
+    // all filtered to the checks being worked on. A check nobody runs is a check that is not
+    // running.
     const empties = q.opts.filter(o => Object.keys(o[2]).length === 0).length;
-    if (empties !== 1) bad.push(`${q.key} has ${empties} do-nothing options, want exactly 1`);
+    if (empties) bad.push(`${q.key} has ${empties} option(s) that patch nothing — they inherit BASE`);
     // and every other option must move something that exists in the voice spec
     for (const [label, , patch] of q.opts) {
       for (const k of Object.keys(patch)) {
         if (!P.VOICE_SPEC.some(x => x.k === k)) bad.push(`${q.key}/${label} sets ${k}, not a voice parameter`);
-        else if (Math.abs((patch[k] - base[k])/(base[k] || 1)) < 0.02)
-          bad.push(`${q.key}/${label} sets ${k} to what it already is`);
+        // "the same as the base" is no longer a fault: one option per question is deliberately
+        // the base's own values, written down rather than inherited. What matters is that the
+        // options DIFFER FROM EACH OTHER — a question whose answers are the same answer is not a
+        // question, and that is the thing this clause was really protecting.
       }
     }
+    // every pair of options must produce a different voice
+    for (let a = 0; a < q.opts.length; a++)
+      for (let b2 = a+1; b2 < q.opts.length; b2++) {
+        const A = { ...base, ...q.opts[a][2] }, B = { ...base, ...q.opts[b2][2] };
+        const same = P.VOICE_SPEC.every(sp => {
+          const span = (sp.hi - sp.lo) || 1;
+          return Math.abs((A[sp.k] ?? sp.d) - (B[sp.k] ?? sp.d)) / span < 0.005;
+        });
+        if (same) bad.push(`${q.key}: "${q.opts[a][0]}" and "${q.opts[b2][0]}" are the same voice`);
+      }
   }
   // the whole point of question 2: its extremes must differ in RANGE, which is the thing a
   // recording says the model is short of — 6.7 semitones against a person's 13.3

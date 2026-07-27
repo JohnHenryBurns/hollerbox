@@ -168,6 +168,12 @@ a{color:var(--hot)}
 .opt.on small{opacity:.8}
 /* varied: the answer is still the answer, and it has been moved off it */
 .opt.varied{box-shadow:inset 0 0 0 2px var(--hot-ink)}
+
+/* The two things the questions are about: what it says, and what it starts from. Stacked, full
+   width, so neither is squashed against the other the way the phrase button was when it shared a
+   row with a text box. */
+#picker{display:flex;flex-direction:column;gap:.5rem;align-items:stretch}
+#picker .btn.big{width:100%}
 </style>
 
 <header>
@@ -474,6 +480,7 @@ function mutate(v, strength){
  *  survive a seed — Barry White could not be shared for exactly that reason. */
 const nudged = {};                       // per question, on top of the chosen option
 const tally  = {};                       // how many times this answer has been varied
+let startedFrom = 'john';                // which preset the questions are adjustments to
 function nudge(qid){
   const keys = OWNS[qid] || [];
   // Around the ANSWER, not around the last nudge. Nudging from the previous nudge is a random
@@ -615,7 +622,33 @@ let chosen_phrase = '';
 // the things you might say, not a separate way of saying things.
 document.getElementById('picker').innerHTML =
   '<button class="btn big" id="sayBtn"><span class="gl">\u275D</span>' +
-  '<span class="two"><span class="lb">Phrase</span><span class="val" id="sayVal">pick one</span></span></button>';
+  '<span class="two"><span class="lb">Phrase</span><span class="val" id="sayVal">pick one</span></span></button>' +
+  // A STARTING VOICE, under the phrase. The four questions are adjustments, and until now the
+  // thing they adjusted was fixed: John, invisibly, forever. Somebody who wanted to start from
+  // Barry and make him breathier had to leave, pick Barry on the throat, and come back by link.
+  '<button class="btn big" id="voiceBtn"><span class="gl">\u223F</span>' +
+  '<span class="two"><span class="lb">Start from</span><span class="val" id="voiceVal">John</span></span></button>';
+document.getElementById('voiceBtn').addEventListener('click', () => {
+  SESSION.menuStyle();
+  SESSION.voiceMenu({
+    current: startedFrom,
+    // No Advanced here: the four questions ARE this page's advanced, and a knob panel behind a
+    // voice picker would be a second way to do the same job with different words.
+    onPick: k => {
+      startedFrom = k;
+      const V = HOLLER.VOICES[k];
+      document.getElementById('voiceVal').textContent = V.label || k;
+      // A NEW STARTING POINT IS A RESET. The questions are re-matched to it and every tally goes
+      // — a nudge count is a record of what you did to the old voice, and keeping it would claim
+      // you had rolled a voice you have never heard.
+      for (const q of Q) delete tally[q.id];
+      adoptVoice({ ...HOLLER.defaultVoice(), ...(V.v || {}) });
+      SESSION.writeURL({ voice: current() }); linkUp();
+      speak(sample());
+    },
+  });
+});
+
 document.getElementById('sayBtn').addEventListener('click', () => {
   SESSION.phraseMenu({
     current: chosen_phrase,

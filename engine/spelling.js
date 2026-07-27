@@ -695,8 +695,50 @@ const BUILTIN_DICT = {
 function loadDict(){
   let user={};
   try{ user=JSON.parse(STORE.getItem('hollerbox.dict')||'{}'); }catch(e){}
-  return {...BUILTIN_DICT, ...user};      // your corrections win
+  // built in, then anything a program taught this session, then this person's own corrections —
+  // so a user who has fixed a name keeps their version even if the program ships a different one
+  return {...BUILTIN_DICT, ...TAUGHT, ...user};
 }
+// ── TAKING THE NAMES SOMEWHERE ELSE ──────────────────────────────────────
+//
+// Words taught with Remember live in this browser's localStorage and nowhere else. That is right
+// for a person correcting their own vocabulary and wrong the moment the same words are needed by
+// another program — a football simulator that says the names of your family and friends needs
+// those pronunciations, and its users are not going to teach them again one at a time.
+//
+// `learned()` hands back what has been taught, as a plain object that can be pasted into source.
+// `teach()` takes such an object without touching storage, which is how another program loads a
+// list it shipped rather than one it remembered.
+//
+//     const names = HOLLER_SPELL.learned();      // in the app, after teaching
+//     HOLLER_SPELL.teach(names);                 // in the sim, at startup
+//
+// Only the taught words come back, not the built-in ones — otherwise every export would carry a
+// copy of the dictionary and the two would drift apart the first time a built-in changed.
+function learned(){
+  try {
+    const user = JSON.parse(STORE.getItem('hollerbox.dict') || '{}');
+    const out = {};
+    for (const k of Object.keys(user).sort()) if (!BUILTIN_DICT[k]) out[k] = user[k];
+    return out;
+  } catch (e) { return {}; }
+}
+
+/** Load words for this session without writing to storage. A program shipping a name list wants
+ *  them present, not remembered — and writing them would mean a user's own corrections could be
+ *  silently overwritten by an update. */
+const TAUGHT = {};
+function teach(words){
+  if (!words) return 0;
+  let n = 0;
+  for (const [w, ph] of Object.entries(words)) {
+    if (!Array.isArray(ph) || !ph.length) continue;
+    TAUGHT[String(w).toLowerCase().replace(/[^a-z]/g, '')] = ph.slice();
+    n++;
+  }
+  return n;
+}
+
 function saveWord(word,ph){
   try{ const d=loadDict(); d[String(word).toLowerCase().replace(/[^a-z]/g,'')]=ph.slice();
        STORE.setItem('hollerbox.dict',JSON.stringify(d)); }catch(e){}
@@ -704,7 +746,7 @@ function saveWord(word,ph){
 
 root.HOLLER_SPELL = { G2P_RULES, BUILTIN_DICT, PAUSE, WEAK_FIRST, WORD_SHAPE,
                   NUCLEI, STRESS_DICT, WEAK_STRESS, legalOnset, syllabify, stressIndex, markStress,
-                  g2p, g2pWord, loadDict, saveWord, useStorage };
+                  g2p, g2pWord, loadDict, saveWord, useStorage, learned, teach };
 if (typeof module !== 'undefined' && module.exports) module.exports = root.HOLLER_SPELL;
 
 })(typeof window !== 'undefined' ? window : globalThis);

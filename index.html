@@ -484,6 +484,10 @@ header{border-bottom:1px solid var(--hot-line)}
           <button class="btn" id="editSounds">Edit sounds</button>
           <button class="btn dim" id="newWord">New word</button>
           <button class="btn dim" id="rememberBtn" disabled>Remember</button>
+          <!-- Words taught here live in this browser and nowhere else, which is right for a
+               person fixing their own vocabulary and wrong the moment another program needs the
+               same names. This copies them out as something that can be pasted into source. -->
+          <button class="btn dim" id="exportBtn" title="Copy every word you have taught">Copy words</button>
         </div>
       </div>
     </section>
@@ -1467,6 +1471,19 @@ function soundOut(raw){
       : 'Sounded out from the rules. If that is wrong, fix it below and press Remember.');
 }
 document.getElementById('spellBtn').addEventListener('click', ()=>soundOut());
+
+// Copy out everything taught in this browser, as something another program can load with
+// HOLLER_SPELL.teach(). Only the taught words, not the built-in ones — an export carrying a copy
+// of the dictionary would drift from it the first time a built-in changed.
+document.getElementById('exportBtn').addEventListener('click', async () => {
+  const words = HOLLER_SPELL.learned ? HOLLER_SPELL.learned() : {};
+  const n = Object.keys(words).length;
+  const text = JSON.stringify(words, null, 1);
+  const btn = document.getElementById('exportBtn');
+  try { await navigator.clipboard.writeText(text); btn.textContent = n ? 'Copied ' + n : 'Nothing yet'; }
+  catch (e) { console.log(text); btn.textContent = 'In the console'; }
+  setTimeout(() => { btn.textContent = 'Copy words'; }, 1800);
+});
 
 // ── the quick word bar: type, hear. Nothing else in the way. ──
 const quick=document.getElementById('quick');

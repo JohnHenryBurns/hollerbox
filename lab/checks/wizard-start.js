@@ -43,6 +43,30 @@ check("the wizard can start from any voice, and says which", () => {
       bad.push(`starting from ${worstName} lands ${(100*worst).toFixed(1)}% off — it is not that voice`);
   }
 
+  // THE SIZE LADDER RUNS ONE WAY. It is a question about size, so its options must be ordered by
+  // size, and the pitch must follow — tract length is what makes a voice a man, a woman or a
+  // child, and pitch is a consequence.
+  //
+  // READ WHAT THIS CANNOT SEE. The ladder used to have a woman in it labelled "a kid", at f0 210
+  // against a measured child's 268 — and ABLATED, THIS CHECK PASSES THAT. Putting 210 back leaves
+  // the ordering perfectly monotonic, because 210 sits between the mouse's 300 and the woman's
+  // 200. Ordering is all this tests.
+  //
+  // What actually exposed it was adding a woman: two adjacent options ten hertz apart, one
+  // claiming to be a child and one a woman. A person can see that and a rule cannot, so the
+  // values here are the presets' own measured ones and changing them means measuring again.
+  const size = Q.find(q => q.key === "size" || q.id === "q1");
+  if (size) {
+    let lastSect = -1, lastF0 = 1e9;
+    for (const [label, , patch] of size.opts) {
+      if (patch.sect === undefined) { bad.push(`size/${label} does not set a tract length`); continue; }
+      if (patch.sect <= lastSect) bad.push(`size/${label} is not longer than the option before it`);
+      if (patch.f0a !== undefined && patch.f0a >= lastF0)
+        bad.push(`size/${label} is not lower-pitched than the option before it`);
+      lastSect = patch.sect; if (patch.f0a !== undefined) lastF0 = patch.f0a;
+    }
+  }
+
   return { ok: bad.length === 0,
            note: bad.slice(0,3).join("  ") ||
                  `${Object.keys(P.VOICES).filter(k => P.VOICES[k].v).length} starting voices, ` +

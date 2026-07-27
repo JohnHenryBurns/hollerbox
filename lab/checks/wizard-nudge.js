@@ -46,6 +46,28 @@ check("a nudge stays in bounds and stays near its answer", () => {
     }
   }
   if (oob) bad.push(`${oob} nudges left their parameter's bounds`);
+
+  // THE PITCH IS A SHAPE, NOT THREE NUMBERS. f0a, f0b and f0c are the pitch at a phrase's start,
+  // at its accent and at its end. Nudged independently they scramble — measured over twenty
+  // rolls of "A man": 138/113/38, 112/65/97, 143/51/93, accents BELOW the phrase start. Nothing
+  // crashes and every one of them speaks, which is why it took three rolls to notice: the voice
+  // simply lurches. They move as a register now, one ratio for all three.
+  if (!/const REGISTER = \['f0a','f0b','f0c'\]/.test(page))
+    bad.push("the three pitch parameters are nudged independently — the melody scrambles");
+  let lost = 0;
+  const Qs = new Function(page.match(/const Q = \[[\s\S]*?\n\];/)[0] + "\nreturn Q;")();
+  const man = (Qs[0].opts.find(o => /man/i.test(o[0])) || [,, {}])[2];
+  if (man.f0a) {
+    for (let i = 0; i < 200; i++) {
+      const lift = Math.exp((rnd()*2 - 1) * 0.2 * 1.4);
+      const f = ["f0a","f0b","f0c"].map(k => {
+        const sp = P.VOICE_SPEC.find(x => x.k === k);
+        return Math.max(sp.lo, Math.min(sp.hi, man[k] * lift));
+      });
+      if (!(f[1] > f[0] && f[0] > f[2])) lost++;
+    }
+    if (lost) bad.push(`${lost} of 200 register nudges lost the pitch shape`);
+  }
   if (far) bad.push(`${far} nudges moved further than one step from the answer`);
 
   // THE VARIETY IS THE POINT. Eighteen of forty-two left twenty-four unreachable from this page,

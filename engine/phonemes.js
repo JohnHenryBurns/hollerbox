@@ -389,10 +389,12 @@ const isDiph  = sym => !!DIPH[sym];
 const VOICE_SPEC=[
   {k:'rd',   lo:0.35,   hi:2.40,    d:0.80},    // LF shape: pressed <-> breathy
   {k:'press',lo:0,      hi:1,       d:0.45, off:0,},    // how much effort presses at the peak
-  {k:'jit',  lo:0,      hi:3,       d:1, off:0,},       // vocal-fold irregularity
+  // 3 to 4: the wizard's "Rough" asks for 3.2, and a value outside its own bounds cannot survive a seed.
+  {k:'jit',  lo:0,      hi:4,       d:1, off:0,},       // vocal-fold irregularity
   {k:'damp', lo:0.9985, hi:0.99985, d:0.9995},  // tract losses -> formant bandwidth
   {k:'lipR', lo:-0.95,  hi:-0.62,   d:-0.85},   // radiation at the lips
-  {k:'brth', lo:0,      hi:0.34,    d:0.18, off:0,},   // aspiration — the noise BETWEEN harmonics,    // aspiration
+  // 0.34 to 0.7: the wizard's "Breathy" asks for 0.55, and a value outside its own bounds cannot survive a seed.
+  {k:'brth', lo:0,      hi:0.7,    d:0.18, off:0,},   // aspiration — the noise BETWEEN harmonics,    // aspiration
   // The floors were 80, 90 and 70, and Barry White sits at 58, 88 and 48 — below all three. A
   // preset outside its own bounds cannot survive a seed: encoding clamps it, so a link to Barry
   // arrived as a higher voice, and the page could not recognise the seed as Barry either.
@@ -405,7 +407,10 @@ const VOICE_SPEC=[
   {k:'stopT',lo:0.035,  hi:0.15,    d:0.075},  // how long a stop stays sealed
   {k:'burst',lo:0.02,   hi:1.2,     d:0.16, off:0.02,},   // release strength; the seal does most of the work
   {k:'hiss', lo:0.3,    hi:2.2,     d:1.0},    // how hard fricatives hiss
-  {k:'sect', lo:14,     hi:52,      d:44},     // tract length in sections (44 = 17.5 cm)
+  // 52 was the ceiling and the wizard's "A giant" asks for 54 — so the largest voice the page
+  // offers could not survive its own seed, clamping to 52 on the way through the codec. The
+  // worklet allows 72; nothing but this line said otherwise.
+  {k:'sect', lo:14,     hi:60,      d:44},     // tract length in sections (44 = 17.5 cm)
   {k:'open', lo:0,      hi:1,       d:0.05, off:0,},   // how far a held vowel opens as it is shouted
   // SECONDS PER SOUND. The floor was 0.10 while a calibrated voice sits at 0.095 — so John was
   // below his own declared minimum, and a seed round-trip would have clamped his tempo back up.

@@ -102,6 +102,16 @@ class TractProcessor extends AudioWorkletProcessor {
         // knob by another route: sound simply travels faster in it.
         const nn=Math.max(14,Math.min(this.nMax,Math.round(d.n)));
         if(nn!==this.n){
+          // ANY SEQUENCE IN FLIGHT IS NOW THE WRONG LENGTH. Its keyframes were built for the old
+          // section count, and reading them against a tract of a different size leaves the tail
+          // of every frame undefined — measured, a resize landing mid-word produces 5,120
+          // non-finite samples and the voice stops until something starts a new one.
+          //
+          // That is reachable from the wizard by design: nudging the size question changes
+          // `sect`, the page sends the resize, and the word already playing has not finished.
+          // The page cannot avoid it — the resize has to happen and the old word has to stop —
+          // so the engine drops what it can no longer render rather than rendering it wrongly.
+          this.seq=null; this.seqT=0; this.voicing=0; this.fric=0; this.asp=0; this.vot=0;
           this.n=nn;
           this.R.fill(0); this.L.fill(0); this.Rin.fill(0); this.Lin.fill(0);
           this.bR.fill(0); this.bL.fill(0); this.nR.fill(0); this.nL.fill(0); this.nLout=0; this.bLout=0;

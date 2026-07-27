@@ -548,7 +548,7 @@ const VOICES = {
   // vowel does NOT open. I had modelled it as an arc with the jaw dropping; the recording
   // says otherwise, so the recording wins.
   announcer:{ label:'Goal announcer', note:'Pressed and drawn out, pitch falling the whole way. Measured from a real cry.',
-    v:{ rd:0.48, press:0.85, jit:1.4, brth:0.20, drawl:0.62, open:0.06, per:0.62,
+    v:{ rd:0.48, press:0.85, jit:1.4, brth:0.20, drawl:0.62, open:0.06, per:0.4526,
         sect:44, f0a:196, f0b:188, f0c:118 } },
   // The fitted one, kept because it is what the recording actually produced and the comparison
   // is worth keeping. It is not the default any more: its postures score 1/10 within 12% of
@@ -557,22 +557,22 @@ const VOICES = {
   // which is within 17%. A 15.9 cm tract with an 88 Hz larynx is a small adult with a large
   // voice box, which is not a person.
   man:{ label:'Man', note:'A 17.5 cm tract, modal voice, ordinary timing.',
-    v:{ rd:0.95, press:0.18, jit:1.0, brth:0.18, drawl:0.08, open:0.05, per:0.17,
+    v:{ rd:0.95, press:0.18, jit:1.0, brth:0.18, drawl:0.08, open:0.05, per:0.1241,
         sect:46, f0a:96, f0b:112, f0c:84 } },
   woman:{ label:'Woman', note:'A shorter tract lifts every formant — that, not pitch alone, is the difference.',
-    v:{ rd:1.25, press:0.15, jit:1.0, brth:0.21, drawl:0.08, open:0.05, per:0.17,
+    v:{ rd:1.25, press:0.15, jit:1.0, brth:0.21, drawl:0.08, open:0.05, per:0.1241,
         sect:37, f0a:200, f0b:232, f0c:178 } },
   child:{ label:'Child', note:'Shorter still, and breathier.',
-    v:{ rd:1.35, press:0.12, jit:1.3, brth:0.22, drawl:0.08, open:0.05, per:0.16,
+    v:{ rd:1.35, press:0.12, jit:1.3, brth:0.22, drawl:0.08, open:0.05, per:0.1168,
         sect:31, f0a:268, f0b:310, f0c:244 } },
   helium:{ label:'Helium', note:'Same voice, same pitch — sound just travels faster, so the tube rings much higher. Source-filter separation, audible.',
-    v:{ rd:0.95, press:0.18, jit:1.0, brth:0.18, drawl:0.08, open:0.05, per:0.17,
+    v:{ rd:0.95, press:0.18, jit:1.0, brth:0.18, drawl:0.08, open:0.05, per:0.1241,
         sect:19, f0a:96, f0b:112, f0c:84 } },
   whisper:{ label:'Whisper', note:'Barely phonating: the folds hardly close at all.',
-    v:{ rd:2.35, press:0.0, jit:1.8, brth:0.26, drawl:0.10, open:0.03, per:0.20,
+    v:{ rd:2.35, press:0.0, jit:1.8, brth:0.26, drawl:0.10, open:0.03, per:0.1460,
         sect:44, f0a:130, f0b:148, f0c:120 } },
   barry:{ label:'Barry White', note:'A long tract and a low larynx: deep, resonant, unhurried.',
-    v:{ rd:0.78, press:0.22, jit:1.1, brth:0.18, drawl:0.14, open:0.10, per:0.20,
+    v:{ rd:0.78, press:0.22, jit:1.1, brth:0.18, drawl:0.14, open:0.10, per:0.1460,
         damp:0.99972, sect:48, f0a:58, f0b:88, f0c:48 } },
   custom:{ label:'Custom', note:'Yours. Tune it in the Lab, then copy the seed — a seed is the whole voice, tract length and timing included.', v:null },
 };
@@ -890,9 +890,30 @@ function closureFor(sym, stopHold, ratio){
 //
 // `per` is the rate now. The fixed part is expressed in units of it, so a slow voice is slow
 // throughout rather than slow in the middle and brisk at the edges.
-const LEN_FIXED = 14.8;      // 735 ms of fixed cost, in units of the 49.6 ms rate
+// EVERY PRESET TUNED UNDER THE OLD LAW NEEDED RESCALING, and only John got it. The duration law
+// changed from `per x n` to `per x (14.8 + n)` — a fixed cost per utterance plus a rate — and
+// `per` stopped meaning what it had meant. John was refitted against a recording at the same
+// time; the other seven were not, so each went on paying 14.8 times its own old `per` in silence
+// before saying anything. The announcer, at per 0.62, paid NINE SECONDS.
+//
+// Nothing sounded wrong in testing because everything tested was John. The others are reachable
+// from one dropdown and I did not open it.
+//
+// Rescaled by 40/54.8 — the factor that leaves a typical forty-sound utterance the length it was.
+// That is a translation of the old tuning into the new law, not a fresh calibration: each of
+// these was set by ear under the old formula and deserves re-hearing.
+// THE FIXED PART IS A TIME, NOT A MULTIPLE OF THE RATE. It was 14.8 units of `per`, on the
+// reasoning that a slow voice should be slow throughout — and that is true of the RATE and false
+// of the fixed cost. Starting and ending an utterance takes about as long whoever is speaking.
+// Tied to `per`, the announcer at 0.62 paid nine seconds of it before a single sound.
+//
+// A little scaling is right: a drawled voice does take longer to get going. A square root gives a
+// voice twice as slow about 1.4 times the run-up, which is audible without being absurd.
+const LEN_FIXED = 0.735;                 // seconds, at the reference rate
+const LEN_REF   = 0.0496;                // the rate it was measured at
 function phraseTime(n, per){
-  return per * (LEN_FIXED + Math.max(1, n));
+  const lead = LEN_FIXED * Math.sqrt(Math.max(0.2, per / LEN_REF));
+  return lead + per * Math.max(1, n);
 }
 
 function rateFor(chain, D, v){

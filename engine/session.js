@@ -151,6 +151,14 @@
       { processorOptions: { n, velar: eng().VELAR } });
     // a view may insert an analyser, a gain stage, anything — it is handed the two ends
     if (o.connect) o.connect(node, ctx); else node.connect(ctx.destination);
+
+    // AND IT MAY LISTEN. The worklet reports its live state every block — the diameters the tube
+    // is drawn from, the wave energy that colours it, whether it is still speaking. index.html's
+    // handler lived inside the start function this one replaced, and went with it: the page kept
+    // reading `liveDiam` and nothing ever assigned it, so the tube fell back to a static shape
+    // and stopped moving. Passed in now, so losing it means deleting an argument rather than
+    // quietly dropping a line out of a function body.
+    if (o.onMessage) node.port.onmessage = o.onMessage;
     await new Promise(r => setTimeout(r, o.warm === undefined ? 300 : o.warm));
     return { ctx, node, n };
   }
@@ -402,9 +410,40 @@
 
   /** Render the navigation into an element. `here` is the file this page is, so it can mark
    *  itself; the links carry voice and phrase, which is what makes the three feel like one. */
+  /** The navigation's own stylesheet, injected once.
+   *
+   *  It used to render elements classed `btn` and rely on each page having a compatible rule for
+   *  that. index.html did. The wizard's was a different size. THE BENCH HAD NO `.btn` RULE AT
+   *  ALL, so the nav arrived there as three words of bare text — which is exactly the failure a
+   *  shared component is supposed to make impossible.
+   *
+   *  Its own class names now, so a page cannot style it wrong by accident or leave it unstyled
+   *  by omission. Colours come from --hot where a page has declared it and fall back where it
+   *  has not. */
+  function navStyle() {
+    if (document.getElementById('hb-nav-css')) return;
+    const st = document.createElement('style');
+    st.id = 'hb-nav-css';
+    st.textContent = [
+      '.hb-nav{display:flex;gap:.4rem;align-items:center;flex-wrap:nowrap;overflow-x:auto;',
+      '  scrollbar-width:none}',
+      '.hb-nav::-webkit-scrollbar{display:none}',
+      '.hb-room{flex:0 0 auto;display:inline-block;text-decoration:none;white-space:nowrap;',
+      '  font:500 .86rem/1 var(--sans,system-ui),system-ui;padding:.44rem .7rem;border-radius:7px;',
+      '  border:1px solid var(--line,#4c575e);color:var(--ink,#f1f5f7);background:transparent;',
+      '  cursor:pointer}',
+      '.hb-room:hover{border-color:var(--hot,#ff8a4c)}',
+      '.hb-room.here{background:var(--hot,#ff8a4c);border-color:var(--hot,#ff8a4c);',
+      '  color:var(--hot-ink,#160a03);font-weight:600;cursor:default}',
+    ].join('');
+    document.head.appendChild(st);
+  }
+
   function mountNav(el, here, state) {
     const host = typeof el === 'string' ? document.getElementById(el) : el;
     if (!host) return null;
+    navStyle();
+    host.className = 'hb-nav';
     // depth matters: lab/bench.html has to climb out to reach the other two
     const up = /\//.test(here) ? '../' : '';
     host.innerHTML = '';
@@ -413,7 +452,7 @@
       // marking it current on the page it opens over would be a lie.
       const mine = !r.mark && r.href.replace(/^.*\//, '') === here.replace(/^.*\//, '');
       const a = document.createElement(mine ? 'span' : 'a');
-      a.className = 'btn' + (mine ? ' here' : '') + (r.quiet ? ' quiet' : '');
+      a.className = 'hb-room' + (mine ? ' here' : '') + (r.quiet ? ' quiet' : '');
       a.textContent = r.name;
       a.title = r.why;
       if (!mine) a.setAttribute('href', up + r.href + (r.mark ? '#' + r.mark : ''));
@@ -565,7 +604,7 @@
   }
 
   root.HOLLER_SESSION = { planWord, planSpeech, chainFor, loadEngine, startAudio, tractFor,
-                          voiceMenu,
+                          voiceMenu, navStyle,
                           phraseMenu, menuStyle,
                           ROOMS, mountNav,
                           PHRASES, mountSelector, readURL, writeURL, carryState };

@@ -211,7 +211,15 @@ input[type=range]:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
 .readout b{color:var(--ink);font-weight:500;display:inline-block;text-align:left;
   font-variant-numeric:tabular-nums}
 /* widths held in ch so the longest value never pushes its neighbours */
-#fmt{min-width:15ch}
+/* ── THE READOUT DOES NOT REFLOW ──────────────────────────────────────────
+   Every field reserves its widest value, so nothing after it moves when it changes. #fmt was
+   15ch and its widest reading is "1046 · 2290 · 3010 Hz" — twenty-one — so on a loud vowel it
+   overflowed and shoved the state label along; and the state label reserved nothing at all, so
+   it moved again between "idle", "speaking" and "hold /aɪ/".
+   Tabular figures as well, or the digits shuffle within a fixed box while the box stays put. */
+.readout{font-variant-numeric:tabular-nums}
+#fmt{min-width:22ch}
+#modeWrap{min-width:11ch}
 #mode{min-width:9ch;color:var(--dim)}
 #mode.live{color:var(--ink)}
 
@@ -929,6 +937,16 @@ let view='tube';
 async function start(){
   if(node) return;
   const a = await HOLLER_SESSION.startAudio({
+    // The tube is drawn from these. Without them `liveDiam` stays null, the tube falls back to
+    // the static shape, and it neither moves nor colours.
+    onMessage: e => {
+      energy=e.data.e; liveDiam=e.data.d; voicedNow=e.data.on;
+      nOpen=e.data.nOpen||0; nEnergy=e.data.nE||null;
+      bOpenLive=e.data.bOpen||0; bEnergy=e.data.bE||null;
+      const changed = (e.data.seq!==sequencing) || (e.data.v!==voicing);
+      sequencing=e.data.seq; voicing=e.data.v;
+      if(changed) paintBtn();                                 // a word ends by itself
+    },
     connect: (nd, c) => {
       analyser = c.createAnalyser();
       analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.55;

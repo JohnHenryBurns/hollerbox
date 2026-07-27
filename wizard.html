@@ -50,7 +50,17 @@
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:var(--sans);
   -webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
-header{display:flex;align-items:center;gap:.75rem;padding:.6rem 1rem;border-bottom:1px solid var(--rule)}
+/* Two rows on a phone, like the throat. It was one flex row, so the rooms folded up beside the
+   title and the subtitle sat between them — "Hollerbox  make a voice  Throat  Make a voice",
+   which reads as four things of equal weight and is really two. */
+header{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .75rem;padding:.55rem 1rem;
+  border-bottom:1px solid var(--rule)}
+@media (max-width:640px){
+  header{padding:.5rem .7rem}
+  header .sub{display:none}
+  header #nav{order:3;flex:1 0 100%}
+  header .spacer{flex:1}
+}
 h1{font-weight:600;font-size:1.1rem;margin:0;letter-spacing:-.01em}
 .sub{font-family:var(--mono);font-size:.78rem;color:var(--dim)}
 .spacer{flex:1}
@@ -384,27 +394,32 @@ function showSeed(){
 // whole point of the page.
 SESSION.menuStyle();
 let chosen_phrase = '';
+// One control, full width. It was a squashed button beside a text box — the button had no room
+// for its own label, showing "PHRAS pi…", and the box asked the same question the button
+// answers. Writing your own is the first entry inside the sheet, where it belongs: it is one of
+// the things you might say, not a separate way of saying things.
 document.getElementById('picker').innerHTML =
   '<button class="btn big" id="sayBtn"><span class="gl">\u275D</span>' +
-  '<span class="two"><span class="lb">Phrase</span><span class="val" id="sayVal">pick one</span></span></button>' +
-  '<input id="own" placeholder="or type your own">';
+  '<span class="two"><span class="lb">Phrase</span><span class="val" id="sayVal">pick one</span></span></button>';
 document.getElementById('sayBtn').addEventListener('click', () => {
   SESSION.phraseMenu({
     current: chosen_phrase,
     kinds: ['passage', 'probe'],
-    onPick: t => { chosen_phrase = t; document.getElementById('own').value = '';
-                   const sv=document.getElementById('sayVal');
-                   if(sv) sv.textContent = t.length>26 ? t.slice(0,25).trimEnd()+'\u2026' : t;
-                   SESSION.writeURL({ phrase: t }); linkUp(); speak(t); },
+    // "Write your own" is the first row of the sheet, not a box beside the button
+    onCustom: () => {
+      const t = prompt('What should it say?', chosen_phrase || '');
+      if (t && t.trim()) { picker.setPhrase(t.trim()); SESSION.writeURL({ phrase: t.trim() });
+                           linkUp(); speak(t.trim()); }
+    },
+    onPick: t => { picker.setPhrase(t); SESSION.writeURL({ phrase: t }); linkUp(); speak(t); },
   });
 });
-document.getElementById('own').addEventListener('keydown', e => {
-  if (e.key === 'Enter') { const t = e.target.value.trim(); if (t) speak(t); }
-});
+
 const picker = {
-  phrase: () => document.getElementById('own').value.trim() || chosen_phrase ||
+  phrase: () => chosen_phrase ||
                 (SESSION.PHRASES.find(p => p.kind === 'passage') || {}).text || 'hello world',
-  setPhrase: t => { chosen_phrase = t; },
+  setPhrase: t => { chosen_phrase = t; const sv=document.getElementById('sayVal');
+                    if(sv) sv.textContent = t.length>26 ? t.slice(0,25).trimEnd()+'\u2026' : t; },
 };
 
 // ── STATE THAT SURVIVES THE TRIP ──────────────────────────────────────────

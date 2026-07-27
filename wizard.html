@@ -126,6 +126,12 @@ a{color:var(--hot)}
   font-size:.78rem;font-weight:400;padding:.35rem .45rem}
 .btn.quiet:hover,.btn.quiet:focus-visible{color:var(--ink);border-color:var(--line);background:none}
 .btn.quiet.here{background:var(--hot);color:var(--hot-ink);border-color:var(--hot);font-weight:600}
+
+/* The nudge is an action among the answers, not one of them: outlined where they are filled, and
+   marked when this question has been moved off its answer. */
+.opt.nudge{flex:1 1 100%;border-style:dashed;color:var(--dim);font-weight:500}
+.opt.nudge:hover{color:var(--ink);border-color:var(--hot)}
+.opt.nudge.on{border-style:solid;border-color:var(--hot);color:var(--hot);background:none}
 </style>
 
 <header>
@@ -263,7 +269,9 @@ const chosen = { q1:2, q2:2, q3:1, q4:1 };          // the "as it is" option in 
 
 function voice(){
   let v = { ...BASE };
-  for (const q of Q) v = { ...v, ...q.opts[chosen[q.id]][2] };
+  // the chosen option first, then whatever that question has been nudged to — so picking a new
+  // option starts you cleanly from it, and a nudge is always relative to your last answer
+  for (const q of Q) v = { ...v, ...q.opts[chosen[q.id]][2], ...(nudged[q.id] || {}) };
   return v;
 }
 /** What actually gets spoken: a contender while a battle is running, the answers otherwise. */
@@ -273,10 +281,11 @@ function current(){ return battle ? battle.keep : voice(); }
    One shared start promise, because four things can trigger it and a flag-then-work guard lets
    the second caller through with no node — which is a bug this project has already had. */
 let ctx=null, node=null, N=44;
+let wakeAudio = null;
 const start = async () => {
   if (node) return;
   const a = await SESSION.startAudio();
-  ctx = a.ctx; node = a.node; N = a.n;
+  ctx = a.ctx; node = a.node; N = a.n; wakeAudio = a.wake;
 };
 
 // The voice is an ARGUMENT, not a global a caller sets and clears around the call. It used to be
@@ -284,10 +293,20 @@ const start = async () => {
 // the read and both buttons played whatever the questions currently said. The A/B comparison has
 // never worked. Then a later edit dropped the listeners entirely and it stopped doing anything at
 // all, which is the "fragile, stops speaking" report.
-async function speak(text, who){
+// ONE AT A TIME. Every option tap calls this and none of them waited, so several could be part
+// way through at once — each past its own `await`, each resizing the tract for a different
+// voice, and whichever finished last left the worklet at a length the others had already built
+// keyframes for. Reported as the wizard going silent after changing the size a few times.
+let speaking = Promise.resolve();
+function speak(text, who){
+  speaking = speaking.then(() => reallySpeak(text, who)).catch(() => {});
+  return speaking;
+}
+async function reallySpeak(text, who){
   await start();
   if (!node) return;
   if (ctx.state === 'suspended') await ctx.resume();
+  if (wakeAudio) wakeAudio();
   const v = who || current();
   // The resize lives in session.js, which tracks what the worklet actually has. This page used
   // to compare against its own local N and assume they matched — and it is the page whose first
@@ -319,6 +338,27 @@ async function speak(text, who){
    against 22.5 — and the bottom already matches. A walk that only ever nudges is unlikely to
    cross that on its own, so it is allowed to push, and it is allowed to be switched off when
    what you want is a small voice rather than a lively one. */
+// ── WHAT EACH QUESTION OWNS ──────────────────────────────────────────────
+//
+// The four questions set eighteen of forty-two parameters, and each offers three to five fixed
+// points. Everything BETWEEN those points is unreachable — "a kid" and "grown up" are two spots
+// on a continuum with nothing in between, and the interesting voices are usually in between.
+//
+// A nudge jitters one question's parameters around wherever you currently are, and leaves the
+// other three alone. That is deliberately not "surprise me": randomising everything gives you a
+// voice you cannot learn anything from, because you cannot tell which of the four changes did
+// it. One question at a time is how you find out what a question MEANS.
+//
+// The A/B walk further down is the other half and answers a different need — it compares two
+// whole voices rather than exploring one axis. Nudge for "more like this, but different"; walk
+// for "which of these is better".
+const OWNS = {
+  q1: ['sect','f0a','f0b','f0c'],
+  q2: ['acc','decl','wklev','wkdur'],
+  q3: ['rd','press','brth','jit','folds','damp'],
+  q4: ['per','drawl','glide','stopT'],
+};
+
 const WALK = ['sect','f0a','f0b','f0c','rd','press','brth','jit','per','drawl','open'];
 const RANGE = ['acc','decl','wklev','wkdur'];
 
@@ -350,6 +390,37 @@ function mutate(v, strength){
   return out;
 }
 
+/** Jitter one question's parameters around where they currently are.
+ *
+ *  Around, not at random: a nudge from "a giant" should still be enormous. The step is a fifth
+ *  of each parameter's range, which is enough to hear and small enough that four nudges in a row
+ *  still sound like relatives. Clamped, because a parameter outside its own bounds cannot
+ *  survive a seed — Barry White could not be shared for exactly that reason. */
+const nudged = {};                       // per question, on top of the chosen option
+function nudge(qid){
+  const keys = OWNS[qid] || [];
+  // Around the ANSWER, not around the last nudge. Nudging from the previous nudge is a random
+  // walk: measured, "a giant" drifted from 70 Hz to 147 in five taps and stopped being a giant,
+  // while the button still said it was one. Each nudge is a fresh sample near the option you
+  // chose, so the fifth is as much a giant as the first and tapping again explores rather than
+  // wanders.
+  const q = Q.find(x => x.id === qid);
+  const answer = { ...BASE, ...(q ? q.opts[chosen[qid]][2] : {}) };
+  const out = {};
+  for (const k of keys) {
+    const spec = HOLLER.VOICE_SPEC.find(x => x.k === k);
+    if (!spec) continue;
+    const span = spec.hi - spec.lo;
+    const at = answer[k] === undefined ? spec.d : answer[k];
+    out[k] = Math.max(spec.lo, Math.min(spec.hi, at + (rnd()*2 - 1) * span * 0.2));
+  }
+  nudged[qid] = out;
+  battle = null; round = 0;
+  document.getElementById('battleCount').textContent = '';
+  draw(); showSeed();
+  speak(sample());
+}
+
 function startBattle(){
   const from = battle ? battle.keep : voice();
   battle = { keep: from, A: mutate(from, 1), B: mutate(from, 1) };
@@ -364,12 +435,21 @@ function draw(){
   for (const q of Q){
     const host = document.getElementById(q.id);
     host.innerHTML = '';
+    // the nudge sits with the options, not in the heading, because it is one of the things you
+    // can do to this question rather than a label on it
+    const nb = document.createElement('button');
+    nb.className = 'opt nudge' + (nudged[q.id] ? ' on' : '');
+    nb.innerHTML = (nudged[q.id] ? 'Nudge again' : 'Nudge') +
+                   '<small>' + (nudged[q.id] ? 'tap an answer to reset' : 'somewhere in between') + '</small>';
+    nb.addEventListener('click', e => { e.stopPropagation(); nudge(q.id); });
+    host.appendChild(nb);
     q.opts.forEach(([label, hint], i) => {
       const b = document.createElement('button');
       b.className = 'opt' + (chosen[q.id] === i ? ' on' : '');
       b.innerHTML = label + '<small>' + hint + '</small>';
       b.addEventListener('click', () => {
-        chosen[q.id] = i; battle = null; round = 0;
+        chosen[q.id] = i; delete nudged[q.id];      // a fresh answer, not a nudged one
+        battle = null; round = 0;
         SESSION.writeURL({ voice: current() }); linkUp();
         document.getElementById('battleCount').textContent = '';
         draw(); showSeed();

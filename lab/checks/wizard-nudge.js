@@ -48,8 +48,60 @@ check("a nudge stays in bounds and stays near its answer", () => {
   if (oob) bad.push(`${oob} nudges left their parameter's bounds`);
   if (far) bad.push(`${far} nudges moved further than one step from the answer`);
 
+  // THE VARIETY IS THE POINT. Eighteen of forty-two left twenty-four unreachable from this page,
+  // and the reachable ones were the obvious ones. Three are held back and each for its own
+  // reason: artStiff breaks articulation at its top end (the tract misses its postures by 0.44
+  // against a calibrated 0.09), outGain is loudness rather than character, and fricDuck is what
+  // makes a voiced fricative sound like one rather than a hum.
+  const HELD = ["artStiff", "outGain", "fricDuck"];
+  const reach = Object.keys(seen).length;
+  if (reach < P.VOICE_SPEC.length - HELD.length)
+    bad.push(`the wizard reaches ${reach} of ${P.VOICE_SPEC.length}; ` +
+             `${P.VOICE_SPEC.length - HELD.length} are safe to expose`);
+  for (const k of HELD)
+    if (seen[k]) bad.push(`${k} is exposed to nudging and should not be`);
+
+  // and a nudged voice must still be a voice. Forty of them, every question moved at once.
+  const S = require("../../engine/spelling.js");
+  const base = { ...P.defaultVoice(), ...P.VOICES.man.v };
+  let broke = 0;
+  // Four, not twelve. Each is a full render and this check was taking 62 seconds — a third of
+  // the fast tier on its own, for a question four samples answer just as well: a nudge that
+  // produces silence or NaN does so because a parameter combination is unsound, not because the
+  // twelfth roll was unlucky.
+  for (let trial = 0; trial < 4; trial++) {
+    const v = { ...base };
+    for (const keys of Object.values(OWNS))
+      for (const k of keys) {
+        const sp = P.VOICE_SPEC.find(x => x.k === k);
+        if (!sp) continue;
+        v[k] = Math.max(sp.lo, Math.min(sp.hi, base[k] + (rnd()*2-1)*(sp.hi-sp.lo)*0.2));
+      }
+    const n = Math.round(v.sect);
+    const r = S.g2p("she sells sea shells");
+    const D = Math.max(0.35, r.ph.length*(v.per||0.17));
+    const W = P.buildWord(r.ph, { D, rate: P.rateFor(r.ph, D, v), n, stress: r.stress, pros: v,
+                          glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+    const p = H.makeProcessor(n);
+    p.port.postMessage = () => {};
+    p.port.onmessage({ data: { type: "voice", v } });
+    p.port.onmessage({ data: { type: "goal",
+      seq: { keys: W.keys, f0: P.buildF0(W.end, v, { stress: r.stress, seg: W.seg }), end: W.end } } });
+    const out = [new Float32Array(128)];
+    let pk = 0, nan = 0;
+    for (let b = 0; b < Math.ceil(W.end*H.SR/128); b++) {
+      p.process([], [out]);
+      for (let i = 0; i < 128; i++) {
+        const x = out[0][i];
+        if (!Number.isFinite(x)) nan++; else pk = Math.max(pk, Math.abs(x));
+      }
+    }
+    if (nan || pk < 0.02) broke++;
+  }
+  if (broke) bad.push(`${broke} of 4 nudged voices came out silent or NaN`);
+
   return { ok: bad.length === 0,
            note: bad.slice(0,3).join("  ") ||
-                 `${Object.keys(OWNS).length} questions own ${Object.keys(seen).length} parameters, ` +
-                 `no overlap; 200 nudges in bounds and within a step` };
+                 `${Object.keys(OWNS).length} questions reach ${reach} of ${P.VOICE_SPEC.length} ` +
+                 `parameters, no overlap; 4 nudged voices all speak` };
 });

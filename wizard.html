@@ -352,11 +352,27 @@ async function reallySpeak(text, who){
 // The A/B walk further down is the other half and answers a different need — it compares two
 // whole voices rather than exploring one axis. Nudge for "more like this, but different"; walk
 // for "which of these is better".
+// Thirty-nine of the forty-two, which is everything a voice IS. The four answers still move the
+// handful each question is really about; a NUDGE moves everything that question owns, which is
+// where the variety lives — the first version reached eighteen and the other twenty-four were
+// unreachable from this page at all.
+//
+// Sorted by measurement rather than by guess. Each of the twenty-four was swept to both extremes
+// and the result checked for whether the tract still LANDS on its postures: calibrated it misses
+// by 0.09, and only artStiff pushed that past 0.30, reaching 0.44 — articulation coming apart
+// rather than a voice sounding different. A sluggish tongue is a real voice quality; a tongue
+// that never arrives is a fault.
+//
+// THREE ARE HELD BACK, each for its own reason:
+//   artStiff  — breaks articulation at its top end, measured
+//   outGain   — loudness is not character. A nudge that only makes it quieter is not variety.
+//   fricDuck  — what makes a voiced fricative sound like one rather than a hum. Correctness.
 const OWNS = {
-  q1: ['sect','f0a','f0b','f0c'],
-  q2: ['acc','decl','wklev','wkdur'],
-  q3: ['rd','press','brth','jit','folds','damp'],
-  q4: ['per','drawl','glide','stopT'],
+  q1: ['sect','f0a','f0b','f0c','lipR'],
+  q2: ['acc','decl','wklev','wkdur','pert','ask','reset'],
+  q3: ['rd','press','brth','jit','folds','damp','open','hiss','burst','onset','stopVc'],
+  q4: ['per','drawl','glide','stopT','vlen','coda','fnl','poly','apw','wgap','gcap',
+       'artT','artCrit','artFar','artPush','velT'],
 };
 
 const WALK = ['sect','f0a','f0b','f0c','rd','press','brth','jit','per','drawl','open'];

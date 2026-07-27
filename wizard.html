@@ -30,13 +30,18 @@
 
      Chosen against the colours already carrying meaning rather than by eye. The Mouth view is
      red for fixed, yellow for flaps, blue for air, and the constriction marker is a brighter
-     orange. #e2622e sits 5.4:1 against the background — comfortable for small text — and far
-     enough from all four to be told apart. Its nearest neighbour is the Mouth view's red, and
-     the two never appear together: one is chrome, the other is inside the canvas.
+     orange. #ff8a4c sits 8.0:1 against the background and 8.5:1 for dark text ON it, so it works as a
+     FILL rather than only as an outline — and it is within ten of the constriction marker it
+     already resembles, which is right, because the two mean the same thing.
+
+     ORANGE IS FILL OR LINE, NEVER TEXT INSIDE AN ORANGE BOX. Orange text on an orange-tinted
+     background with an orange border is three quiet signals where one loud one was wanted; it
+     reads as washed out. A marked control is FILLED and its text goes dark.
 
      Used for exactly two things: WHERE YOU ARE, and WHAT IS LIVE. Everything else stays grey,
      because an accent on everything is an accent on nothing. */
-  --hot:#e2622e; --hot-soft:rgba(226,98,46,.16); --hot-line:rgba(226,98,46,.45);
+  --hot:#ff8a4c; --hot-soft:rgba(255,138,76,.14); --hot-line:rgba(255,138,76,.55);
+  --hot-ink:#160a03;
   --bg:#0f1316; --panel:#171c20; --panel2:#212930; --rule:#2f373d;
   --ink:#f1f5f7; --dim:#aeb9bf; --line:#4c575e; --pick:#cfe3ff;
   --mono:"IBM Plex Mono",ui-monospace,monospace;
@@ -75,22 +80,27 @@ main{max-width:44rem;margin:0 auto;padding:1rem 1rem 4rem}
 .note{font-family:var(--mono);font-size:.72rem;color:var(--dim);margin-top:.5rem;line-height:1.5}
 
 
-/* WHERE YOU ARE. This was dashed and at 55% opacity, which is how an interface says "disabled",
-   not "current" — so the room you were in looked like the one you could not go to. */
-.btn.here{opacity:1;cursor:default;border-color:var(--hot-line);
-  background:var(--hot-soft);color:var(--hot);font-weight:600}
+
+/* FILLED, NOT TINTED. This was orange text on an orange wash inside an orange border — three
+   quiet signals where one loud one was wanted, and it read as washed out rather than current. */
+.btn.here{opacity:1;cursor:default;background:var(--hot);border-color:var(--hot);
+  color:var(--hot-ink);font-weight:600}
 
 /* The chosen answer to each question, and the seed the answers make. */
-.opt.on{background:var(--hot-soft);color:var(--hot);border-color:var(--hot);font-weight:600}
-#seed{border-color:var(--hot-line);color:var(--hot)}
+.opt.on{background:var(--hot);color:var(--hot-ink);border-color:var(--hot);font-weight:600}
+/* the seed is orange TEXT, and legitimately so: it sits on the plain panel, not inside an
+   orange box, so there is nothing for it to wash out against */
+#seed{border-color:var(--hot-line)}
+#seed{color:var(--hot)}
 a{color:var(--hot)}
 :focus-visible{outline:2px solid var(--hot);outline-offset:2px}
 
 /* The same two-question treatment as the throat: a mark, and the weight to match. */
 .btn.big{display:inline-flex;align-items:center;gap:.42rem;padding:.5rem .8rem;
   font-size:.98rem;font-weight:600;background:var(--panel2);border-color:var(--line)}
-.btn.big .gl{font-size:1.05rem;line-height:1;color:var(--hot);opacity:.92}
-.btn.big:hover,.btn.big:focus-visible{border-color:var(--hot-line);background:var(--hot-soft)}
+.btn.big .gl{font-size:1.05rem;line-height:1;color:var(--hot)}
+.btn.big:hover,.btn.big:focus-visible{border-color:var(--hot);background:var(--hot);color:var(--hot-ink)}
+.btn.big:hover .gl,.btn.big:focus-visible .gl{color:var(--hot-ink)}
 </style>
 
 <header>

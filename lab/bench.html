@@ -7,7 +7,8 @@
    button, the filled part of a bar, the room you are in. Same meaning, different colour, because
    the three pages were styled on different days. Burnt orange now, like the rest. */
 :root{ --bg:#0e1113; --fg:#e8e6e1; --dim:#8a908f; --line:#242a2d;
-       --hot:#e2622e; --hot-soft:rgba(226,98,46,.16); --hot-line:rgba(226,98,46,.45);
+       --hot:#ff8a4c; --hot-soft:rgba(255,138,76,.14); --hot-line:rgba(255,138,76,.55);
+       --hot-ink:#160a03;
        --good:#5aa469; --bad:#c05a4e; }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
@@ -46,10 +47,11 @@ select{font:inherit;background:#171b1e;color:var(--fg);border:1px solid var(--li
 .status{color:var(--dim);font-size:12px;min-height:16px;margin-top:6px}
 
 
-/* WHERE YOU ARE. This was dashed and at 55% opacity, which is how an interface says "disabled",
-   not "current" — so the room you were in looked like the one you could not go to. */
-.btn.here{opacity:1;cursor:default;border-color:var(--hot-line);
-  background:var(--hot-soft);color:var(--hot);font-weight:600}
+
+/* FILLED, NOT TINTED. This was orange text on an orange wash inside an orange border — three
+   quiet signals where one loud one was wanted, and it read as washed out rather than current. */
+.btn.here{opacity:1;cursor:default;background:var(--hot);border-color:var(--hot);
+  color:var(--hot-ink);font-weight:600}
 </style>
 
 <h1>Consonant bench</h1>

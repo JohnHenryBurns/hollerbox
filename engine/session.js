@@ -165,6 +165,22 @@
   // `why` is not decoration. Half of these exist because they broke something, and a phrase
   // whose purpose is forgotten gets quietly dropped the next time the list is tidied.
   const PHRASES = [
+    // PASSAGES FIRST. The list is what the Say sheet shows in order, and somebody opening it is
+    // far more likely to want something worth hearing than a four-word probe. The probes are the
+    // working end of the list and they keep their notes; they are simply not the front of it.
+    { text: 'To be, or not to be, that is the question.',
+      kind: 'passage', why: 'Shakespeare \u00b7 Hamlet, 1601' },
+    { text: 'In the beginning, God created the heavens and the earth.',
+      kind: 'passage', why: 'Genesis 1:1 \u00b7 King James Version, 1611' },
+    { text: 'It was the best of times, it was the worst of times.',
+      kind: 'passage', why: 'Dickens \u00b7 A Tale of Two Cities, 1859' },
+    { text: 'Call me Ishmael. Some years ago, never mind how long precisely, I thought I would sail about a little.',
+      kind: 'passage', why: 'Melville \u00b7 Moby-Dick, 1851' },
+    { text: 'Two roads diverged in a wood, and I took the one less travelled by, and that has made all the difference.',
+      kind: 'passage', why: 'Frost \u00b7 The Road Not Taken, 1916' },
+
+    // Each of these is here because it found something, and the note says what. A phrase whose
+    // purpose is forgotten gets quietly dropped the next time somebody tidies the list.
     { text: 'Hello World',                kind: 'probe', why: 'the smallest sanity check' },
     { text: 'I love my daughter',         kind: 'probe', why: 'the words that found the final-y and final-e bugs' },
     { text: 'my wife is great',           kind: 'probe', why: 'three lexical exceptions in four words: my, is, great' },
@@ -178,17 +194,6 @@
     { text: 'my mother and my brother',   kind: 'probe', why: 'nasals, and the /\u00f0/ that still hisses' },
     { text: 'the quick brown fox jumps over the lazy dog',
                                           kind: 'probe', why: 'long enough to hear phrase rhythm rather than word rhythm' },
-
-    { text: 'It was the best of times, it was the worst of times.',
-      kind: 'passage', why: 'Dickens \u00b7 A Tale of Two Cities, 1859' },
-    { text: 'Call me Ishmael. Some years ago, never mind how long precisely, I thought I would sail about a little.',
-      kind: 'passage', why: 'Melville \u00b7 Moby-Dick, 1851' },
-    { text: 'It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.',
-      kind: 'passage', why: 'Austen \u00b7 Pride and Prejudice, 1813' },
-    { text: 'I have spread my dreams under your feet. Tread softly because you tread on my dreams.',
-      kind: 'passage', why: 'Yeats \u00b7 He Wishes for the Cloths of Heaven, 1899' },
-    { text: 'Two roads diverged in a wood, and I took the one less travelled by, and that has made all the difference.',
-      kind: 'passage', why: 'Frost \u00b7 The Road Not Taken, 1916' },
   ];
 
   // ── THE SHARED SELECTOR ─────────────────────────────────────────────────
@@ -477,16 +482,18 @@
       '.hb-row{display:block;width:100%;text-align:left;background:none;border:0;',
       '  color:#f1f5f7;padding:.62rem 1.1rem;cursor:pointer;font:inherit}',
       '.hb-row:hover,.hb-row:focus{background:#212930;outline:none}',
-      '.hb-row:focus-visible{box-shadow:inset 3px 0 0 #e2622e}',
+      '.hb-row:focus-visible{box-shadow:inset 3px 0 0 #ff8a4c}',
       '.hb-row b{display:block;font-weight:600;font-size:.98rem}',
       '.hb-row small{display:block;color:#8b969c;font:.76rem/1.45 ui-monospace,monospace;',
       '  margin-top:.1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
       // The accent, spelled out rather than read from a variable: this stylesheet is injected
       // into whichever page asks, and a page that has not declared --hot would get nothing.
-      '.hb-row.on b{color:#e2622e}',
+      // filled, not tinted: an orange word on an orange wash is the thing that did not pop
+      '.hb-row.on{background:#ff8a4c}',
+      '.hb-row.on b,.hb-row.on small{color:#160a03}',
       '.hb-row.on b:after{content:" \\2713"}',
       '.hb-row-action{border-bottom:1px solid #2f373d;margin-bottom:.2rem}',
-      '.hb-row-action b{color:#e2622e}',
+      '.hb-row-action b{color:#ff8a4c}',
       '.hb-row-foot{border-top:1px solid #2f373d;border-bottom:0;margin:.3rem 0 0}',
     ].join('');
     document.head.appendChild(st);

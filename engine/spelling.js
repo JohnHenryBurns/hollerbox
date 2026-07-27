@@ -365,7 +365,13 @@ function reduceUnstressed(ph, stress){
 
 function withStress(word, res){
   const m=markStress(word, res.ph);
-  return {...res, ph:reduceUnstressed(res.ph, m.stress), syl:m.syl, stress:m.stress, primary:m.primary};
+  // A DICTIONARY ENTRY IS NOT REDUCED. Reduction is a rule for words spelled out by rules; a
+  // word somebody wrote the pronunciation of has already had every decision made about it.
+  // Applying both turned "beginning" into /bəgɪnɪŋ/ where the entry says /bɪgɪnɪŋ/, and
+  // "forget" into /fɔrgət/ where it says /fɔrgɛt/ — the rule quietly overruling the exception
+  // that exists BECAUSE the rules are wrong there.
+  const ph = res.from === 'rules' ? reduceUnstressed(res.ph, m.stress) : res.ph;
+  return {...res, ph, syl:m.syl, stress:m.stress, primary:m.primary};
 }
 function g2pWord(word){
   let w=String(word||'').toLowerCase().replace(/[^a-z]/g,'');
@@ -491,6 +497,24 @@ function g2pWord(word){
 }
 
 const BUILTIN_DICT = {
+  // ── HARD G BEFORE E, I AND Y ────────────────────────────────────────────
+  // The soft-g rule is right for gem, gin, gym, giant and gentle, and wrong for a whole
+  // Germanic seam underneath it: get, give, girl, gift, begin. No rule separates them — the
+  // soft ones came through French and the hard ones did not — so a list is the honest answer
+  // and this is the frequent end of it.
+  get:['g','ɛ','t'], gets:['g','ɛ','t','s'], getting:['g','ɛ','t','ɪ','ŋ'],
+  girl:['g','ɝ','l'], girls:['g','ɝ','l','z'], gift:['g','ɪ','f','t'],
+  begin:['b','ɪ','g','ɪ','n'], beginning:['b','ɪ','g','ɪ','n','ɪ','ŋ'],
+  began:['b','ɪ','g','æ','n'], forget:['f','ɔ','r','g','ɛ','t'],
+  gear:['g','i','r'], geese:['g','i','s'], giggle:['g','ɪ','g','ə','l'],
+
+  // ── OU BEFORE R ─────────────────────────────────────────────────────────
+  // /ɔr/ in four, pour, course, court; /aʊr/ in sour, flour, scour, our. Same letters, same
+  // following r, no rule between them. The /ɔr/ side is the one the letter rules get wrong.
+  four:['f','ɔ','r'], fourth:['f','ɔ','r','θ'], pour:['p','ɔ','r'],
+  course:['k','ɔ','r','s'], court:['k','ɔ','r','t'], mourn:['m','ɔ','r','n'],
+  source:['s','ɔ','r','s'], "your":['j','ɔ','r'],
+
   // English spells /θ/ and /ð/ identically. Only a list can tell them apart, and the
   // voiced ones are almost all function words — a short list covers most of the language.
   // The words English simply does not spell phonetically. Rules reach about 60%; the rest

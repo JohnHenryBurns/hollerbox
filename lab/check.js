@@ -1859,6 +1859,7 @@ check("the fricative pairs share a place of articulation", () => {
                : `four pairs matched; ʃ/ʒ ${seen["ʃ"].toFixed(0)}/${seen["ʒ"].toFixed(0)}, ` +
                  `s/z ${seen["s"].toFixed(0)}/${seen["z"].toFixed(0)} Hz` };
 });
+});
 
 // ── every control on every page does something ────────────────────────────
 check("no button or input is left unwired", () => {

@@ -21,6 +21,22 @@
 
 <style>
 :root{
+
+  /* ── THE ACCENT ─────────────────────────────────────────────────────────
+     Burnt orange, and it is not an arbitrary brand choice: orange already meant something here
+     before it meant anything. #ff8c42 marks the narrowest point of the tract, the constriction —
+     the thing that decides what a sound IS. So the accent says the same thing everywhere it
+     appears: this is the live one, this is where you are.
+
+     Chosen against the colours already carrying meaning rather than by eye. The Mouth view is
+     red for fixed, yellow for flaps, blue for air, and the constriction marker is a brighter
+     orange. #e2622e sits 5.4:1 against the background — comfortable for small text — and far
+     enough from all four to be told apart. Its nearest neighbour is the Mouth view's red, and
+     the two never appear together: one is chrome, the other is inside the canvas.
+
+     Used for exactly two things: WHERE YOU ARE, and WHAT IS LIVE. Everything else stays grey,
+     because an accent on everything is an accent on nothing. */
+  --hot:#e2622e; --hot-soft:rgba(226,98,46,.16); --hot-line:rgba(226,98,46,.45);
   --bg:#0f1316; --panel:#171c20; --panel2:#212930; --rule:#2f373d;
   --ink:#f1f5f7; --dim:#aeb9bf; --line:#4c575e; --pick:#cfe3ff;
   --mono:"IBM Plex Mono",ui-monospace,monospace;
@@ -58,9 +74,17 @@ main{max-width:44rem;margin:0 auto;padding:1rem 1rem 4rem}
   background:var(--panel2);border:1px solid var(--rule);border-radius:6px;padding:.5rem;margin-top:.5rem}
 .note{font-family:var(--mono);font-size:.72rem;color:var(--dim);margin-top:.5rem;line-height:1.5}
 
-/* The room you are in, marked rather than omitted. A navigation that hides the current page
-   makes every page look like a different app. */
-.btn.here{opacity:.55;cursor:default;border-style:dashed}
+
+/* WHERE YOU ARE. This was dashed and at 55% opacity, which is how an interface says "disabled",
+   not "current" — so the room you were in looked like the one you could not go to. */
+.btn.here{opacity:1;cursor:default;border-color:var(--hot-line);
+  background:var(--hot-soft);color:var(--hot);font-weight:600}
+
+/* The chosen answer to each question, and the seed the answers make. */
+.opt.on{background:var(--hot-soft);color:var(--hot);border-color:var(--hot);font-weight:600}
+#seed{border-color:var(--hot-line);color:var(--hot)}
+a{color:var(--hot)}
+:focus-visible{outline:2px solid var(--hot);outline-offset:2px}
 </style>
 
 <header>

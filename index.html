@@ -9,6 +9,22 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
+
+  /* ── THE ACCENT ─────────────────────────────────────────────────────────
+     Burnt orange, and it is not an arbitrary brand choice: orange already meant something here
+     before it meant anything. #ff8c42 marks the narrowest point of the tract, the constriction —
+     the thing that decides what a sound IS. So the accent says the same thing everywhere it
+     appears: this is the live one, this is where you are.
+
+     Chosen against the colours already carrying meaning rather than by eye. The Mouth view is
+     red for fixed, yellow for flaps, blue for air, and the constriction marker is a brighter
+     orange. #e2622e sits 5.4:1 against the background — comfortable for small text — and far
+     enough from all four to be told apart. Its nearest neighbour is the Mouth view's red, and
+     the two never appear together: one is chrome, the other is inside the canvas.
+
+     Used for exactly two things: WHERE YOU ARE, and WHAT IS LIVE. Everything else stays grey,
+     because an accent on everything is an accent on nothing. */
+  --hot:#e2622e; --hot-soft:rgba(226,98,46,.16); --hot-line:rgba(226,98,46,.45);
   --bg:#0f1316; --panel:#171c20; --panel2:#212930; --rule:#2f373d;
   --ink:#f1f5f7; --dim:#aeb9bf; --line:#4c575e;
   --mono:"IBM Plex Mono",ui-monospace,monospace;
@@ -299,9 +315,21 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 
-/* The room you are in, marked rather than omitted. A navigation that hides the current page
-   makes every page look like a different app. */
-.btn.here{opacity:.55;cursor:default;border-style:dashed}
+
+/* WHERE YOU ARE. This was dashed and at 55% opacity, which is how an interface says "disabled",
+   not "current" — so the room you were in looked like the one you could not go to. */
+.btn.here{opacity:1;cursor:default;border-color:var(--hot-line);
+  background:var(--hot-soft);color:var(--hot);font-weight:600}
+
+/* ── WHAT IS LIVE ─────────────────────────────────────────────────────────
+   The accent marks the sound being spoken and the view being shown, and nothing else. An accent
+   on every button is an accent on none of them. */
+#stageChain .chip.now{background:var(--hot);color:#120a06;border-color:var(--hot);
+  box-shadow:0 0 0 3px var(--hot-soft)}
+.vt.on{background:var(--hot-soft);color:var(--hot);border-color:var(--hot-line)}
+.icn.play.solid,.btn.solid{background:var(--hot);border-color:var(--hot);color:#120a06}
+a{color:var(--hot)}
+:focus-visible{outline:2px solid var(--hot);outline-offset:2px}
 </style>
 </head>
 <body>

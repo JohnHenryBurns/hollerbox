@@ -7,13 +7,13 @@ measured human articulator motion does a target-and-interpolate model account fo
 systematically remains. Descriptive, falsifiable either way, and answerable with a public corpus
 and this engine as it stands.
 
-**Two.** *Does the physics earn its place?* Whether a neural controller constrained by a
-physically modelled tube generalises better than one constrained by articulatory features feeding
-an ordinary vocoder. Narrower than it first looks, because the obvious comparison — articulatory
-bottleneck against unconstrained spectrogram — is already settled in the literature.
+**Two.** *Should physical knowledge constrain a model, or merely inform it?* Whether a vocal
+tract is better used as a bottleneck a network must speak through, or as a prior shaping what it
+learns. Four arms, cheapest first, and the cheapest one answers the foundational question — does
+knowing about throats help a text-driven model at all.
 
-They share stage 0 and nothing else. The first is a few months; the second needs a differentiable
-waveguide that does not exist yet.
+They share stage 0 and nothing else. The first is a few months. The second starts in weeks and
+only becomes expensive if its early arms say the expense is warranted.
 
 ## The question
 
@@ -142,75 +142,94 @@ Refit on MOCHA-TIMIT's two speakers without re-tuning. Anything that survives a 
 and a different sensor convention is a claim about speech. Anything that does not is a claim about
 one person, which is worth saying plainly rather than quietly.
 
-## The second question: does the physics earn its place?
+## The second question: constrain the representation, or merely inform it?
 
-**Does a neural controller constrained by a physically modelled tube generalise better than one
-constrained by articulatory features feeding an ordinary vocoder?**
+**Should physical knowledge of the vocal tract be a bottleneck a model must speak through, or a
+prior that shapes what it learns?**
 
-That phrasing matters, and an earlier version of it was wrong in a way that would have wasted the
-project. The tempting comparison is *tube versus spectrogram* — and that one is already answered.
+### A correction to the earlier version of this section
 
-### What the literature settles
+The first draft said the comparison "articulatory bottleneck versus unconstrained spectrogram" was
+already settled, and used it as a calibration baseline both other arms should beat. **That was
+wrong, and the error is worth keeping written down because it would have sent the project down
+the expensive path for the wrong reason.**
 
-A bottleneck shaped like articulation beats an unconstrained acoustic one, on both axes we care
-about. Anumanchipalli and colleagues found that decoding articulatory kinematics first and then
-transforming to acoustics gave reliable synthesis from as little as **25 minutes** of speech,
-outperforming direct acoustic decoding. SPARC shows a single-speaker EMA template adapting to
-other speakers by linear affine transformation, reaching speaker-agnostic inversion comparable to
-multi-speaker systems. Wu et al. state the reasoning explicitly: current models lack sufficient
-inductive biases, and constraining the intermediate representation to an articulatory space is one
-way to supply one, because a limited set of articulator configurations can specify all human
-speech.
+What the literature settles is **biosignal to speech**. Anumanchipalli and colleagues got reliable
+synthesis from 25 minutes of data by decoding articulatory kinematics first, outperforming direct
+acoustic decoding — but the input there is neural activity. SPARC does acoustic-to-articulatory
+inversion. Wu et al. work from MRI and EMG. In every one of those the input is ALREADY
+articulatory in character, so routing through articulation is nearly free and of course it helps.
 
-So "is an articulatory bottleneck better than a spectrogram" is not an open question. Running it
-would reproduce a known result.
+**Text is not.** Text has no articulatory content at all, and whether routing a symbolic input
+through articulation helps is a different question with a different answer. Searching the TTS
+intermediate-representation literature turns up mel spectrograms, codec tokens, self-supervised
+features and VAE latents. Articulation does not appear.
 
-### What it leaves open
+That absence is not evidence it fails. The likely reason is stated plainly in the field: there is
+much less articulatory data than other kinds of language data, and current articulatory
+synthesisers produce lower-fidelity speech than non-articulatory ones. **A data problem, not a
+demonstrated defeat.**
 
-Nearly all of that work uses articulatory **features** — EMA coordinates driving a learned or DSP
-vocoder. The 2024 DDSP articulatory vocoder turns EMA, F0 and loudness into speech through a
-harmonic-plus-noise model. That is a statistical bottleneck **shaped like** articulation. The
-physics is not in the loop; the shape of the representation is.
+### Which is what makes the soft version interesting
 
-Two papers do drive an actual physical model, both Pink Trombone, and both hit the same wall. One
-says it plainly: the PT is not differentiable and cannot sit inside an autodifferentiable graph.
-They work around it with a latent projector; the other uses a genetic optimiser and a ResNet as a
-neural codebook. Nobody backpropagates through a waveguide.
+A hard bottleneck can only learn from utterances that have measured articulation — about 1,300,
+one speaker. That is the binding constraint on the whole idea, and it is not a constraint about
+speech, it is a constraint about corpora.
 
-Which leaves the question this project is actually placed to ask:
+An inductive prior does not have that problem. Give a net real capacity and shape its INTERNAL
+representation toward articulation: an auxiliary loss requiring the hidden state to predict where
+the articulators were, or a latent regularised toward articulatory consistency. Train on all the
+text and audio available; apply the articulatory loss only on the subset that has EMA.
 
-> **Does a bottleneck of true wave physics buy anything over a bottleneck merely shaped like
-> articulation?**
+**The physical knowledge becomes a regulariser rather than a gate.** The corpus stops needing to
+be large and starts needing only to be representative — which is a much weaker requirement, and
+one a 1,300-utterance set can plausibly meet.
 
-It might not. The vocoder may be doing all the useful work and the physics may be decoration —
-and that is exactly why the question is worth asking rather than assuming.
+### The four arms
 
-### The experiment
+Same encoder, same parameter budget, same optimiser, same schedule. Only what sits between text
+and audio differs.
 
-Three arms, same inputs, same training budget, same held-out split:
-
-| arm | bottleneck | status |
+| arm | between text and audio | trains on |
 |---|---|---|
-| **A** | six articulator parameters → **the tube** | the open question |
-| **B** | six articulator parameters → a DDSP vocoder | the established comparison |
-| **C** | mel spectrogram, unconstrained | the calibration baseline |
+| **A** | six articulator parameters → **the tube** | EMA subset only |
+| **B** | six articulator parameters → DDSP vocoder | EMA subset only |
+| **C** | free latent, **auxiliary articulatory loss** | everything; the loss on the EMA subset |
+| **D** | mel spectrogram, unconstrained | everything |
 
-C exists only to confirm the setup reproduces the known result. If A and B do not both beat it,
-something is wrong with the harness rather than with the hypothesis, and nothing else can be
-trusted.
+**B against C is the question**: should the physics constrain the representation, or inform it?
+Hard priors usually win when data is plentiful and the prior is exactly right; soft priors win
+when data is scarce or the prior is approximate. Both conditions here point at C — which is a
+prediction, and therefore falsifiable.
 
-**A against B is the finding.** Measured on data efficiency — train on 100%, 50%, 25%, 10% of the
-corpus and plot degradation — and on a held-out speaker.
+**A against B** asks whether true wave physics buys anything over a representation merely shaped
+like articulation. It is the more novel comparison and the more expensive one; nobody in the
+literature backpropagates through a waveguide, and the two papers that drive a physical model at
+all both work around its non-differentiability rather than solving it.
 
-### What this needs that the current engine cannot give
+**D is the honest baseline**, and unlike the earlier draft it is NOT assumed to lose. If D wins
+outright at matched data, the answer to this whole section is that articulation is the wrong
+intermediate for text input, and that is a real and publishable finding.
 
-**A differentiable Kelly–Lochbaum tube.** Arm A cannot be trained on audio loss through
-JavaScript. A waveguide in PyTorch is a few hundred lines and is the real cost of this question.
+### Order of work
 
-There is a cheaper first pass: train all three arms **supervised on EMA**, and evaluate on audio
-without backpropagating through synthesis. That tests the generalisation claim without the
-rewrite, and if A shows no advantage there, the differentiable version is probably not worth
-building.
+**C against D first.** It needs no differentiable tube, no rewrite, and it answers the
+foundational question — does physical knowledge help a text-driven model at all, in the cheapest
+form it can take. Weeks.
+
+**Then B against C**, which needs only the DDSP vocoder, already published and reimplementable.
+
+**A last, and only if the earlier arms justify it.** A differentiable Kelly–Lochbaum tube is a few
+hundred lines of PyTorch and a real project. If articulation shows no advantage in its cheap
+forms, simulating the physics exactly is unlikely to rescue it.
+
+### What I have not checked
+
+Whether articulatory features as an AUXILIARY objective have been tried for text-to-speech. They
+are established in speech recognition — the dysarthric-speech literature uses exactly this — but
+recognition and synthesis are different problems and the result may not transfer. **This is an
+afternoon in the literature and it should happen before any code.** If arm C has been run, its
+result decides whether the rest is worth starting.
 
 ## What could go wrong, stated in advance
 
@@ -228,6 +247,13 @@ where they disagree that disagreement is data rather than an embarrassment.
 **The phoneme string is not the input a brain gets.** Segments are a linguist's abstraction. If
 the residual turns out to be largely about where segment boundaries were assumed to be, the
 finding is about the annotation rather than about control.
+
+**The auxiliary loss may be doing something other than what it says.** An articulatory objective
+on a free latent could improve things by acting as any regulariser would — extra supervision,
+noise, a smoother loss surface — rather than because the information is about throats. The control
+that separates those: the same auxiliary loss against a SHUFFLED articulatory target, which
+carries the same shape and statistics and none of the meaning. If shuffled targets help nearly as
+much, the physics is not what is helping.
 
 **The physics arm may simply be worse.** A waveguide is a strong constraint and strong constraints
 cost expressiveness. If arm A loses to arm B outright, that is a real answer — physical realism is
@@ -247,9 +273,11 @@ works, not a result — and the temptation to present them as results should be 
 
 **Stage 0 alone is a few weeks** and decides whether the rest is possible.
 
-**The three-arm comparison is a separate project from stages 1 to 3**, sharing only stage 0's
-mapping. The cheap version — all three arms supervised on EMA — is weeks. The version that
-answers the question properly needs the differentiable tube and is months.
+**The second question is a separate project from stages 1 to 3**, sharing only stage 0's mapping,
+and it is staged so the cheap arms come first. C against D needs no tube and no rewrite: weeks.
+B against C needs a DDSP vocoder, already published: weeks more. A needs a differentiable
+Kelly-Lochbaum tube and is months — and should only be built if the earlier arms say it is
+warranted.
 
 **Stages 0–2 on one corpus is a few months of focused work** and a workshop paper if the residual
 is structured, or a short negative-result note if it is not. That is a real and achievable

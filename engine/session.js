@@ -421,22 +421,6 @@
     return want;
   }
 
-  // ── ONE WAY BETWEEN THE ROOMS ───────────────────────────────────────────
-  //
-  // Three pages had three navigations: index offered "Make a voice · Bench · About", the wizard
-  // offered "Back · Bench", and THE BENCH OFFERED NOTHING AT ALL — a page you could reach and
-  // not leave. "Back" did not say where it went and "Bench" did not say what it was.
-  //
-  // One list, named by what the room is for rather than by what it is called internally, and the
-  // page you are on is marked rather than omitted — a navigation that hides the current page
-  // makes every page look like a different app.
-  const ROOMS = [
-    { href: 'index.html',  name: 'Throat',       why: 'watch it speak' },
-    { href: 'wizard.html', name: 'Make a Voice', why: 'four questions and a walk' },
-    { href: 'lab/bench.html', name: 'Lab',       why: 'measure one sound at a time' },
-    { href: 'about.html',  name: 'About',        why: 'why this exists' },
-  ];
-
   /** Render the navigation into an element. `here` is the file this page is, so it can mark
    *  itself; the links carry voice and phrase, which is what makes the three feel like one. */
   /** The navigation's own stylesheet, injected once.
@@ -449,46 +433,10 @@
    *  Its own class names now, so a page cannot style it wrong by accident or leave it unstyled
    *  by omission. Colours come from --hot where a page has declared it and fall back where it
    *  has not. */
-  function navStyle() {
-    if (document.getElementById('hb-nav-css')) return;
-    const st = document.createElement('style');
-    st.id = 'hb-nav-css';
-    st.textContent = [
-      '.hb-nav{display:flex;gap:.4rem;align-items:center;flex-wrap:nowrap;overflow-x:auto;',
-      '  scrollbar-width:none}',
-      '.hb-nav::-webkit-scrollbar{display:none}',
-      '.hb-room{flex:0 0 auto;display:inline-block;text-decoration:none;white-space:nowrap;',
-      '  font:500 .86rem/1 var(--sans,system-ui),system-ui;padding:.44rem .7rem;border-radius:7px;',
-      '  border:1px solid var(--line,#4c575e);color:var(--ink,#f1f5f7);background:transparent;',
-      '  cursor:pointer}',
-      '.hb-room:hover{border-color:var(--hot,#ff8a4c)}',
-      '.hb-room.here{background:var(--hot,#ff8a4c);border-color:var(--hot,#ff8a4c);',
-      '  color:var(--hot-ink,#160a03);font-weight:600;cursor:default}',
-    ].join('');
-    document.head.appendChild(st);
-  }
+
 
   // Four pages, one list, the one you are on marked. `here` is the page's own filename.
-  function mountNav(el, here, state) {
-    const host = typeof el === 'string' ? document.getElementById(el) : el;
-    if (!host) return null;
-    navStyle();
-    host.className = 'hb-nav';
-    const up = /\//.test(here) ? '../' : '';      // lab/bench.html climbs out
-    const leaf = x => x.replace(/^.*\//, '');
-    host.innerHTML = '';
-    for (const r of ROOMS) {
-      const mine = leaf(r.href) === leaf(here);
-      const a = document.createElement(mine ? 'span' : 'a');
-      a.className = 'hb-room' + (mine ? ' here' : '');
-      a.textContent = r.name;
-      a.title = r.why;
-      if (!mine) a.setAttribute('href', up + r.href);
-      host.appendChild(a);
-    }
-    if (state) carryState(state);
-    return host;
-  }
+
 
 
   // ── A PHRASE MENU, NOT A DROPDOWN ───────────────────────────────────────
@@ -632,9 +580,8 @@
   }
 
   root.HOLLER_SESSION = { planWord, planSpeech, chainFor, loadEngine, startAudio, tractFor,
-                          voiceMenu, navStyle,
+                          voiceMenu,
                           phraseMenu, menuStyle,
-                          ROOMS, mountNav,
                           PHRASES, mountSelector, readURL, writeURL, carryState };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 

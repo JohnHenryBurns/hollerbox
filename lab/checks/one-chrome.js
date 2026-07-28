@@ -49,6 +49,32 @@ check("four pages, one chrome", () => {
     if (/\.nav a,\s*\.nav span/.test(s)) bad.push(`${k} restyles the nav's links wholesale`);
   }
 
+  // AND NOTHING ABOUT THE BAND IS LEFT TO THE PAGE. The rules were in one file already and the
+  // headers still measured 63.5, 68.8 and 67.4 px tall, because the geometry did not come from
+  // the rules — it came from inherited line-height, from body padding, and from three different
+  // sets of media queries that only some pages carried. Every one of those is in chrome.css now
+  // and no page may take any of it back.
+  for (const [k, s] of Object.entries(page)) {
+    for (const [what, re] of [
+      ["a header rule",        /^\s*header\s*\{/m],
+      ["a header descendant",  /^\s*header\s+\.\w/m],
+      ["a .sub rule",          /^\s*\.sub\s*\{/m],
+      ["a .nav rule",          /^\s*\.nav\s*\{/m],
+      ["a .spacer rule",       /^\s*\.spacer\s*\{/m]])
+      if (re.test(s)) bad.push(`${k} declares ${what} — the band belongs to chrome.css`);
+  }
+
+  // The pins themselves, since losing one is silent: it renders fine on whichever page you are
+  // looking at and wrong on the other three.
+  for (const [what, re] of [
+    ["line-height on the header", /^header\{[\s\S]*?line-height:1\.2/m],
+    ["line-height on the brand",  /^h1\{[\s\S]*?line-height:1\.2/m],
+    ["line-height on the nav",    /^\.nav\{[\s\S]*?line-height:1\.2/m],
+    ["the full-bleed cancel",     /--page-pad/],
+    ["the 820 breakpoint",        /@media \(max-width:820px\)/],
+    ["the 640 breakpoint",        /@media \(max-width:640px\)/]])
+    if (chrome && !re.test(chrome)) bad.push(`chrome.css has lost ${what}`);
+
   // THE CHROME'S CONTRACT: it reads four variables from the page, so every page must declare
   // them. The bench went a year without --sans and --rule and the difference was visible.
   for (const [k, s] of Object.entries(page))

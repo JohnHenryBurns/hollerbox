@@ -5,7 +5,7 @@
 <title>About · Hollerbox</title>
 <style>
 /* The name is the accent colour on every page. */
-h1{color:var(--hot,#ff8a4c)}
+h1{color:var(--hot);font-family:var(--sans);font-weight:600;font-size:1.1rem;letter-spacing:-.01em;margin:0}
 
 :root{
 
@@ -35,8 +35,12 @@ h1{color:var(--hot,#ff8a4c)}
   --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--ink);font-family:var(--sans);
-  line-height:1.55;padding:1rem 1.2rem 3rem;max-width:44rem;margin:0 auto}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55}
+/* The page's own width, applied to its content — NOT to .nav, which is shared with the other
+   three pages and must stay identical to them. An earlier version put both under one selector
+   and silently overwrote the shared rule. */
+.cardbody{max-width:44rem;margin:0 auto;padding:0 1.2rem 3rem}
+.nav{padding:0 1.2rem}
 h1{font-size:1.5rem;letter-spacing:-.01em;margin-bottom:.5rem}
 a{color:var(--hot)}
 .tabs{display:flex;gap:.3rem;padding:.6rem 1.2rem 0;border-bottom:1px solid var(--rule)}
@@ -78,8 +82,14 @@ if(window.HOLLER_SESSION){
 p{margin:.7rem 0}
 </style>
 
-<h1>Hollerbox</h1>
+<header>
+  <h1>Hollerbox</h1>
+  <span class="sub">why this exists</span>
+</header>
 <style>
+header{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .75rem;padding:.55rem 1rem;
+  border-bottom:1px solid var(--rule)}
+.sub{font-family:var(--mono);font-size:.78rem;color:var(--dim);letter-spacing:.04em}
 /* The navigation. Four links, the one you are on marked. No script: this used to be built by
    session.js and it kept not appearing, because a page that fails to boot cannot draw its own
    way out. HTML does not fail to boot. */

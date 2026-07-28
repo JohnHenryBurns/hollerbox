@@ -194,6 +194,16 @@ a{color:var(--hot)}
 .opt.on.varied small,.opt.on.varied .tally{color:var(--hot-ink);opacity:.8}
 .opt.on small{color:var(--hot);opacity:.75}
 .opt .tally{color:var(--hot)}
+
+/* The die sits in the corner of the chosen answer. Big enough to hit on a phone — 44px is the
+   usual floor — without covering the label it sits on. */
+.opt .die{position:absolute;top:0;right:0;width:2.1rem;height:2.1rem;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1rem;line-height:1;cursor:pointer;opacity:.85;border-radius:0 8px 0 8px}
+.opt.on .die{color:var(--hot)}
+.opt.on.varied .die{color:var(--hot-ink)}
+.opt .die:hover{opacity:1;background:rgba(255,138,76,.16)}
+.opt .tally{right:2.2rem}
 </style>
 
 <header>
@@ -681,9 +691,23 @@ function refreshAnswer(qid){
   // wholesale would strip the very animation it exists to let play
   const shim = b.classList.contains('shimmy') ? ' shimmy' : '';
   b.className = 'opt on' + (nudged[qid] ? ' varied' : '') + shim;
+  // innerHTML replaces the children, so the die has to go back on — and it needs its listener
+  // again, which is why it is rebuilt rather than saved and re-appended.
   b.innerHTML = (lab ? lab[0] : '') +
     (rolls ? '<span class="tally">\u00d7' + rolls + '</span>' : '') +
-    '<small>' + (rolls ? 'varied \u00b7 tap to vary again' : 'tap again to vary') + '</small>';
+    '<small>' + (rolls ? 'varied \u00b7 \u2684 to vary again' : '\u2684 to vary') + '</small>';
+  const die = document.createElement('span');
+  die.className = 'die';
+  die.textContent = '\u2684';
+  die.title = 'Vary this answer';
+  die.addEventListener('click', e => {
+    e.stopPropagation();
+    b.classList.remove('shimmy');
+    void b.offsetWidth;
+    b.classList.add('shimmy');
+    nudge(qid);
+  });
+  b.appendChild(die);
 }
 
 /** Take an arriving voice INTO the questions, rather than underneath them.
@@ -763,17 +787,33 @@ function draw(){
       const rolls = tally[q.id] || 0;
       b.innerHTML = label +
         (mine && rolls ? '<span class="tally">\u00d7' + rolls + '</span>' : '') +
-        '<small>' + (mine ? (rolls ? 'varied \u00b7 tap to vary again' : 'tap again to vary')
+        '<small>' + (mine ? (rolls ? 'varied \u00b7 \u2684 to vary again' : '\u2684 to vary')
                           : hint) + '</small>';
-      b.addEventListener('click', () => {
-        if (mine) {
-          // already the answer: vary it, and shimmy so the tap is visibly not a no-op
+      // THE WHOLE BUTTON WAS THE NUDGE, AND THAT WAS WRONG. Tapping the chosen answer varied it,
+      // which is fine when you chose it yourself a moment ago and hostile when you arrive from a
+      // shared link with an answer already selected: you tap the option you want, it is already
+      // the one, and instead of confirming it the voice changes slightly. Reported as "the giant
+      // button doesn't work" — it worked, it just did something nobody asked for.
+      //
+      // The nudge is a small control in the corner of the chosen option, which is what was asked
+      // for in the first place. Tapping the option is always "choose this"; tapping the die is
+      // always "vary it". Neither can be mistaken for the other.
+      if (mine) {
+        const die = document.createElement('span');
+        die.className = 'die';
+        die.textContent = '\u2684';
+        die.title = 'Vary this answer';
+        die.addEventListener('click', e => {
+          e.stopPropagation();                      // not a re-selection of the option beneath
           b.classList.remove('shimmy');
           void b.offsetWidth;                       // restart the animation rather than ignore it
           b.classList.add('shimmy');
           nudge(q.id);
-          return;
-        }
+        });
+        b.appendChild(die);
+      }
+      b.addEventListener('click', () => {
+        if (mine) return;                           // already the answer; the die varies it
         chosen[q.id] = i; delete nudged[q.id]; delete tally[q.id];   // a fresh answer
         battle = null; round = 0;
         SESSION.writeURL({ voice: current() }); linkUp();

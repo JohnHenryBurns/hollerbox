@@ -1,6 +1,19 @@
-# What is the simplest law that reproduces the movements a brain produces?
+# Two questions about controlling a throat
 
 **Status: a proposal to argue with. Nothing here is started.**
+
+**One.** *What is the simplest law that reproduces the movements a brain produces?* How much of
+measured human articulator motion does a target-and-interpolate model account for, and what
+systematically remains. Descriptive, falsifiable either way, and answerable with a public corpus
+and this engine as it stands.
+
+**Two.** *Does the physics earn its place?* Whether a neural controller constrained by a
+physically modelled tube generalises better than one constrained by articulatory features feeding
+an ordinary vocoder. Narrower than it first looks, because the obvious comparison — articulatory
+bottleneck against unconstrained spectrogram — is already settled in the literature.
+
+They share stage 0 and nothing else. The first is a few months; the second needs a differentiable
+waveguide that does not exist yet.
 
 ## The question
 
@@ -129,6 +142,76 @@ Refit on MOCHA-TIMIT's two speakers without re-tuning. Anything that survives a 
 and a different sensor convention is a claim about speech. Anything that does not is a claim about
 one person, which is worth saying plainly rather than quietly.
 
+## The second question: does the physics earn its place?
+
+**Does a neural controller constrained by a physically modelled tube generalise better than one
+constrained by articulatory features feeding an ordinary vocoder?**
+
+That phrasing matters, and an earlier version of it was wrong in a way that would have wasted the
+project. The tempting comparison is *tube versus spectrogram* — and that one is already answered.
+
+### What the literature settles
+
+A bottleneck shaped like articulation beats an unconstrained acoustic one, on both axes we care
+about. Anumanchipalli and colleagues found that decoding articulatory kinematics first and then
+transforming to acoustics gave reliable synthesis from as little as **25 minutes** of speech,
+outperforming direct acoustic decoding. SPARC shows a single-speaker EMA template adapting to
+other speakers by linear affine transformation, reaching speaker-agnostic inversion comparable to
+multi-speaker systems. Wu et al. state the reasoning explicitly: current models lack sufficient
+inductive biases, and constraining the intermediate representation to an articulatory space is one
+way to supply one, because a limited set of articulator configurations can specify all human
+speech.
+
+So "is an articulatory bottleneck better than a spectrogram" is not an open question. Running it
+would reproduce a known result.
+
+### What it leaves open
+
+Nearly all of that work uses articulatory **features** — EMA coordinates driving a learned or DSP
+vocoder. The 2024 DDSP articulatory vocoder turns EMA, F0 and loudness into speech through a
+harmonic-plus-noise model. That is a statistical bottleneck **shaped like** articulation. The
+physics is not in the loop; the shape of the representation is.
+
+Two papers do drive an actual physical model, both Pink Trombone, and both hit the same wall. One
+says it plainly: the PT is not differentiable and cannot sit inside an autodifferentiable graph.
+They work around it with a latent projector; the other uses a genetic optimiser and a ResNet as a
+neural codebook. Nobody backpropagates through a waveguide.
+
+Which leaves the question this project is actually placed to ask:
+
+> **Does a bottleneck of true wave physics buy anything over a bottleneck merely shaped like
+> articulation?**
+
+It might not. The vocoder may be doing all the useful work and the physics may be decoration —
+and that is exactly why the question is worth asking rather than assuming.
+
+### The experiment
+
+Three arms, same inputs, same training budget, same held-out split:
+
+| arm | bottleneck | status |
+|---|---|---|
+| **A** | six articulator parameters → **the tube** | the open question |
+| **B** | six articulator parameters → a DDSP vocoder | the established comparison |
+| **C** | mel spectrogram, unconstrained | the calibration baseline |
+
+C exists only to confirm the setup reproduces the known result. If A and B do not both beat it,
+something is wrong with the harness rather than with the hypothesis, and nothing else can be
+trusted.
+
+**A against B is the finding.** Measured on data efficiency — train on 100%, 50%, 25%, 10% of the
+corpus and plot degradation — and on a held-out speaker.
+
+### What this needs that the current engine cannot give
+
+**A differentiable Kelly–Lochbaum tube.** Arm A cannot be trained on audio loss through
+JavaScript. A waveguide in PyTorch is a few hundred lines and is the real cost of this question.
+
+There is a cheaper first pass: train all three arms **supervised on EMA**, and evaluate on audio
+without backpropagating through synthesis. That tests the generalisation claim without the
+rewrite, and if A shows no advantage there, the differentiable version is probably not worth
+building.
+
 ## What could go wrong, stated in advance
 
 **The mapping absorbs the finding.** With enough freedom in stage 0, the sensor-to-tract mapping
@@ -146,6 +229,16 @@ where they disagree that disagreement is data rather than an embarrassment.
 the residual turns out to be largely about where segment boundaries were assumed to be, the
 finding is about the annotation rather than about control.
 
+**The physics arm may simply be worse.** A waveguide is a strong constraint and strong constraints
+cost expressiveness. If arm A loses to arm B outright, that is a real answer — physical realism is
+not automatically a better prior than a well-chosen statistical one — and it should be reported as
+one rather than tuned away.
+
+**Arm A and arm B must be matched on everything but the bottleneck.** Same encoder, same
+parameter count, same optimiser, same schedule. A difference in any of those makes the comparison
+meaningless, and it is the easiest thing in the world to get wrong by accident when one arm needs
+a rewrite and the other does not.
+
 **Known effects will be rediscovered.** Undershoot, coarticulation, phrase-final lengthening and
 the utterance-length law are all documented. Rediscovering them is a validation that the method
 works, not a result — and the temptation to present them as results should be resisted.
@@ -153,6 +246,10 @@ works, not a result — and the temptation to present them as results should be 
 ## Feasibility
 
 **Stage 0 alone is a few weeks** and decides whether the rest is possible.
+
+**The three-arm comparison is a separate project from stages 1 to 3**, sharing only stage 0's
+mapping. The cheap version — all three arms supervised on EMA — is weeks. The version that
+answers the question properly needs the differentiable tube and is months.
 
 **Stages 0–2 on one corpus is a few months of focused work** and a workshop paper if the residual
 is structured, or a short negative-result note if it is not. That is a real and achievable

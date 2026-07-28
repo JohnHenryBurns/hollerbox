@@ -58,13 +58,6 @@ html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-fa
 /* Two rows on a phone, like the throat. It was one flex row, so the rooms folded up beside the
    title and the subtitle sat between them — "Hollerbox  make a voice  Throat  Make a voice",
    which reads as four things of equal weight and is really two. */
-@media (max-width:640px){
-  header{padding:.5rem .7rem}
-  header .sub{display:none}
-  header .nav{order:3;flex:1 0 100%}
-  header .spacer{flex:1}
-}
-.sub{font-family:var(--mono);font-size:.78rem;color:var(--dim)}
 .btn{font-family:var(--sans);font-weight:500;font-size:.9rem;border-radius:6px;cursor:pointer;
   padding:.45rem .8rem;background:transparent;color:var(--ink);border:1px solid var(--line)}
 .btn:hover{border-color:var(--ink)}

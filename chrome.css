@@ -18,17 +18,55 @@
    changed colour depending on the room. Only the accent comes from the page. */
 
 header{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .75rem;padding:.55rem 1rem;
-  border-bottom:1px solid var(--rule)}
-h1{color:var(--hot);font-family:var(--sans);font-weight:600;font-size:1.1rem;letter-spacing:-.01em;margin:0}
+  border-bottom:1px solid var(--hot-line);line-height:1.2;
+  /* Full bleed regardless of what the page does to the body. The bench pads its body 12px and
+     the header inherited the inset, so the band started 12px in and 24px narrow. A page that
+     pads its body declares --page-pad and the chrome cancels it. */
+  margin-left:calc(-1 * var(--page-pad,0px));margin-right:calc(-1 * var(--page-pad,0px));
+  margin-top:calc(-1 * var(--page-pad,0px))}
+
+/* EVERY DIMENSION PINNED, NOT INHERITED. These rules were identical on all four pages and the
+   headers still measured three different heights, because line-height was inherited: normal on
+   index and the wizard, 1.55 on About, 1.45 on the bench. That leaks into the brand and into
+   every nav pill, so the band was 63.5, 68.8 and 67.4 px tall for the same markup. Anything the
+   header's geometry depends on is stated here now. */
+h1{color:var(--hot);font-family:var(--sans);font-weight:600;font-size:1.1rem;letter-spacing:-.01em;
+  margin:0;line-height:1.2}
 h1 a{color:inherit;text-decoration:none}
 h1 a:hover{text-decoration:underline;text-underline-offset:3px}
 .spacer{flex:1}
 
+/* The tagline. Its own rule here rather than four per-page copies, one of which had lost its
+   letter-spacing and one of which was a different element entirely. */
+header .sub{font-family:var(--mono);font-size:.78rem;color:var(--dim);letter-spacing:.04em;
+  line-height:1.2}
+
 /* The navigation. Four links, the one you are on marked. The name is the way home. */
-.nav{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;margin:.4rem 0 .6rem;
-  font-family:var(--sans,system-ui);font-size:.86rem}
+.nav{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;margin:.4rem 0 .6rem;padding:0;
+  font-family:var(--sans,system-ui);font-size:.86rem;line-height:1.2}
 .nav a,.nav span{padding:.34rem .6rem;border-radius:8px;border:1px solid #4c575e;
-  text-decoration:none;color:#f1f5f7;white-space:nowrap}
+  text-decoration:none;color:#f1f5f7;white-space:nowrap;line-height:1.2}
 .nav a:hover{border-color:#f1f5f7}
 .nav .here{background:var(--hot,#ff8a4c);border-color:var(--hot,#ff8a4c);
-  color:var(--hot-ink,#160a03);font-weight:600}
+  color:var(--hot-ink,#160a03)}
+/* The marker is the fill, not the weight. Bolding the current page made its pill wider, and
+   since the nav is right-aligned that moved the whole strip a few pixels — so the one thing
+   that differs between pages changed the geometry of the thing that must not. Measured: with
+   the weight dropped the nav is 304.1px on all four. */
+
+/* THE SMALL SCREENS BELONG TO THE CHROME TOO. index shrank its header at 820 and again at 640,
+   the wizard only at 640 and by different amounts, About and the bench not at all — so the band
+   that is supposed to be the site diverged fastest exactly where there is least room. */
+@media (max-width:820px){
+  header{padding:.55rem .8rem;gap:.5rem}
+  h1{font-size:1.02rem}
+}
+@media (max-width:640px){
+  header{padding:.5rem .7rem}
+  header .sub{display:none}          /* the subtitle is the first thing to go */
+  header .spacer{flex:1}
+  /* One row that scrolls, not two that wrap. */
+  header .nav{order:3;flex:1 0 100%;flex-wrap:nowrap;overflow-x:auto;
+    scrollbar-width:none;padding-bottom:.1rem}
+  header .nav::-webkit-scrollbar{display:none}
+}

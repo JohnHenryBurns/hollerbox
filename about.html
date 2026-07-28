@@ -3,6 +3,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>About · Hollerbox</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* The name is the accent colour on every page. */
 h1{color:var(--hot);font-family:var(--sans);font-weight:600;font-size:1.1rem;letter-spacing:-.01em;margin:0}
@@ -83,23 +86,29 @@ p{margin:.7rem 0}
 </style>
 
 <header>
-  <h1>Hollerbox</h1>
+  <h1><a href="index.html">Hollerbox</a></h1>
   <span class="sub">why this exists</span>
-</header>
+  <span class="spacer"></span>
 <style>
 header{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .75rem;padding:.55rem 1rem;
   border-bottom:1px solid var(--rule)}
 .sub{font-family:var(--mono);font-size:.78rem;color:var(--dim);letter-spacing:.04em}
+.spacer{flex:1}
 /* The navigation. Four links, the one you are on marked. No script: this used to be built by
    session.js and it kept not appearing, because a page that fails to boot cannot draw its own
-   way out. HTML does not fail to boot. */
+   way out. HTML does not fail to boot.
+   The chrome is pinned rather than themed: the bench declares --line darker for its own tables,
+   so a nav that borrowed page variables changed colour depending on the room. Only the accent
+   comes from the page, and every page declares the same accent. The name is the way home. */
+h1 a{color:inherit;text-decoration:none}
+h1 a:hover{text-decoration:underline;text-underline-offset:3px}
 .nav{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;margin:.4rem 0 .6rem;
   font-family:var(--sans,system-ui);font-size:.86rem}
-.nav a,.nav span{padding:.34rem .6rem;border-radius:8px;border:1px solid var(--line,#2a3540);
-  text-decoration:none;color:var(--ink,#e8efe9);white-space:nowrap}
-.nav a:hover{border-color:var(--ink,#e8efe9)}
+.nav a,.nav span{padding:.34rem .6rem;border-radius:8px;border:1px solid #4c575e;
+  text-decoration:none;color:#f1f5f7;white-space:nowrap}
+.nav a:hover{border-color:#f1f5f7}
 .nav .here{background:var(--hot,#ff8a4c);border-color:var(--hot,#ff8a4c);
-  color:var(--hot-ink,#1a1005);font-weight:600}
+  color:var(--hot-ink,#160a03);font-weight:600}
 </style>
 <nav class="nav">
   <a href="index.html">Throat</a>
@@ -107,6 +116,7 @@ header{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .75rem;padding:.
   <a href="lab/bench.html">Lab</a>
   <span class="here">About</span>
 </nav>
+</header>
 
 <div class="cardbody">
 

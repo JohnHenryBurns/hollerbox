@@ -498,13 +498,18 @@
     //
     // The wordmark goes home with nothing. `carryState` skips it — that is what `data-clean` is
     // for — so it is the one link that means "start again".
-    const home = document.createElement('a');
-    home.className = 'hb-mark';
-    home.textContent = 'Hollerbox';
-    home.title = 'Back to the start, with no voice or phrase';
-    home.setAttribute('href', up + 'index.html');
-    home.dataset.clean = '1';
-    host.appendChild(home);
+    // NOT ON THE PAGE IT POINTS AT. The throat already carries the name in its heading, so a
+    // wordmark there was the word "Hollerbox" twice, one above the other, the second of which
+    // linked to the page you were on. Where you are already home there is nothing to go back to.
+    if (!/^index\.html/.test(here)) {
+      const home = document.createElement('a');
+      home.className = 'hb-mark';
+      home.textContent = 'Hollerbox';
+      home.title = 'Back to the start, with no voice or phrase';
+      home.setAttribute('href', up + 'index.html');
+      home.dataset.clean = '1';
+      host.appendChild(home);
+    }
     for (const r of ROOMS) {
       // A marker room is never "here": About is a thing you open, not a place you are, and
       // marking it current on the page it opens over would be a lie.

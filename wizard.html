@@ -76,6 +76,9 @@ main{max-width:44rem;margin:0 auto;padding:1rem 1rem 4rem}
   padding:.9rem 1rem;margin-bottom:.9rem}
 .step h2{font-size:1rem;margin:0 0 .15rem}
 .step .why{font-family:var(--mono);font-size:.75rem;color:var(--dim);margin-bottom:.7rem}
+/* The walk's counter. It wore `.sub` — the header tagline's class — so styling the tagline
+   restyled it and vice versa. Its own name, and not `.tally`, which the option badges own. */
+.step .walkcount{font-family:var(--mono);font-size:.78rem;color:var(--dim)}
 /* A GRID, NOT A WRAPPING ROW. `flex-wrap` sizes each option from its own content, so the moment
    one is chosen and its hint grows from "a mouse" to "tap again to vary" the whole row re-flows
    — options change width, some jump to the next line, and on a phone the question you just
@@ -244,13 +247,20 @@ a{color:var(--hot)}
   </div>
 
   <div class="step">
-    <h2>4 · How fast does it talk?</h2>
+    <h2>4 · How does it come out?</h2>
+    <div class="why">the consonants rather than the voice — how hard they hiss and pop, how fast the
+      voice comes back after a closure, how much the walls swallow</div>
+    <div class="opts" id="q5"></div>
+  </div>
+
+  <div class="step">
+    <h2>5 · How fast does it talk?</h2>
     <div class="why">seconds per sound. real speech is about 70 to 80 milliseconds</div>
     <div class="opts" id="q4"></div>
   </div>
 
   <div class="step" id="battleStep">
-    <h2>5 · Two at a time</h2>
+    <h2>6 · Two at a time</h2>
     <div class="why">the four answers get you close; this walks from there. play both, keep the
       one you like, and it walks again from the winner</div>
     <div class="opts">
@@ -266,7 +276,7 @@ a{color:var(--hot)}
       <label style="font-family:var(--mono);font-size:.78rem;color:var(--dim);flex:0 0 auto">
         <input type="checkbox" id="wideRange" checked> let it widen the range
       </label>
-      <span class="sub" id="battleCount" style="flex:1;text-align:right"></span>
+      <span class="walkcount" id="battleCount" style="flex:1;text-align:right"></span>
     </div>
   </div>
 
@@ -404,7 +414,7 @@ const Q = [
     ['Quick',   'brisk',     { per:0.075 }],
   ]},
 ];
-const chosen = { q1:2, q2:2, q3:1, q4:1 };          // the "as it is" option in each
+const chosen = { q1:2, q2:2, q3:1, q5:1, q4:1 };   // the "as it is" option in each
 
 function voice(){
   let v = { ...BASE };

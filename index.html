@@ -50,10 +50,11 @@ header{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .75rem;padding:.
 @media (max-width:640px){
   header{padding:.5rem .7rem}
   header .sub{display:none}                 /* the subtitle is the first thing to go */
-  header #nav{order:3;flex:1 0 100%;display:flex;gap:.4rem;overflow-x:auto;
+  /* One row that scrolls, not two that wrap. Written for the injected nav as #nav and left
+     pointing at nothing when the nav went static — the phone got a wrapping nav by accident. */
+  header .nav{order:3;flex:1 0 100%;flex-wrap:nowrap;overflow-x:auto;
     scrollbar-width:none;padding-bottom:.1rem}
-  header #nav::-webkit-scrollbar{display:none}
-  header #nav .btn{flex:0 0 auto}
+  header .nav::-webkit-scrollbar{display:none}
   header .spacer{flex:1}
 }
 h1{color:var(--hot);font-family:var(--sans);font-weight:600;font-size:1.1rem;letter-spacing:-.01em;margin:0}
@@ -293,10 +294,7 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
 .links a:hover{border-color:var(--ink)}
 .cardbody a{color:var(--ink)}
 @media(max-width:820px){
-      .cardbody p{font-size:1rem}
-}
-
-@media(max-width:820px){
+  .cardbody p{font-size:1rem}
   main{grid-template-columns:1fr}
   header{padding:.55rem .8rem;gap:.5rem}
   h1{font-size:1.02rem}

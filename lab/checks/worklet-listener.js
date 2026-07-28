@@ -23,13 +23,12 @@ check("the page listens to the worklet", () => {
     if (!re.test(idx)) bad.push(`${name} is read but never assigned from the worklet`);
   }
 
-  // and the nav must carry its own styling rather than borrowing a page's `.btn`
-  if (!/hb-room/.test(sess)) bad.push("the nav still depends on each page's own button styling");
-  for (const p of ["index.html", "wizard.html", "lab/bench.html"]) {
-    const t = fs.readFileSync(path.join(root, p), "utf8");
-    if (/mountNav/.test(t) && /class="btn"/.test(t) && !/hb-nav-css/.test(sess))
-      bad.push(`${p} would render an unstyled nav`);
-  }
+  // The nav used to be built by session.js and needed its own stylesheet, because it rendered
+  // elements classed `btn` and each page styled those differently — the bench had no `.btn` rule
+  // at all. It is four links written into each page now, so there is nothing here to check: no
+  // shared component, no injected CSS, no ordering. The clauses that were here asserted the
+  // machinery existed, and outlived it by two commits.
+
 
   return { ok: bad.length === 0,
            note: bad.join("  ") || "worklet state reaches the page; the nav styles itself" };

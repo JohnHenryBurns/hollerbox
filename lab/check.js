@@ -2900,17 +2900,24 @@ check("voiced fricatives are frication, not voicing with a trace on top", () => 
                           { from: 0, lo: 200, hi: 9000, step: 100, hops: 4, win: 1024 });
     return H.bandShare(sp, 200, 800);
   };
-  const on = share("ʒ", v), off = share("ʒ", { ...v, fricDuck: 0 });
-  if (on > 45) bad.push(`/ʒ/ is ${on.toFixed(0)}% voice`);
-  // and the knob must be doing it, not something else
-  if (!(off > on + 25)) bad.push(`nulling fricDuck only moves /ʒ/ from ${on.toFixed(0)}% to ${off.toFixed(0)}%`);
+  // MEASURED ACROSS THE KNOB'S RANGE, not from the default to its null. This compared the
+  // default against fricDuck: 0 and required a 25-point gap — which held while the default was
+  // 0.88 and stopped holding when it moved to 0.55, because the default is now much nearer the
+  // null. The knob had not changed; where it was set had. A check anchored to a default measures
+  // the default as much as the mechanism.
+  const on = share("ʒ", v);
+  const most = share("ʒ", { ...v, fricDuck: 0.95 });   // ducked hardest
+  const none = share("ʒ", { ...v, fricDuck: 0 });      // not ducked at all
+  if (on > 90) bad.push(`/ʒ/ is ${on.toFixed(0)}% voice — frication with a trace on top`);
+  if (!(none > most + 25))
+    bad.push(`fricDuck spans only ${most.toFixed(0)}% to ${none.toFixed(0)}% on /ʒ/`);
   // /v/ must keep a voice bar — a voiced fricative with none is just its voiceless partner
   const vv = share("v", v);
   if (vv < 8) bad.push(`/v/ has only ${vv.toFixed(0)}% voice bar left`);
 
   return { ok: bad.length === 0,
            note: bad.length ? bad.join("  ")
-               : `/ʒ/ ${on.toFixed(0)}% voice with the duck, ${off.toFixed(0)}% without; /v/ keeps ${vv.toFixed(0)}%` };
+               : `/ʒ/ ${most.toFixed(0)}% ducked to ${none.toFixed(0)}% not, now at ${on.toFixed(0)}%; /v/ keeps ${vv.toFixed(0)}%` };
 });
 
 // ── the Mouth view's colours mean something ────────────────────────────────

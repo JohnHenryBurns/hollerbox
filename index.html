@@ -1124,6 +1124,39 @@ document.getElementById('loadSeed').addEventListener('click',()=>{
   if(short) alert('Loaded an older seed. Newer settings took their defaults.');
 });
 
+// RESTORED. Removing the About dialog took this with it: the voice button, the sheet's close
+// and play, the scrim, and the Escape handler all sat between the dialog's comment banner and
+// the next one, and the edit that deleted "everything from here to the next banner" deleted
+// them too. The gate said so — "no button or input is left unwired" named voiceBtn and
+// sheetClose — and I did not run it.
+// WHO SAYS IT, as a sheet. Every voice carries a note explaining what it is — "a shorter tract
+// lifts every formant, that and not pitch is what makes it sound like a woman" — and a dropdown
+// showed none of it. That is the most interesting writing in the project and it was invisible.
+//
+// Advanced sits at the bottom of the same sheet. Tuning a voice is the last thing you do TO a
+// voice, so it belongs where the voices are, and the dock is a button lighter for it.
+document.getElementById('voiceBtn').addEventListener('click', () => {
+  if(!window.HOLLER_SESSION) return;
+  HOLLER_SESSION.menuStyle();
+  HOLLER_SESSION.voiceMenu({
+    current: voiceName,
+    onPick: k => { setVoice(k); playWord(); },
+    onAdvanced: () => openSheet('adv'),
+  });
+});
+scrim.addEventListener('click',()=>sheet(null));
+document.getElementById('sheetClose').addEventListener('click',()=>sheet(null));
+document.getElementById('sheetPlay').addEventListener('click',()=>{
+  if(sequencing){ node && node.port.postMessage({type:'stopSeq'}); sequencing=false; voicing=0; paintBtn(); }
+  else playWord();
+});
+addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+  if(!document.getElementById('kbd').hidden){ openKbd(false); return; }
+  if(!quick.hidden){ openQuick(false); return; }
+  sheet(null);
+});
+
 // The About dialog became about.html — a page like the others, reachable from the nav.
 // It was shown once on first load and reopenable from a marker in the URL, which meant
 // three pieces of state (has it been seen, is it open, is the marker still there) for a

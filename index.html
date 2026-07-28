@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="chrome.css">
 <style>
 
 :root{
@@ -45,8 +46,6 @@ body{display:flex;flex-direction:column}
    header was one flex row with no rule about what gives way. Two rows now: the name on one, the
    rooms on the other, each scrolling sideways rather than wrapping. Nothing overlaps because
    nothing has to fit beside anything. */
-header{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .75rem;padding:.55rem 1rem;
-  border-bottom:1px solid var(--rule)}
 @media (max-width:640px){
   header{padding:.5rem .7rem}
   header .sub{display:none}                 /* the subtitle is the first thing to go */
@@ -57,9 +56,7 @@ header{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .75rem;padding:.
   header .nav::-webkit-scrollbar{display:none}
   header .spacer{flex:1}
 }
-h1{color:var(--hot);font-family:var(--sans);font-weight:600;font-size:1.1rem;letter-spacing:-.01em;margin:0}
 .sub{font-family:var(--mono);font-size:.78rem;color:var(--dim);letter-spacing:.04em}
-.spacer{flex:1}
 
 .btn{font-family:var(--sans);font-weight:500;font-size:.9rem;border-radius:6px;cursor:pointer;
   padding:.45rem .8rem;background:transparent;color:var(--ink);border:1px solid var(--line)}
@@ -251,50 +248,12 @@ input[type=range]:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
 aside section{display:block}
 #scrim{display:none;position:fixed;inset:0;background:rgba(6,9,11,.55);z-index:30}
 
-.cardhead{display:flex;align-items:center;gap:1rem;padding:1rem 1.2rem;
-  border-bottom:1px solid var(--rule)}
-.cardhead h2{margin:0;font-size:1.25rem;font-weight:600;letter-spacing:-.01em}
-.cardhead .btn{margin-left:auto}
-.cardhead .btn+.btn{margin-left:0}
 footer{display:flex;align-items:center;gap:.85rem;padding:.45rem 1rem;
   font-family:var(--mono);font-size:.75rem;color:var(--dim);border-top:1px solid var(--rule)}
 footer a{color:var(--dim);text-decoration:none;border-bottom:1px solid var(--line);padding-bottom:1px}
 footer a:hover{color:var(--ink)}
 footer .sep{opacity:.5}
-.tabs{display:flex;gap:.3rem;padding:.6rem 1.2rem 0;border-bottom:1px solid var(--rule)}
-.tab{font-family:var(--sans);font-size:.92rem;font-weight:500;color:var(--dim);
-  background:transparent;border:0;border-bottom:2px solid transparent;
-  padding:.5rem .1rem .55rem;margin-right:1.1rem;cursor:pointer}
-.tab:hover{color:var(--ink)}
-.tab.on{color:var(--ink);border-bottom-color:var(--ink)}
-.cardbody{padding:1.1rem 1.2rem 1.4rem;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.cardbody section[hidden]{display:none}
-.cardbody p{font-size:1rem;line-height:1.66;margin:0 0 1rem;color:var(--ink)}
-.cardbody .lead{font-size:1.35rem;line-height:1.3;color:var(--ink);font-weight:600;
-  margin-bottom:1rem;letter-spacing:-.01em}
-.cardbody .tryit{background:var(--panel2);border:1px solid var(--rule);border-radius:8px;
-  padding:.75rem .9rem;font-size:.96rem}
-.cardbody sub{font-size:.72em}
-table.mini{width:100%;border-collapse:collapse;margin:0 0 1rem;font-size:.9rem}
-table.mini th{text-align:left;font-family:var(--mono);font-size:.74rem;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--dim);font-weight:500;padding:.35rem .5rem;
-  border-bottom:1px solid var(--rule)}
-table.mini td{padding:.5rem .5rem;border-bottom:1px solid var(--rule);vertical-align:top}
-table.mini .dimtd{color:var(--dim);font-size:.84em}
-.cardbody h3{font-size:.82rem;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--dim);margin:1.5rem 0 .6rem;font-family:var(--mono);font-weight:500}
-.cardbody b{font-weight:600}
-.eqn{font-family:var(--mono);font-size:1.05rem;text-align:center;color:var(--ink);
-  background:var(--panel2);border:1px solid var(--rule);border-radius:8px;
-  padding:.85rem 1rem;margin:0 0 1rem}
-.links{display:flex;flex-wrap:wrap;gap:.9rem;margin-top:1.4rem;
-  padding-top:1.1rem;border-top:1px solid var(--rule)}
-.links a{color:var(--ink);font-size:.94rem;text-decoration:none;
-  border-bottom:1px solid var(--line);padding-bottom:2px}
-.links a:hover{border-color:var(--ink)}
-.cardbody a{color:var(--ink)}
 @media(max-width:820px){
-  .cardbody p{font-size:1rem}
   main{grid-template-columns:1fr}
   header{padding:.55rem .8rem;gap:.5rem}
   h1{font-size:1.02rem}
@@ -423,23 +382,6 @@ header{border-bottom:1px solid var(--hot-line)}
   <h1><a href="index.html">Hollerbox</a></h1>
   <span class="sub">Kelly–Lochbaum waveguide · 1962</span>
   <span class="spacer"></span>
-<style>
-/* The navigation. Four links, the one you are on marked. No script: this used to be built by
-   session.js and it kept not appearing, because a page that fails to boot cannot draw its own
-   way out. HTML does not fail to boot.
-   The chrome is pinned rather than themed: the bench declares --line darker for its own tables,
-   so a nav that borrowed page variables changed colour depending on the room. Only the accent
-   comes from the page, and every page declares the same accent. The name is the way home. */
-h1 a{color:inherit;text-decoration:none}
-h1 a:hover{text-decoration:underline;text-underline-offset:3px}
-.nav{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;margin:.4rem 0 .6rem;
-  font-family:var(--sans,system-ui);font-size:.86rem}
-.nav a,.nav span{padding:.34rem .6rem;border-radius:8px;border:1px solid #4c575e;
-  text-decoration:none;color:#f1f5f7;white-space:nowrap}
-.nav a:hover{border-color:#f1f5f7}
-.nav .here{background:var(--hot,#ff8a4c);border-color:var(--hot,#ff8a4c);
-  color:var(--hot-ink,#160a03);font-weight:600}
-</style>
 <nav class="nav">
   <span class="here">Throat</span>
   <a href="wizard.html">Make a Voice</a>

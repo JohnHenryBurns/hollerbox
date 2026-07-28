@@ -1,0 +1,34 @@
+/* ── THE CHROME, ONCE ────────────────────────────────────────────────────────
+   The header, the name, and the navigation — the part of every page that is the SITE rather
+   than the page. This lived as four pasted copies and the copies drifted three separate ways
+   before the gate started watching them (lab/checks/one-chrome.js tells that story). One file
+   now, so drift is impossible by construction rather than merely alarmed.
+
+   A stylesheet rather than a script on purpose: the nav was once rendered by session.js and
+   kept not appearing, because a page that fails to boot cannot draw its own way out. A <link>
+   fails safe — worst case the chrome arrives unstyled, but it arrives.
+
+   Pages may still override — About pads .nav to its column, index underlines the header in the
+   accent — because a page's <style> comes after this link and wins. What a page may NOT do is
+   carry its own copy of these rules; the gate checks.
+
+   Expects from the page: --hot, --hot-ink, --rule, --sans — which every page declares, and the
+   gate would catch a page that stopped. The nav's own chrome is pinned rather than themed: the
+   bench declares --line darker for its own tables, so a nav that borrowed page variables
+   changed colour depending on the room. Only the accent comes from the page. */
+
+header{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .75rem;padding:.55rem 1rem;
+  border-bottom:1px solid var(--rule)}
+h1{color:var(--hot);font-family:var(--sans);font-weight:600;font-size:1.1rem;letter-spacing:-.01em;margin:0}
+h1 a{color:inherit;text-decoration:none}
+h1 a:hover{text-decoration:underline;text-underline-offset:3px}
+.spacer{flex:1}
+
+/* The navigation. Four links, the one you are on marked. The name is the way home. */
+.nav{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;margin:.4rem 0 .6rem;
+  font-family:var(--sans,system-ui);font-size:.86rem}
+.nav a,.nav span{padding:.34rem .6rem;border-radius:8px;border:1px solid #4c575e;
+  text-decoration:none;color:#f1f5f7;white-space:nowrap}
+.nav a:hover{border-color:#f1f5f7}
+.nav .here{background:var(--hot,#ff8a4c);border-color:var(--hot,#ff8a4c);
+  color:var(--hot-ink,#160a03);font-weight:600}

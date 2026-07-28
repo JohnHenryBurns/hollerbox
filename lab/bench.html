@@ -3,6 +3,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Consonant bench — Hollerbox</title>
 <style>
+/* The name is the accent colour on every page. */
+h1{color:var(--hot,#ff8a4c)}
+
 /* --hot was #e2b13c here and used for the same thing it means everywhere else — the selected
    button, the filled part of a bar, the room you are in. Same meaning, different colour, because
    the three pages were styled on different days. Burnt orange now, like the rest. */
@@ -21,7 +24,17 @@ button{font:inherit;background:#171b1e;color:var(--fg);border:1px solid var(--li
 button:active{transform:translateY(1px)}
 button.on{background:var(--hot);color:#111;border-color:var(--hot)}
 button:disabled{opacity:.35}
-.tab{flex:1;min-width:70px;text-align:center}
+/* THE SUB-NAV. Seven buttons at flex:1 stretched to fill the row, so on a phone each was about
+   forty pixels wide with the label clipped — and it looked like a second main navigation rather
+   than a set of views within one page.
+   Sized to their text and wrapping instead, and visually subordinate to the nav above: smaller,
+   quieter, outlined rather than filled when current. */
+.subnav{display:flex;flex-wrap:wrap;gap:.3rem;margin:.1rem 0 .7rem}
+.tab{flex:0 0 auto;text-align:center;font-size:.8rem;padding:.28rem .55rem;
+  border:1px solid var(--line);border-radius:7px;background:none;color:var(--dim);
+  font-family:inherit;cursor:pointer;white-space:nowrap}
+.tab:hover{color:var(--ink);border-color:var(--ink)}
+.tab.on{color:var(--hot);border-color:var(--hot);background:none;font-weight:600}
 .card{border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;background:#12161800}
 .token{font-size:44px;text-align:center;margin:4px 0 2px;letter-spacing:.06em}
 .ctx{text-align:center;color:var(--dim);font-size:12px;margin-bottom:10px}
@@ -63,7 +76,7 @@ select{font:inherit;background:#171b1e;color:var(--fg);border:1px solid var(--li
 .btn.quiet.here{background:var(--hot);color:var(--hot-ink);border-color:var(--hot);font-weight:600}
 </style>
 
-<h1>Consonant bench</h1>
+<h1>Hollerbox</h1><span class="sub">consonant bench</span>
 <style>
 /* The navigation. Four links, the one you are on marked. No script: this used to be built by
    session.js and it kept not appearing, because a page that fails to boot cannot draw its own
@@ -87,7 +100,7 @@ select{font:inherit;background:#171b1e;color:var(--fg);border:1px solid var(--li
   <input type="file" id="file" accept=".html,text/html" class="mini">
 </div>
 
-<div class="row" style="margin-bottom:8px">
+<div class="subnav">
   <button class="tab" data-mode="sweep">Sweep</button>
   <button class="tab" data-mode="blind">Blind</button>
   <button class="tab" data-mode="pairs">Pairs</button>

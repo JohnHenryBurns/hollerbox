@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>About · Hollerbox</title>
+<style>
+:root{
+
+  /* ── THE ACCENT ─────────────────────────────────────────────────────────
+     Burnt orange, and it is not an arbitrary brand choice: orange already meant something here
+     before it meant anything. #ff8c42 marks the narrowest point of the tract, the constriction —
+     the thing that decides what a sound IS. So the accent says the same thing everywhere it
+     appears: this is the live one, this is where you are.
+
+     Chosen against the colours already carrying meaning rather than by eye. The Mouth view is
+     red for fixed, yellow for flaps, blue for air, and the constriction marker is a brighter
+     orange. #ff8a4c sits 8.0:1 against the background and 8.5:1 for dark text ON it, so it works as a
+     FILL rather than only as an outline — and it is within ten of the constriction marker it
+     already resembles, which is right, because the two mean the same thing.
+
+     ORANGE IS FILL OR LINE, NEVER TEXT INSIDE AN ORANGE BOX. Orange text on an orange-tinted
+     background with an orange border is three quiet signals where one loud one was wanted; it
+     reads as washed out. A marked control is FILLED and its text goes dark.
+
+     Used for exactly two things: WHERE YOU ARE, and WHAT IS LIVE. Everything else stays grey,
+     because an accent on everything is an accent on nothing. */
+  --hot:#ff8a4c; --hot-soft:rgba(255,138,76,.14); --hot-line:rgba(255,138,76,.55);
+  --hot-ink:#160a03;
+  --bg:#0f1316; --panel:#171c20; --panel2:#212930; --rule:#2f373d;
+  --ink:#f1f5f7; --dim:#aeb9bf; --line:#4c575e;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);
+  line-height:1.55;padding:1rem 1.2rem 3rem;max-width:44rem;margin:0 auto}
+h1{font-size:1.5rem;letter-spacing:-.01em;margin-bottom:.5rem}
+a{color:var(--hot)}
+.tabs{display:flex;gap:.3rem;padding:.6rem 1.2rem 0;border-bottom:1px solid var(--rule)}
+.tab{font-family:var(--sans);font-size:.92rem;font-weight:500;color:var(--dim);
+  background:transparent;border:0;border-bottom:2px solid transparent;
+  padding:.5rem .1rem .55rem;margin-right:1.1rem;cursor:pointer}
+.tab.on{color:var(--ink);border-bottom-color:var(--ink)}
+.lead{font-size:1.35rem;line-height:1.3;color:var(--ink);font-weight:600;
+  margin-bottom:1rem;letter-spacing:-.01em}
+.tryit{background:var(--panel2);border:1px solid var(--rule);border-radius:8px;
+  padding:.75rem .9rem;font-size:.96rem}
+.cardbody{padding:1.1rem 1.2rem 1.4rem;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.cardbody section[hidden]{display:none}
+.cardbody p{font-size:1rem;line-height:1.66;margin:0 0 1rem;color:var(--ink)}
+.cardbody .lead{font-size:1.35rem;line-height:1.3;color:var(--ink);font-weight:600;
+  margin-bottom:1rem;letter-spacing:-.01em}
+.cardbody .tryit{background:var(--panel2);border:1px solid var(--rule);border-radius:8px;
+  padding:.75rem .9rem;font-size:.96rem}
+.cardbody sub{font-size:.72em}
+.cardbody h3{font-size:.82rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--dim);margin:1.5rem 0 .6rem;font-family:var(--mono);font-weight:500}
+.cardbody b{font-weight:600}
+.cardbody a{color:var(--ink)}
+.cardbody p{font-size:1rem}
+.cardbody section').forEach(sec=>sec.hidden = sec.dataset.tab!==want);
+  const body=about.querySelector('.cardbody'); if(body) body.scrollTop=0;
+});
+// About is a room in the nav now rather than a button beside it. It lives here as a dialog
+// rather than as a file, so the room is a MARKER in the hash: every page links to it, and this
+// page opens it on arrival. That makes it shareable like any other state — a link to About
+// carries the voice and the phrase with it, and comes back to them when the dialog closes.
+if(window.HOLLER_SESSION){
+  try {
+    const h = new URLSearchParams((location.hash||'').replace(/^#/,''));
+    if(h.has('about')) showAbout(true);
+  }
+.cardbody section[data-tab]{display:none}
+.cardbody section[data-tab].on{display:block}
+p{margin:.7rem 0}
+</style>
+
+<h1>Hollerbox</h1>
+<div id="nav"></div>
+
+<div class="cardbody">
+
+  
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-tab="mission">The mission</button>
+      <button class="tab" data-tab="tool">The tool</button>
+      <button class="tab" data-tab="science">The science</button>
+    </div>
+    
+
+      <section data-tab="mission">
+        <p class="lead">I wanted a goal cry.</p>
+
+        <p>I built a <a href="https://johnhenryburns.github.io/three-sided-football/"
+        target="_blank" rel="noopener">three-sided football game</a> with my kids. Three teams,
+        one ball, no permanent friends. It narrates its own matches, so it needed someone to
+        shout GOOOOAAALLL when a goal goes in.</p>
+
+        <p>A sound file would have worked. But then it's the same shout every time, and kids
+        notice that by the third match. I wanted the computer to actually make the sound.</p>
+
+        <p>First attempt was filters and math faking a voice. Nine rounds of it. Along the way
+        it sounded like a ghost, then a sasquatch, then a cow, then a Spanish speaker, then a
+        sheep. Each of those turned out to be pointing at something genuinely broken, so they
+        were useful. It still never got close.</p>
+
+        <p>So we stopped faking it and built the throat.</p>
+
+        <p>That's what this is. It isn't done. Press Play and you'll hear that. But it's real
+        physics now instead of a guess, and it's getting closer.</p>
+
+        <p class="tryit"><b>Try it:</b> type a word and press <b>▶</b>. That is the whole thing.
+        Everything else — other voices, the tongue, the tuning — is optional.</p>
+      </section>
+
+      <section data-tab="tool" hidden>
+        <p class="lead">Five controls.</p>
+
+        <p>Along the bottom: <b>∿</b> sustains whatever shape the tract is in — one sound, held,
+        for as long as you like. Which sound that is depends on what you last touched: tap a
+        phoneme and it is that one, move the articulator sliders and it is whatever the tube
+        now makes. A nasal shape gives you a hum; a stop gives you silence, because a sealed
+        tube has nothing to radiate. <b>▶</b> is the other thing entirely — a whole word,
+        articulated in sequence. One is a note, the other is a melody. The <b>voice</b> picker
+        changes who is talking, <b>Phrase</b> is where the words come from, and <b>Advanced</b>
+        holds the articulators, the timing, the tract length and the Lab.</p>
+
+        <p><b>Play word</b> speaks the word you have built. It opens on <i>goal</i>.
+        While it is speaking, that button becomes Stop.</p>
+
+        <p>The <b>Voice</b> list is not a set of effects. Each entry changes the <i>length of the
+        tube</i> along with the source: a woman's tract is about 14.7 cm against a man's 17.5,
+        and that shortening is what lifts every formant — pitch alone will not do it. Helium is
+        the same idea arriving by another route: the gas carries sound faster, so the same
+        voice at the same pitch rings a tube that is acoustically half the size. You can hear
+        source and filter come apart.</p>
+
+        <p><b>Phrase</b> is where the words come from. Type anything and it is sounded out for you;
+        tap the sounds it chose and a phoneme keyboard opens, with a backspace, so you can
+        correct it the way you would correct a spelling. <b>New word</b> starts clean. The
+        timing sliders set how long the word takes and how much the first vowel is stretched.</p>
+
+        <p><b>Tract</b> opens the tongue and voice controls. Tongue position slides the
+        narrowing from the throat toward the lips, constriction sets how tight it is, and lip
+        aperture rounds or spreads the mouth. Between those three you can reach most of the
+        vowel space by hand.</p>
+
+        <p><b>Lab</b> is where the tuning happens. It plays you two versions of the voice and
+        you keep the better one. Do that ten times and it converges somewhere you would not have
+        found by dragging sliders. If both sound wrong, say so — it will search somewhere else.
+        A good voice can be copied out as a seed and pasted back later.</p>
+
+        <p>One thing worth knowing: a voice and a word are separate. Tune a voice on
+        <i>goal</i> and it will speak <i>bulldog</i> the same way, without retuning.</p>
+
+        <p class="tryit"><b>Things it can already say:</b> goal, gold, ball, bulldog, dad, good,
+        bird. Anything built from vowels, /l/, and the stops b d g.</p>
+      </section>
+
+      <section data-tab="science" hidden>
+        <p class="lead">A tube decides the sound.</p>
+
+        <p>Blow across the top of a bottle and you get a note. Change the bottle and the note
+        changes. The shape of the space inside is what decides it.</p>
+
+        <p>Your mouth works the same way. Your vocal cords make a buzz, and the tube above them
+        turns that buzz into a vowel. Move your tongue and you change the shape of the tube.
+        That is most of what a vowel is.</p>
+
+        <p>So the controls here are not abstract. They are a <b>jaw</b>, a <b>tongue body</b>, a
+        <b>tongue tip</b> and <b>lips</b> — six numbers shared by every sound. That constraint
+        matters: a tongue cannot be in two places, and lips are not part of it, so no setting
+        can produce a shape a real mouth could not make.</p>
+
+        <p>Thirty-nine sounds are built this way, and two of the voices are <b>measured from a
+        real person</b> — tract length taken from their third formant, tongue positions solved
+        to match their vowels, pitch and voice quality from a recording. Which is how we
+        learned that a shouted vowel does <i>not</i> open as it is held, and that the model had
+        been assuming a dialect seventy years out of date.</p>
+
+        <p>This page is that tube, simulated. It is cut into 44 short segments, and sound
+        bounces around inside it the way it does in your own head. Nothing here is a recording,
+        and nothing here knows what a vowel is. It only knows the shape of the pipe.</p>
+
+        <h3>Where the shapes came from</h3>
+        <p>In 1952 Peterson and Barney measured the resonances of thousands of spoken vowels,
+        and their numbers are still the standard reference. We searched over tube shapes until
+        the simulation matched those measurements.</p>
+
+        <p>The interesting part is what fell out of that search. Nobody gave it any phonetics,
+        but it independently found that /o/ needs a narrowing at the back of the throat plus
+        rounded lips, and /ɑ/ a narrowing low in the throat with the jaw open. That is exactly
+        what those vowels are.</p>
+
+        <h3>Under the hood</h3>
+        <p>The model is a <b>Kelly–Lochbaum digital waveguide</b> (1962). The tract is a chain
+        of cylindrical sections carrying two counter-propagating travelling waves. Wherever the
+        cross-sectional area changes, part of each wave reflects:</p>
+
+        <p class="eqn">r = (A₁ − A₂) / (A₁ + A₂)</p>
+
+        <p>That is the whole model. There are no formant filters in the code. The resonances are
+        standing waves, and each cylinder in the 3D view is lit by the wave energy actually
+        present in that section, so you are watching the pressure pattern that <i>is</i> a
+        formant.</p>
+
+        <p>The /l/ needs more than one tube. A lateral splits the airflow around the tongue and
+        leaves a closed pocket, which puts a <b>zero</b> in the transfer function — and a single
+        unbranched tube is an all-pole system that cannot produce one. So the tract carries a
+        side branch, coupled through a three-port scattering junction:</p>
+
+        <p class="eqn">p<sub>j</sub> = 2·Σu⁺ / ΣA &nbsp;·&nbsp; u⁻ᵢ = Aᵢ·p<sub>j</sub> − u⁺ᵢ</p>
+
+        <p>which reduces exactly to the two-port form when the branch is shut, so it cannot
+        disturb the tract it taps into. With the lateral re-solved around it, the engine
+        measures a −33.7 dB notch at 1950 Hz. The same mechanism with an open far end at the
+        velum gives the nasals.</p>
+
+        <h3>The same algorithm plucks a string</h3>
+        <p>Anyone who has built synthesizers will recognise the machinery. <b>Karplus–Strong</b>
+        (1983) — a delay line with a loss filter in its feedback path, kicked with a burst of
+        noise — is the standard way to synthesize a plucked string, and it is the same idea:
+        sound in a one-dimensional medium is two travelling waves, so you simulate it by
+        delaying and filtering rather than by solving anything.</p>
+
+        <p>Kelly and Lochbaum got there first, in 1962, with the vocal tract. Julius O. Smith
+        later formalised the whole family as <b>digital waveguide synthesis</b> and showed that
+        Karplus–Strong is a waveguide with the simplifications a string allows.</p>
+
+        <p>The difference is geometry. A string is uniform, so nothing scatters along its
+        length and a single delay loop is enough. A vocal tract changes cross-section
+        constantly, so it needs a scattering junction at every boundary — which is why this
+        model carries 44 of them.</p>
+
+        <p>You can watch the two collapse into each other. Make every section of this tube the
+        same diameter and every reflection coefficient goes to zero, leaving a plain delay loop.
+        Then only the ends decide what it is:</p>
+
+        <table class="mini">
+          <tr><th></th><th>resonances</th><th>theory</th></tr>
+          <tr><td>one end open<br><span class="dimtd">(vocal tract)</span></td>
+              <td>500 · 1505 · 2505 · 3510 Hz</td><td>odd × c/4L</td></tr>
+          <tr><td>both ends reflecting<br><span class="dimtd">(string)</span></td>
+              <td>1000 · 2005 · 3005 · 4010 Hz</td><td>all × c/2L</td></tr>
+        </table>
+
+        <p>Odd harmonics only is a tube stopped at one end — a clarinet, a throat. The full
+        harmonic series is a string fixed at both ends. Same code, two numbers changed.</p>
+
+        <h3>What is still missing</h3>
+        <p>The things listed here for a long time — nasals, voiceless stops, fricatives, and the
+        LF glottal source that makes a shout <i>pressed</i> rather than merely loud — are all
+        built. What replaced them is a harder problem, and a more interesting one.</p>
+
+        <p><b>The vowels are solved and the consonants are not.</b> All ten of the vowels
+        Peterson &amp; Barney measured land within 12% of their published figures, and the two
+        further vowels the model adds — schwa and /o/, which were not in their study — land
+        inside the same tolerance against conventional values. But a labelled ɑCɑ listening
+        sweep scored the consonants at 1 in 22. That is not twenty-two faults; it is about
+        four.</p>
+
+        <p>Two are fixed. Voiceless stops had no voice onset time, so /p t k/ were heard as
+        /b d g/ — they now sit at 70–105 ms against 10–15 for their voiced partners, in the
+        right order labial to velar. And the burst was filtered at one fixed cutoff, which
+        erased place: /g/ came back as /d/ and /k/ as /t/. The burst now follows the cavity in
+        front of the release. Both hold, by ear.</p>
+
+        <p>Two remain. Every fricative is measurably in the right band — /s/ at 4700 Hz, /ʃ/ at
+        3000 — and several are still heard as undifferentiated hiss, so spectrum is not what is
+        wrong with them. And the consonants have no measured targets: the vowel shapes were
+        solved against real formant data and score ten out of ten, while the consonants were
+        placed by hand, so nothing has ever noticed when two of them drifted onto the same
+        sound. A listening sweep identifies about two in three.</p>
+
+        <p>The nasal tract is 11 cm, which is the real range, and you can watch it open — the
+        second cavity swings out from the velum on every /m/, /n/ and /ŋ/, with its own standing
+        wave coloured the same way. The little stub near the lips is the pocket that makes an
+        /l/. Both were invisible until recently, which is a poor thing to hide: the coupling of
+        two cavities through a velum is the most interesting thing in here.</p>
+
+        <p>Below that sit the things nobody has got to: prosody beyond a pitch arc, and
+        frequency-dependent losses — which were built, measured, and reverted, because the loss
+        filter's group delay lengthened the tube and moved every formant by 11%.</p>
+
+        <p class="links">
+          <a href="https://github.com/JohnHenryBurns/hollerbox" target="_blank" rel="noopener">Source on GitHub</a>
+          <a href="https://github.com/JohnHenryBurns/hollerbox/blob/main/LICENSE" target="_blank" rel="noopener">MIT licence</a>
+          <a href="https://github.com/JohnHenryBurns/hollerbox/blob/main/ROADMAP.md" target="_blank" rel="noopener">Roadmap</a>
+          <a href="https://github.com/JohnHenryBurns/three-sided-football/blob/main/docs/AUDIO-EXPERIMENT.md" target="_blank" rel="noopener">The nine-attempt write-up</a>
+          <a href="https://dood.al/pink-trombone/" target="_blank" rel="noopener">Pink Trombone</a>
+          <a href="https://ccrma.stanford.edu/~jos/pasp/" target="_blank" rel="noopener">Smith, Physical Audio Signal Processing</a>
+        </p>
+      </section>
+</div>
+
+<script>
+// Tabs, and nothing else. This was a dialog over the throat; it is a page now, so there is no
+// opening, no closing, and no marker in the URL to remember whether it has been seen.
+(function(){
+  const secs = document.querySelectorAll('.cardbody section[data-tab]');
+  const tabs = document.querySelectorAll('.tab');
+  function show(name){
+    for (const s of secs) s.classList.toggle('on', s.dataset.tab === name);
+    for (const t of tabs) t.classList.toggle('on', t.dataset.tab === name);
+  }
+  for (const t of tabs) t.addEventListener('click', () => show(t.dataset.tab));
+  show('mission');
+})();
+</script>
+<script>
+(async function(){
+  try {
+    const r = await fetch('engine/session.js', { cache:'no-store' });
+    if (r.ok) { new Function(await r.text())(); window.HOLLER_SESSION.mountNav('nav', 'about.html'); }
+  } catch (e) {}
+})();
+</script>

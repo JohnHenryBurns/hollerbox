@@ -196,14 +196,17 @@ a{color:var(--hot)}
 .opt .tally{color:var(--hot)}
 
 /* The die sits in the corner of the chosen answer. Big enough to hit on a phone — 44px is the
-   usual floor — without covering the label it sits on. */
-.opt .die{position:absolute;top:0;right:0;width:2.1rem;height:2.1rem;
+   usual floor — without covering the label it sits on.
+   It said 44 and measured 34: 2.1rem is 33.6px, and the comment had been describing an
+   intention rather than the rule under it. 2.75rem is the number the comment always meant.
+   The glyph grows with it, since the thing was hard to see as well as hard to hit. */
+.opt .die{position:absolute;top:0;right:0;width:2.75rem;height:2.75rem;
   display:flex;align-items:center;justify-content:center;
-  font-size:1rem;line-height:1;cursor:pointer;opacity:.85;border-radius:0 8px 0 8px}
+  font-size:1.2rem;line-height:1;cursor:pointer;opacity:.85;border-radius:0 8px 0 8px}
 .opt.on .die{color:var(--hot)}
 .opt.on.varied .die{color:var(--hot-ink)}
 .opt .die:hover{opacity:1;background:rgba(255,138,76,.16)}
-.opt .tally{right:2.2rem}
+.opt .tally{right:2.85rem}
 </style>
 
 <header>

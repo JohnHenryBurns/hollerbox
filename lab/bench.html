@@ -3,8 +3,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Consonant bench — Hollerbox</title>
 <style>
-/* The name is the accent colour on every page. */
-h1{color:var(--hot,#ff8a4c)}
 
 /* --hot was #e2b13c here and used for the same thing it means everywhere else — the selected
    button, the filled part of a bar, the room you are in. Same meaning, different colour, because
@@ -16,7 +14,7 @@ h1{color:var(--hot,#ff8a4c)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
      padding:12px 12px calc(12px + env(safe-area-inset-bottom));-webkit-text-size-adjust:100%}
-h1{font-size:15px;margin:0 0 2px;font-weight:600;letter-spacing:.02em}
+h1{color:var(--hot);font-family:var(--sans);font-weight:600;font-size:1.1rem;letter-spacing:-.01em;margin:0}
 .sub{color:var(--dim);font-size:12px;margin-bottom:10px}
 .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 button{font:inherit;background:#171b1e;color:var(--fg);border:1px solid var(--line);border-radius:9px;
@@ -76,8 +74,12 @@ select{font:inherit;background:#171b1e;color:var(--fg);border:1px solid var(--li
 .btn.quiet.here{background:var(--hot);color:var(--hot-ink);border-color:var(--hot);font-weight:600}
 </style>
 
-<h1>Hollerbox</h1><span class="sub">consonant bench</span>
+<header>
+  <h1>Hollerbox</h1>
+</header>
 <style>
+header{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .75rem;padding:.55rem 1rem;
+  border-bottom:1px solid var(--rule)}
 /* The navigation. Four links, the one you are on marked. No script: this used to be built by
    session.js and it kept not appearing, because a page that fails to boot cannot draw its own
    way out. HTML does not fail to boot. */

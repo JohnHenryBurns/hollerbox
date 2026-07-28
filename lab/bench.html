@@ -64,7 +64,21 @@ select{font:inherit;background:#171b1e;color:var(--fg);border:1px solid var(--li
 </style>
 
 <h1>Consonant bench</h1>
-<div id="nav" style="margin:.4rem 0 .6rem"></div>
+<!-- THE WAY OUT IS WRITTEN HERE, not built by script.
+     This was mounted by session.js like the other two pages, and on the bench that is the wrong
+     dependency: this is the page most likely to fail to boot — it fetches an engine from a URL
+     you can point anywhere — and the moment it does, the navigation that would have let you
+     leave is the thing that did not run. Twice now it has simply been absent, and the second
+     time a try/catch I added swallowed the reason.
+     A way out of a room must not depend on the room working. These are four plain links; they
+     are correct before any script runs and they survive every failure below. -->
+<div id="nav" class="hb-nav" style="margin:.4rem 0 .6rem">
+  <a class="hb-mark" data-clean="1" href="../index.html">Hollerbox</a>
+  <a class="hb-room" href="../index.html">Throat</a>
+  <a class="hb-room" href="../wizard.html">Make a Voice</a>
+  <span class="hb-room here">Lab</span>
+  <a class="hb-room" href="../index.html#about">About</a>
+</div>
 <div class="sub" id="boot">loading the shipping engine…</div>
 <div id="pick" class="hidden" style="margin-bottom:10px">
   <input type="file" id="file" accept=".html,text/html" class="mini">
@@ -407,7 +421,9 @@ async function boot(src){
   // not leave, which is the exact fault the navigation was added to fix. It depends on nothing
   // but session.js, so it goes before everything that can fail, and it is wrapped because a
   // navigation that throws must not take the bench down with it.
-  try { window.HOLLER_SESSION.mountNav('nav', 'lab/bench.html'); } catch (e) {}
+  // The links above are already right. session.js only styles them and, later, threads the
+  // current voice and phrase onto them — neither of which the page needs in order to be left.
+  try { window.HOLLER_SESSION.navStyle(); } catch (e) {}
   document.getElementById('boot').textContent =
     'engine from ' + (ENGSRC.length>52 ? '…'+ENGSRC.slice(-49) : ENGSRC) +
     ' · ' + Object.keys(VOICES).length + ' voices · ' + CONS.length + ' consonants';

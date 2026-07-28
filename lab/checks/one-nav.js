@@ -11,7 +11,14 @@ check("every page can reach every other", () => {
 
   for (const p of PAGES) {
     const t = fs.readFileSync(path.join(root, p), "utf8");
-    if (!/mountNav\(/.test(t)) bad.push(`${p} does not mount the navigation`);
+    // Built by script OR written into the page. The bench writes its own, because it is the page
+    // most likely to fail to boot — it fetches an engine from a URL you can point anywhere — and
+    // a way out of a room must not depend on the room working. What matters is that every room
+    // is reachable from every page, not which mechanism put the links there.
+    const built = /mountNav\(/.test(t);
+    const written = /class="hb-room"/.test(t);
+    if (!built && !written) bad.push(`${p} has no navigation, built or written`);
+
     if (!/id="nav"/.test(t)) bad.push(`${p} has nowhere to mount it`);
     // and the marker has to be visible, or the current room looks like a broken link
     if (!/\.btn\.here/.test(t)) bad.push(`${p} does not style the current room`);
@@ -35,6 +42,19 @@ check("every page can reach every other", () => {
   // The Lab is a full room again. It was quiet for a while — a workbench a visitor would have
   // walked into — and it stays in the nav either way, because carryState rewrites these links
   // and a Lab reachable only by URL loses the voice on the way there.
+  // A HAND-WRITTEN NAV IS CHECKED AGAINST THE ROOM LIST, since nothing generates it and nothing
+  // else would notice a room going missing from it.
+  for (const p2 of PAGES) {
+    const t2 = fs.readFileSync(path.join(root, p2), "utf8");
+    if (!/class="hb-room"/.test(t2)) continue;
+    for (const r of rooms) {
+      // The room you are ON is a span with no href — that is the point of marking it — so the
+      // name is what to look for, not the address. Checking the address would demand that every
+      // page link to itself.
+      if (!t2.includes(r.name)) bad.push(`${p2} writes its own nav and omits ${r.name}`);
+    }
+  }
+
   const lab = rooms.find(r => /bench/.test(r.href));
   if (!lab) bad.push("the Lab is not in the nav — state cannot travel to it");
 

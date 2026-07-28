@@ -375,8 +375,6 @@
       tail = '#' + h.toString();
     } catch (e) { return; }
     for (const a of document.querySelectorAll('a[href]')) {
-      // the wordmark is the one link that carries nothing — see mountNav
-      if (a.dataset && a.dataset.clean) continue;
       const href = a.getAttribute('href') || '';
       if (!/\.html(\?|#|$)/.test(href)) continue;          // only our own pages
       // A room may carry a marker of its own in the hash — About does. State is written onto
@@ -433,14 +431,10 @@
   // page you are on is marked rather than omitted — a navigation that hides the current page
   // makes every page look like a different app.
   const ROOMS = [
-    { href: 'index.html',     name: 'Throat',       why: 'watch it speak' },
-    { href: 'wizard.html',    name: 'Make a Voice', why: 'four questions and a walk' },
-    { href: 'lab/bench.html', name: 'Lab',          why: 'the workbench: sweeps, pairs, every knob' },
-    // About is a room too, and was a button sitting outside the nav pretending not to be one.
-    // It lives as a dialog on the throat page rather than as a file, so the room is a MARKER in
-    // the hash: every page links to it, index opens it on arrival, and it is shareable like any
-    // other state. `mark` is what carryState has to preserve — see there.
-    { href: 'index.html',     name: 'About',        why: 'what this is and why', mark: 'about' },
+    { href: 'index.html',  name: 'Throat',       why: 'watch it speak' },
+    { href: 'wizard.html', name: 'Make a Voice', why: 'four questions and a walk' },
+    { href: 'lab/bench.html', name: 'Lab',       why: 'measure one sound at a time' },
+    { href: 'about.html',  name: 'About',        why: 'why this exists' },
   ];
 
   /** Render the navigation into an element. `here` is the file this page is, so it can mark
@@ -460,12 +454,6 @@
     const st = document.createElement('style');
     st.id = 'hb-nav-css';
     st.textContent = [
-      // The wordmark is the name of the thing, not a fifth room, so it is set apart:
-      // heavier, in the accent, with a divider after it. Somebody scanning for places to
-      // go should not find one more.
-      '.hb-nav .hb-mark{font-weight:700;color:var(--hot);text-decoration:none;' +
-        'padding-right:.7rem;margin-right:.35rem;border-right:1px solid var(--line)}',
-      '.hb-nav .hb-mark:hover{text-decoration:underline}',
       '.hb-nav{display:flex;gap:.4rem;align-items:center;flex-wrap:nowrap;overflow-x:auto;',
       '  scrollbar-width:none}',
       '.hb-nav::-webkit-scrollbar{display:none}',
@@ -480,51 +468,28 @@
     document.head.appendChild(st);
   }
 
+  // Four pages, one list, the one you are on marked. `here` is the page's own filename.
   function mountNav(el, here, state) {
     const host = typeof el === 'string' ? document.getElementById(el) : el;
     if (!host) return null;
     navStyle();
     host.className = 'hb-nav';
-    // depth matters: lab/bench.html has to climb out to reach the other two
-    const up = /\//.test(here) ? '../' : '';
+    const up = /\//.test(here) ? '../' : '';      // lab/bench.html climbs out
+    const leaf = x => x.replace(/^.*\//, '');
     host.innerHTML = '';
-
-    // ── A WAY BACK TO NOTHING ───────────────────────────────────────────
-    //
-    // Every other link here carries the current voice and phrase, which is right: moving between
-    // rooms should not lose what you were working on. But there was no way to PUT IT DOWN. A
-    // voice you were only trying followed you everywhere, and the only escape was editing the
-    // address bar.
-    //
-    // The wordmark goes home with nothing. `carryState` skips it — that is what `data-clean` is
-    // for — so it is the one link that means "start again".
-    // NOT ON THE PAGE IT POINTS AT. The throat already carries the name in its heading, so a
-    // wordmark there was the word "Hollerbox" twice, one above the other, the second of which
-    // linked to the page you were on. Where you are already home there is nothing to go back to.
-    if (!/^index\.html/.test(here)) {
-      const home = document.createElement('a');
-      home.className = 'hb-mark';
-      home.textContent = 'Hollerbox';
-      home.title = 'Back to the start, with no voice or phrase';
-      home.setAttribute('href', up + 'index.html');
-      home.dataset.clean = '1';
-      host.appendChild(home);
-    }
     for (const r of ROOMS) {
-      // A marker room is never "here": About is a thing you open, not a place you are, and
-      // marking it current on the page it opens over would be a lie.
-      const mine = !r.mark && r.href.replace(/^.*\//, '') === here.replace(/^.*\//, '');
+      const mine = leaf(r.href) === leaf(here);
       const a = document.createElement(mine ? 'span' : 'a');
-      a.className = 'hb-room' + (mine ? ' here' : '') + (r.quiet ? ' quiet' : '');
+      a.className = 'hb-room' + (mine ? ' here' : '');
       a.textContent = r.name;
       a.title = r.why;
-      if (!mine) a.setAttribute('href', up + r.href + (r.mark ? '#' + r.mark : ''));
-      if (r.mark) a.dataset.mark = r.mark;
+      if (!mine) a.setAttribute('href', up + r.href);
       host.appendChild(a);
     }
     if (state) carryState(state);
     return host;
   }
+
 
   // ── A PHRASE MENU, NOT A DROPDOWN ───────────────────────────────────────
   //

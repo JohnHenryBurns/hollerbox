@@ -249,12 +249,6 @@ input[type=range]:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
 aside section{display:block}
 #scrim{display:none;position:fixed;inset:0;background:rgba(6,9,11,.55);z-index:30}
 
-#about{position:fixed;inset:0;z-index:60;background:rgba(6,9,11,.72);
-  display:flex;align-items:center;justify-content:center;padding:1.2rem}
-#about[hidden]{display:none}
-#about .card{background:var(--panel);border:1px solid var(--rule);border-radius:12px;
-  width:min(46rem,100%);max-height:86vh;display:flex;flex-direction:column;
-  box-shadow:0 24px 60px rgba(0,0,0,.6)}
 .cardhead{display:flex;align-items:center;gap:1rem;padding:1rem 1.2rem;
   border-bottom:1px solid var(--rule)}
 .cardhead h2{margin:0;font-size:1.25rem;font-weight:600;letter-spacing:-.01em}
@@ -298,9 +292,7 @@ table.mini .dimtd{color:var(--dim);font-size:.84em}
 .links a:hover{border-color:var(--ink)}
 .cardbody a{color:var(--ink)}
 @media(max-width:820px){
-  #about{padding:0}
-  #about .card{max-height:100%;height:100%;border-radius:0;border:0;width:100%}
-  .cardbody p{font-size:1rem}
+      .cardbody p{font-size:1rem}
 }
 
 @media(max-width:820px){
@@ -618,228 +610,7 @@ header{border-bottom:1px solid var(--hot-line)}
   </div>
 </div>
 
-<div id="about" hidden>
-  <div class="card" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
-    <div class="cardhead">
-      <h2 id="aboutTitle">Hollerbox</h2>
-      <a class="btn" href="https://github.com/JohnHenryBurns/hollerbox"
-         target="_blank" rel="noopener">GitHub</a>
-      <button class="btn" id="aboutClose">Close</button>
-    </div>
-    <div class="tabs" id="tabs">
-      <button class="tab on" data-tab="mission">The mission</button>
-      <button class="tab" data-tab="tool">The tool</button>
-      <button class="tab" data-tab="science">The science</button>
-    </div>
-    <div class="cardbody">
 
-      <section data-tab="mission">
-        <p class="lead">I wanted a goal cry.</p>
-
-        <p>I built a <a href="https://johnhenryburns.github.io/three-sided-football/"
-        target="_blank" rel="noopener">three-sided football game</a> with my kids. Three teams,
-        one ball, no permanent friends. It narrates its own matches, so it needed someone to
-        shout GOOOOAAALLL when a goal goes in.</p>
-
-        <p>A sound file would have worked. But then it's the same shout every time, and kids
-        notice that by the third match. I wanted the computer to actually make the sound.</p>
-
-        <p>First attempt was filters and math faking a voice. Nine rounds of it. Along the way
-        it sounded like a ghost, then a sasquatch, then a cow, then a Spanish speaker, then a
-        sheep. Each of those turned out to be pointing at something genuinely broken, so they
-        were useful. It still never got close.</p>
-
-        <p>So we stopped faking it and built the throat.</p>
-
-        <p>That's what this is. It isn't done. Press Play and you'll hear that. But it's real
-        physics now instead of a guess, and it's getting closer.</p>
-
-        <p class="tryit"><b>Try it:</b> type a word and press <b>▶</b>. That is the whole thing.
-        Everything else — other voices, the tongue, the tuning — is optional.</p>
-      </section>
-
-      <section data-tab="tool" hidden>
-        <p class="lead">Five controls.</p>
-
-        <p>Along the bottom: <b>∿</b> sustains whatever shape the tract is in — one sound, held,
-        for as long as you like. Which sound that is depends on what you last touched: tap a
-        phoneme and it is that one, move the articulator sliders and it is whatever the tube
-        now makes. A nasal shape gives you a hum; a stop gives you silence, because a sealed
-        tube has nothing to radiate. <b>▶</b> is the other thing entirely — a whole word,
-        articulated in sequence. One is a note, the other is a melody. The <b>voice</b> picker
-        changes who is talking, <b>Phrase</b> is where the words come from, and <b>Advanced</b>
-        holds the articulators, the timing, the tract length and the Lab.</p>
-
-        <p><b>Play word</b> speaks the word you have built. It opens on <i>goal</i>.
-        While it is speaking, that button becomes Stop.</p>
-
-        <p>The <b>Voice</b> list is not a set of effects. Each entry changes the <i>length of the
-        tube</i> along with the source: a woman's tract is about 14.7 cm against a man's 17.5,
-        and that shortening is what lifts every formant — pitch alone will not do it. Helium is
-        the same idea arriving by another route: the gas carries sound faster, so the same
-        voice at the same pitch rings a tube that is acoustically half the size. You can hear
-        source and filter come apart.</p>
-
-        <p><b>Phrase</b> is where the words come from. Type anything and it is sounded out for you;
-        tap the sounds it chose and a phoneme keyboard opens, with a backspace, so you can
-        correct it the way you would correct a spelling. <b>New word</b> starts clean. The
-        timing sliders set how long the word takes and how much the first vowel is stretched.</p>
-
-        <p><b>Tract</b> opens the tongue and voice controls. Tongue position slides the
-        narrowing from the throat toward the lips, constriction sets how tight it is, and lip
-        aperture rounds or spreads the mouth. Between those three you can reach most of the
-        vowel space by hand.</p>
-
-        <p><b>Lab</b> is where the tuning happens. It plays you two versions of the voice and
-        you keep the better one. Do that ten times and it converges somewhere you would not have
-        found by dragging sliders. If both sound wrong, say so — it will search somewhere else.
-        A good voice can be copied out as a seed and pasted back later.</p>
-
-        <p>One thing worth knowing: a voice and a word are separate. Tune a voice on
-        <i>goal</i> and it will speak <i>bulldog</i> the same way, without retuning.</p>
-
-        <p class="tryit"><b>Things it can already say:</b> goal, gold, ball, bulldog, dad, good,
-        bird. Anything built from vowels, /l/, and the stops b d g.</p>
-      </section>
-
-      <section data-tab="science" hidden>
-        <p class="lead">A tube decides the sound.</p>
-
-        <p>Blow across the top of a bottle and you get a note. Change the bottle and the note
-        changes. The shape of the space inside is what decides it.</p>
-
-        <p>Your mouth works the same way. Your vocal cords make a buzz, and the tube above them
-        turns that buzz into a vowel. Move your tongue and you change the shape of the tube.
-        That is most of what a vowel is.</p>
-
-        <p>So the controls here are not abstract. They are a <b>jaw</b>, a <b>tongue body</b>, a
-        <b>tongue tip</b> and <b>lips</b> — six numbers shared by every sound. That constraint
-        matters: a tongue cannot be in two places, and lips are not part of it, so no setting
-        can produce a shape a real mouth could not make.</p>
-
-        <p>Thirty-nine sounds are built this way, and two of the voices are <b>measured from a
-        real person</b> — tract length taken from their third formant, tongue positions solved
-        to match their vowels, pitch and voice quality from a recording. Which is how we
-        learned that a shouted vowel does <i>not</i> open as it is held, and that the model had
-        been assuming a dialect seventy years out of date.</p>
-
-        <p>This page is that tube, simulated. It is cut into 44 short segments, and sound
-        bounces around inside it the way it does in your own head. Nothing here is a recording,
-        and nothing here knows what a vowel is. It only knows the shape of the pipe.</p>
-
-        <h3>Where the shapes came from</h3>
-        <p>In 1952 Peterson and Barney measured the resonances of thousands of spoken vowels,
-        and their numbers are still the standard reference. We searched over tube shapes until
-        the simulation matched those measurements.</p>
-
-        <p>The interesting part is what fell out of that search. Nobody gave it any phonetics,
-        but it independently found that /o/ needs a narrowing at the back of the throat plus
-        rounded lips, and /ɑ/ a narrowing low in the throat with the jaw open. That is exactly
-        what those vowels are.</p>
-
-        <h3>Under the hood</h3>
-        <p>The model is a <b>Kelly–Lochbaum digital waveguide</b> (1962). The tract is a chain
-        of cylindrical sections carrying two counter-propagating travelling waves. Wherever the
-        cross-sectional area changes, part of each wave reflects:</p>
-
-        <p class="eqn">r = (A₁ − A₂) / (A₁ + A₂)</p>
-
-        <p>That is the whole model. There are no formant filters in the code. The resonances are
-        standing waves, and each cylinder in the 3D view is lit by the wave energy actually
-        present in that section, so you are watching the pressure pattern that <i>is</i> a
-        formant.</p>
-
-        <p>The /l/ needs more than one tube. A lateral splits the airflow around the tongue and
-        leaves a closed pocket, which puts a <b>zero</b> in the transfer function — and a single
-        unbranched tube is an all-pole system that cannot produce one. So the tract carries a
-        side branch, coupled through a three-port scattering junction:</p>
-
-        <p class="eqn">p<sub>j</sub> = 2·Σu⁺ / ΣA &nbsp;·&nbsp; u⁻ᵢ = Aᵢ·p<sub>j</sub> − u⁺ᵢ</p>
-
-        <p>which reduces exactly to the two-port form when the branch is shut, so it cannot
-        disturb the tract it taps into. With the lateral re-solved around it, the engine
-        measures a −33.7 dB notch at 1950 Hz. The same mechanism with an open far end at the
-        velum gives the nasals.</p>
-
-        <h3>The same algorithm plucks a string</h3>
-        <p>Anyone who has built synthesizers will recognise the machinery. <b>Karplus–Strong</b>
-        (1983) — a delay line with a loss filter in its feedback path, kicked with a burst of
-        noise — is the standard way to synthesize a plucked string, and it is the same idea:
-        sound in a one-dimensional medium is two travelling waves, so you simulate it by
-        delaying and filtering rather than by solving anything.</p>
-
-        <p>Kelly and Lochbaum got there first, in 1962, with the vocal tract. Julius O. Smith
-        later formalised the whole family as <b>digital waveguide synthesis</b> and showed that
-        Karplus–Strong is a waveguide with the simplifications a string allows.</p>
-
-        <p>The difference is geometry. A string is uniform, so nothing scatters along its
-        length and a single delay loop is enough. A vocal tract changes cross-section
-        constantly, so it needs a scattering junction at every boundary — which is why this
-        model carries 44 of them.</p>
-
-        <p>You can watch the two collapse into each other. Make every section of this tube the
-        same diameter and every reflection coefficient goes to zero, leaving a plain delay loop.
-        Then only the ends decide what it is:</p>
-
-        <table class="mini">
-          <tr><th></th><th>resonances</th><th>theory</th></tr>
-          <tr><td>one end open<br><span class="dimtd">(vocal tract)</span></td>
-              <td>500 · 1505 · 2505 · 3510 Hz</td><td>odd × c/4L</td></tr>
-          <tr><td>both ends reflecting<br><span class="dimtd">(string)</span></td>
-              <td>1000 · 2005 · 3005 · 4010 Hz</td><td>all × c/2L</td></tr>
-        </table>
-
-        <p>Odd harmonics only is a tube stopped at one end — a clarinet, a throat. The full
-        harmonic series is a string fixed at both ends. Same code, two numbers changed.</p>
-
-        <h3>What is still missing</h3>
-        <p>The things listed here for a long time — nasals, voiceless stops, fricatives, and the
-        LF glottal source that makes a shout <i>pressed</i> rather than merely loud — are all
-        built. What replaced them is a harder problem, and a more interesting one.</p>
-
-        <p><b>The vowels are solved and the consonants are not.</b> All ten of the vowels
-        Peterson &amp; Barney measured land within 12% of their published figures, and the two
-        further vowels the model adds — schwa and /o/, which were not in their study — land
-        inside the same tolerance against conventional values. But a labelled ɑCɑ listening
-        sweep scored the consonants at 1 in 22. That is not twenty-two faults; it is about
-        four.</p>
-
-        <p>Two are fixed. Voiceless stops had no voice onset time, so /p t k/ were heard as
-        /b d g/ — they now sit at 70–105 ms against 10–15 for their voiced partners, in the
-        right order labial to velar. And the burst was filtered at one fixed cutoff, which
-        erased place: /g/ came back as /d/ and /k/ as /t/. The burst now follows the cavity in
-        front of the release. Both hold, by ear.</p>
-
-        <p>Two remain. Every fricative is measurably in the right band — /s/ at 4700 Hz, /ʃ/ at
-        3000 — and several are still heard as undifferentiated hiss, so spectrum is not what is
-        wrong with them. And the consonants have no measured targets: the vowel shapes were
-        solved against real formant data and score ten out of ten, while the consonants were
-        placed by hand, so nothing has ever noticed when two of them drifted onto the same
-        sound. A listening sweep identifies about two in three.</p>
-
-        <p>The nasal tract is 11 cm, which is the real range, and you can watch it open — the
-        second cavity swings out from the velum on every /m/, /n/ and /ŋ/, with its own standing
-        wave coloured the same way. The little stub near the lips is the pocket that makes an
-        /l/. Both were invisible until recently, which is a poor thing to hide: the coupling of
-        two cavities through a velum is the most interesting thing in here.</p>
-
-        <p>Below that sit the things nobody has got to: prosody beyond a pitch arc, and
-        frequency-dependent losses — which were built, measured, and reverted, because the loss
-        filter's group delay lengthened the tube and moved every formant by 11%.</p>
-
-        <p class="links">
-          <a href="https://github.com/JohnHenryBurns/hollerbox" target="_blank" rel="noopener">Source on GitHub</a>
-          <a href="https://github.com/JohnHenryBurns/hollerbox/blob/main/LICENSE" target="_blank" rel="noopener">MIT licence</a>
-          <a href="https://github.com/JohnHenryBurns/hollerbox/blob/main/ROADMAP.md" target="_blank" rel="noopener">Roadmap</a>
-          <a href="https://github.com/JohnHenryBurns/three-sided-football/blob/main/docs/AUDIO-EXPERIMENT.md" target="_blank" rel="noopener">The nine-attempt write-up</a>
-          <a href="https://dood.al/pink-trombone/" target="_blank" rel="noopener">Pink Trombone</a>
-          <a href="https://ccrma.stanford.edu/~jos/pasp/" target="_blank" rel="noopener">Smith, Physical Audio Signal Processing</a>
-        </p>
-      </section>
-
-    </div>
-  </div>
-</div>
 
 <div class="readout">
   <span><b id="fmt">—</b></span>
@@ -1335,73 +1106,10 @@ document.getElementById('loadSeed').addEventListener('click',()=>{
   if(short) alert('Loaded an older seed. Newer settings took their defaults.');
 });
 
-// ── about dialog: shown once, reopenable from the header ──
-const about=document.getElementById('about');
-function showAbout(v){
-  // Closing takes the marker out of the URL. Without that, a reload — or the back button —
-  // reopens the dialog over a page the reader has already dismissed it from.
-  if(!v){ try {
-    const h = new URLSearchParams((location.hash||'').replace(/^#/,''));
-    if(h.has('about')){ h.delete('about');
-      history.replaceState(null,'',location.pathname+location.search+(h.toString()?'#'+h:'')); }
-  } catch(e) {} }
-  about.hidden=!v;
-  if(!v){ try{ localStorage.setItem('hollerbox.seen','1'); }catch(e){} }
-}
-document.getElementById('tabs').addEventListener('click',e=>{
-  const b=e.target.closest('.tab'); if(!b) return;
-  const want=b.dataset.tab;
-  about.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on', t===b));
-  about.querySelectorAll('.cardbody section').forEach(sec=>sec.hidden = sec.dataset.tab!==want);
-  const body=about.querySelector('.cardbody'); if(body) body.scrollTop=0;
-});
-// About is a room in the nav now rather than a button beside it. It lives here as a dialog
-// rather than as a file, so the room is a MARKER in the hash: every page links to it, and this
-// page opens it on arrival. That makes it shareable like any other state — a link to About
-// carries the voice and the phrase with it, and comes back to them when the dialog closes.
-if(window.HOLLER_SESSION){
-  try {
-    const h = new URLSearchParams((location.hash||'').replace(/^#/,''));
-    if(h.has('about')) showAbout(true);
-  } catch(e) { /* a hash that is not ours */ }
-}
-document.getElementById('aboutClose').addEventListener('click',()=>showAbout(false));
-about.addEventListener('click',e=>{ if(e.target===about) showAbout(false); });
-addEventListener('keydown',e=>{ if(e.key==='Escape' && !about.hidden) showAbout(false); });
-let firstVisit=true;
-try{ firstVisit = !localStorage.getItem('hollerbox.seen'); }catch(e){}
-if(firstVisit) showAbout(true);
-// once the introduction is out of the way, land where the work happens
-const _closeAbout=showAbout;
-showAbout=function(v){ _closeAbout(v); if(!v && firstVisit){ firstVisit=false; openQuick(true); } };
-
-// WHO SAYS IT, as a sheet. Every voice carries a note explaining what it is — "a shorter tract
-// lifts every formant, that and not pitch is what makes it sound like a woman" — and a dropdown
-// showed none of it. That is the most interesting writing in the project and it was invisible.
-//
-// Advanced sits at the bottom of the same sheet. Tuning a voice is the last thing you do TO a
-// voice, so it belongs where the voices are, and the dock is a button lighter for it.
-document.getElementById('voiceBtn').addEventListener('click', () => {
-  if(!window.HOLLER_SESSION) return;
-  HOLLER_SESSION.menuStyle();
-  HOLLER_SESSION.voiceMenu({
-    current: voiceName,
-    onPick: k => { setVoice(k); playWord(); },
-    onAdvanced: () => openSheet('adv'),
-  });
-});
-scrim.addEventListener('click',()=>sheet(null));
-document.getElementById('sheetClose').addEventListener('click',()=>sheet(null));
-document.getElementById('sheetPlay').addEventListener('click',()=>{
-  if(sequencing){ node && node.port.postMessage({type:'stopSeq'}); sequencing=false; voicing=0; paintBtn(); }
-  else playWord();
-});
-addEventListener('keydown',e=>{
-  if(e.key!=='Escape') return;
-  if(!document.getElementById('kbd').hidden){ openKbd(false); return; }
-  if(!quick.hidden){ openQuick(false); return; }
-  sheet(null);
-});
+// The About dialog became about.html — a page like the others, reachable from the nav.
+// It was shown once on first load and reopenable from a marker in the URL, which meant
+// three pieces of state (has it been seen, is it open, is the marker still there) for a
+// thing that is just some prose.
 
 // ── typing a word ──
 // ── the phoneme keyboard ──

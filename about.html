@@ -65,18 +65,6 @@ a{color:var(--hot)}
 .cardbody b{font-weight:600}
 .cardbody a{color:var(--ink)}
 .cardbody p{font-size:1rem}
-.cardbody section').forEach(sec=>sec.hidden = sec.dataset.tab!==want);
-  const body=about.querySelector('.cardbody'); if(body) body.scrollTop=0;
-});
-// About is a room in the nav now rather than a button beside it. It lives here as a dialog
-// rather than as a file, so the room is a MARKER in the hash: every page links to it, and this
-// page opens it on arrival. That makes it shareable like any other state — a link to About
-// carries the voice and the phrase with it, and comes back to them when the dialog closes.
-if(window.HOLLER_SESSION){
-  try {
-    const h = new URLSearchParams((location.hash||'').replace(/^#/,''));
-    if(h.has('about')) showAbout(true);
-  }
 .cardbody section[data-tab]{display:none}
 .cardbody section[data-tab].on{display:block}
 p{margin:.7rem 0}

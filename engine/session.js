@@ -377,6 +377,12 @@
     for (const a of document.querySelectorAll('a[href]')) {
       const href = a.getAttribute('href') || '';
       if (!/\.html(\?|#|$)/.test(href)) continue;          // only our own pages
+      // THE NAME IS NOT A ROUTE THROUGH THE STATE. Every other link between pages carries the
+      // voice and the phrase, which is what makes three pages feel like one tool. The wordmark
+      // is the way back to the front door, and a front door that arrives holding what you were
+      // last doing is not a front door. It opts out, and it says so in the markup rather than
+      // relying on its href happening not to end in .html.
+      if (a.dataset && a.dataset.home !== undefined) continue;
       // A room may carry a marker of its own in the hash — About does. State is written onto
       // every link, and a naive rewrite dropped it, so the About link silently became a link to
       // the throat. Its own key goes back on the front.

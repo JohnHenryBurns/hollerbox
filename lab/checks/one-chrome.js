@@ -86,9 +86,12 @@ check("four pages, one chrome", () => {
   const WANT = ["Throat", "Make a Voice", "Lab", "About"];
   const HERE = { index: "Throat", wizard: "Make a Voice", bench: "Lab", about: "About" };
   for (const [k, s] of Object.entries(page)) {
-    const home = k === "bench" ? "\\.\\./index\\.html" : "index\\.html";
-    if (!new RegExp(`<h1><a href="${home}">Hollerbox</a></h1>`).test(s))
-      bad.push(`${k}'s brand is not a link to the index`);
+    // The homepage itself, not a file inside it, and marked so carryState leaves it clean —
+    // every other link between pages carries the voice and the phrase, and the front door must
+    // not. It was `index.html`, which carryState rewrote to `index.html#v=...&say=...`.
+    const home = k === "bench" ? "\\.\\./" : "\\./";
+    if (!new RegExp(`<h1><a href="${home}" data-home>Hollerbox</a></h1>`).test(s))
+      bad.push(`${k}'s brand is not a clean, state-free link to the homepage`);
     const nav = (s.match(/<nav class="nav">([\s\S]*?)<\/nav>/) || [])[1];
     if (!nav) { bad.push(`${k} has no nav`); continue; }
     const items = [...nav.matchAll(/<(a|span)[^>]*>([^<]+)</g)];

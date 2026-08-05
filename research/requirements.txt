@@ -1,0 +1,22 @@
+# Pinned, because a fit that cannot be reproduced next month is not a measurement.
+#
+# These are the versions that actually resolved on Python 3.14.7 on 2026-08-05, read back out of
+# the environment rather than typed from memory — the first draft of this file pinned a pandas that
+# has never existed. Regenerate with:
+#
+#     research/.venv/Scripts/python -m pip freeze > research/requirements.txt
+#
+# Deliberately small. The engine does the synthesis and `lab/` does the acoustics; Python is here
+# to do regression, statistics and plots on CSVs, which is what it is good at. Nothing here reads
+# audio, and nothing here reimplements any part of the model — see research/README.md.
+numpy==2.5.1
+scipy==1.18.0
+# NOT 3.0.5, which pip resolves to by default on this Python. Its compiled extension is blocked by
+# Windows Application Control — "DLL load failed while importing properties: An Application Control
+# policy has blocked this file" — while numpy, scipy and matplotlib of the same vintage load fine.
+# The wheel is new enough to have no reputation with Smart App Control, and the block is silent
+# until import. 2.3.3 loads. Revisit when 3.x has been in the wild longer.
+pandas==2.3.3
+matplotlib==3.11.1
+statsmodels==0.14.6      # stage 2 wants mixed effects; scipy alone will not do it
+pytest==9.1.1

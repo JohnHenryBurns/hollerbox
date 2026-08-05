@@ -131,7 +131,9 @@ const AS = ACTUAL ? require(path.join(__dirname, 'artspace.js')) : null;
  * and the resulting jitter shows up as articulator VELOCITY that the engine never had.
  */
 function actualTrack(W, stress) {
-  const p = H.makeProcessor(n);
+  // artOnly: the tract still moves, nothing is synthesised. Bit-identical diameters, and the
+  // acoustics were most of the bill.
+  const p = H.makeProcessor(n, { artOnly: true });
   p.port.onmessage({ data: { type: 'voice', v } });
   p.port.onmessage({ data: { type: 'goal',
     seq: { keys: W.keys, f0: P.buildF0(W.end, v, { stress, seg: W.seg }), end: W.end } } });

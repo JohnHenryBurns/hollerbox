@@ -3,12 +3,21 @@
 // It used to live inside a template literal in index.html, which meant every consumer
 // re-derived it by regex and its one template interpolation had to be faked. One copy now.
 //
-// Everything it needs arrives in processorOptions: { n, velar }.
+// Everything it needs arrives in processorOptions: { n, velar, artOnly }.
+//
+// `artOnly` runs the articulation and stops. No source, no scattering, no output — the sample loop
+// updates the tract and returns. It exists because fitting a control model against measured
+// articulography needs the tract's MOTION and never needs to hear it, and the acoustics are 95% of
+// the cost: a rendered word is 4.3 s against 0.55 ms to plan one. Nothing in the articulation block
+// reads anything the source block writes, and every Math.random() in this file is downstream of the
+// cut, so the diameter track is bit-identical either way. A check asserts exactly that, because a
+// fast path that quietly computed something else would be the most expensive kind of bug here.
 
 class TractProcessor extends AudioWorkletProcessor {
   constructor(opt){
     super();
     const n = opt.processorOptions.n;
+    this.artOnly = !!opt.processorOptions.artOnly;
     const CAP = 72;                         // allocate for the longest tract we allow
     this.n=n; this.nMax=CAP; this.steps=2;
     this.diam=new Float64Array(CAP).fill(1.5);
@@ -481,6 +490,8 @@ class TractProcessor extends AudioWorkletProcessor {
       } else {
         for(let i=0;i<n;i++){ this.diam[i]=this.tgt[i]; this.dv[i]=0; }
       }
+      // The cut. calcRefl() only feeds the scattering, so it goes on this side of it.
+      if(this.artOnly) continue;
       this.calcRefl();
 
       // ---- source ----

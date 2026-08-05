@@ -1,6 +1,11 @@
 # Two questions about controlling a throat
 
-**Status: a proposal to argue with. Nothing here is started.**
+**Status: a proposal to argue with. Stage 0a is built; nothing beyond it is started.**
+
+*Stage 0a — making the engine's real trajectory observable — is done: `lab/artspace.js`,
+`lab/trajectories.js --actual`, `processorOptions.artOnly`, and two gate checks. It found three
+errors in this document, all corrected below and marked where they were. Corpus access is
+requested and not yet granted, so no measured data has been touched.*
 
 **One.** *What is the simplest law that reproduces the movements a brain produces?* How much of
 measured human articulator motion does a target-and-interpolate model account for, and what
@@ -55,24 +60,64 @@ because most articulatory synthesisers are too slow to fit thousands of utteranc
 
 ## Why this engine is a reasonable instrument
 
-**It is fast, and the number matters more than the adjective.** Measured: planning a
-nine-word utterance to a full articulator track takes **2.17 ms** on one core, no audio rendered —
-trajectory fitting does not need the audio. So:
+**It is fast, and the number matters more than the adjective.**
 
-- one pass over all of mngu0 (~1,300 utterances): **2.8 seconds**
-- a 2,000-evaluation search over the ten control parameters: **1.6 hours**
+**Corrected, and the original figure was attached to the wrong quantity.** This section used to
+read: planning a nine-word utterance takes 2.17 ms, so one pass over mngu0 is 2.8 seconds and a
+2,000-evaluation search is 1.6 hours. The 2.17 ms is real and it is the cost of **planning the
+targets**. It is not the cost of producing a trajectory, because the trajectory is not in the plan —
+see the correction to stage 1 below. `lab/fit-auto.js` had the honest ratio written in it the whole
+time: *"a rendered word costs about 4.3 seconds and `buildWord` alone costs 0.24 ms — four orders of
+magnitude."*
 
-That is a laptop overnight, not a cluster allocation. Most articulatory models solve aero-acoustic
-equations per sample and cannot be fitted at this scale at all, which is a real part of why the
-control literature is thin on large fits — and it is the single strongest argument for using this
-engine rather than a better one.
+Measured, voice john, a nine-word utterance:
+
+| | |
+|---|---|
+| plan the targets (`buildWord`) | **0.55 ms** |
+| trace the tract that is actually spoken | **1042 ms** |
+| the same, articulation-only, inverted to postures at 200 Hz | **993 ms** |
+
+So the real figures:
+
+- one pass over all of mngu0 (~1,350 utterances): **about 20 minutes**
+- a 2,000-evaluation search over the gesture parameters: **about 570 core-hours**
+
+A pass is still cheap enough to run whenever you like. **The search is not**, and pretending
+otherwise was the load-bearing error in this section. `processorOptions.artOnly` now runs the
+articulation without synthesising anything — bit-identical diameters, gated as such — and it only
+bought 1.37x end to end, because once the acoustics are gone the cost is the posture inversion
+rather than the engine. The way to afford the search is to stop inverting inside it: register the
+measured EMA into articulator coordinates once, forward-map it through `articulate` once, and let
+the search compare in diameter space where the engine already lives.
+
+Most articulatory models solve aero-acoustic equations per sample and cannot be fitted at this scale
+at all, which is a real part of why the control literature is thin on large fits — and that remains
+the strongest argument for using this engine rather than a better one. It is an argument about
+minutes against weeks, not seconds against hours.
 
 **It is interpretable.** Six articulator degrees of freedom — `jaw`, `bodyPos`, `bodyHi`,
-`tipPos`, `tipHi`, `lip` — and ten control parameters with physical meanings. A fitted value is a
-claim about speech, not a weight.
+`tipPos`, `tipHi`, `lip` — and a handful of control parameters with physical meanings. A fitted
+value is a claim about speech, not a weight.
 
-**It already emits the thing to be compared.** `buildWord` returns a per-frame articulator track.
-The comparison to measured data is a comparison of two trajectories, not an inversion problem.
+**It emits the thing to be compared, but not from where this said it did.** ~~`buildWord` returns a
+per-frame articulator track. The comparison to measured data is a comparison of two trajectories,
+not an inversion problem.~~ `buildWord` returns two representations — the six articulators and the
+diameters `articulate` makes from them — and they agree at the keyframes and nowhere else. The
+worklet runs its follower over the **diameters**, per section; the six are smoothstepped with no
+mass at all. `ROADMAP.md` line 1623 had already recorded that `art` is emitted and ignored.
+
+It is therefore an inversion problem after all, but a small and well-posed one rather than the
+usual one. `lab/artspace.js` reads a tract shape back into the six articulators using the engine's
+own forward map: six bounded parameters against forty-four diameters, over-determined, gated on
+recovering a planted posture. That is a much easier problem than mapping flesh points onto an area
+function, and it is the reason the comparison can still be done in articulator coordinates.
+
+**Two things it turned up immediately, both of which change what stage 1 will find.** With the mass
+model off, 20.5% of frames sit in a tract shape no posture reaches; with it on, 64.5%. Transitions
+are interpolated in **area** space, and a blend of two `articulate` outputs is not generally an
+`articulate` output — so the model passes through shapes no tongue could hold, during exactly the
+intervals a control model is about. That is before any corpus is consulted.
 
 **It is calibrated to one speaker and instrumented.** Ninety-odd checks, ablation-verified. When a
 fit changes something, it is possible to find out what.
@@ -84,9 +129,19 @@ done:
 
 | corpus | what it is | the catch |
 |---|---|---|
-| **mngu0** | one British English speaker, ~1,300 utterances, EMA + audio | one speaker; registration |
-| **MOCHA-TIMIT** | two speakers, 460 sentences each | small; older sensor conventions |
-| **USC-TIMIT / rtMRI** | real-time MRI, several speakers | image data, needs segmentation first |
+| **mngu0** | one British English speaker, 1,354 utterances, EMA @ 200 Hz + audio, **plus MRI and dental scans of the same speaker** | one speaker; email registration; do not redistribute |
+| **SPIRE-EMA** | **38 speakers** reading MOCHA's own 460 sentences, phone-aligned, **CC BY 4.0, no registration** | coordinate conventions undocumented — no head-correction or palate notes anywhere in the release |
+| **MOCHA-TIMIT** | two validated speakers, 460 sentences each | coil re-attachments at known file indices, an unexplained velum drift, ~6% transcription error never fixed |
+| **USC-TIMIT / rtMRI** | real-time MRI, 10 speakers, EMA for 4 of them; **re-hosted CC BY 4.0 in 2026** | image data; MRI and EMA are separate sessions, so no frame-level correspondence |
+
+**mngu0 is no longer at `mngu0.org`.** That domain lapsed and now serves an unrelated Korean
+phonetics blog, and it returns HTTP 200, so a link-checker will not notice. It is distributed from
+Korin Richmond's Edinburgh page by email approval.
+
+**Not available, despite being cited as though it were:** the Haskins rate-comparison corpus (HPRC),
+whose Box link is dead and which is absent from Yale Dataverse — it is the only public corpus with a
+deliberate rate contrast, so it is worth an email rather than a download. XRMB appears to be
+unobtainable through any public channel now.
 
 Start with mngu0 because it is the largest single-speaker set and the most used, which makes
 results comparable to published work.
@@ -110,9 +165,28 @@ This is the stage most likely to end it, and it should be attempted first for ex
 
 ### Stage 1 — how far does target-and-interpolate get?
 
-Drive the model from the phoneme string of each utterance. Fit the ten control parameters to
+Drive the model from the phoneme string of each utterance. Fit the control parameters to
 minimise trajectory error against the measured articulators. Report **variance explained per
 articulator**, held out by utterance.
+
+**A correction, and it was nearly fatal to the whole stage.** This used to say "fit the ten control
+parameters", meaning `VOICE_SPEC`'s `gesture` group, against the CSV from `lab/trajectories.js`.
+That could not have worked, for two independent reasons.
+
+**Four of the ten cannot move an articulator under any circumstances.** The group is `artT artCrit
+artStiff artPush velT fricDuck decl reset ask artFar`. `decl`, `reset` and `ask` are pitch-contour
+parameters and `fricDuck` is a level; they are grouped with the gesture knobs because a tournament
+mutates them together, not because they are gestural.
+
+**And the remaining six never reach the exported track at all.** `artT`, `artCrit`, `artStiff`,
+`artPush`, `artFar` and `velT` appear in `phonemes.js` only as `VOICE_SPEC` declarations, one preset
+value and that group listing. `buildWord` never reads them — they belong to the worklet's follower,
+which acts on the diameters. So an optimiser pointed at the articulator columns would have reported
+**all ten unidentifiable**, and the sensible-looking response to that would have been to distrust
+the corpus or the registration rather than the instrument.
+
+Fixed by `lab/trajectories.js --actual`, which traces the running engine and inverts each frame back
+to a posture. The parameters are identifiable against that track because it is the one they move.
 
 **What each outcome means:**
 
@@ -136,11 +210,24 @@ neighbouring gesture, distance still to travel.
 - **Unstructured** → target-and-interpolate is adequate at this level. Publish that; it constrains
   what everyone else should be working on.
 
+### Stage 2.5 — does any of it sound better?
+
+**Added, because stages 1 to 3 as written contain no ear at all**, in a project whose own record
+says every real diagnosis came from someone listening and not one came from the measurements. Take
+the parameters fitted to human trajectories, render the bench phrases, and listen. If trajectories
+measurably closer to a person's do not sound more like a person, that is the most interesting result
+available here and nobody else is positioned to find it.
+
 ### Stage 3 — does it generalise?
 
-Refit on MOCHA-TIMIT's two speakers without re-tuning. Anything that survives a different speaker
-and a different sensor convention is a claim about speech. Anything that does not is a claim about
-one person, which is worth saying plainly rather than quietly.
+Refit on a second corpus without re-tuning. **SPIRE-EMA rather than MOCHA-TIMIT**: 38 speakers
+against two, reading MOCHA's own 460 sentences so the comparison is clean, CC BY 4.0 with no
+registration, and without MOCHA's documented coil re-attachments and 6% transcription error rate.
+The one thing MOCHA still has that SPIRE does not is a velum coil.
+
+Anything that survives a different speaker and a different sensor convention is a claim about
+speech. Anything that does not is a claim about one person, which is worth saying plainly rather
+than quietly — and with 38 speakers that stops being a standing caveat and becomes a measurement.
 
 ## The second question: constrain the representation, or merely inform it?
 
@@ -225,11 +312,30 @@ forms, simulating the physics exactly is unlikely to rescue it.
 
 ### What I have not checked
 
-Whether articulatory features as an AUXILIARY objective have been tried for text-to-speech. They
+~~Whether articulatory features as an AUXILIARY objective have been tried for text-to-speech. They
 are established in speech recognition — the dysarthric-speech literature uses exactly this — but
-recognition and synthesis are different problems and the result may not transfer. **This is an
-afternoon in the literature and it should happen before any code.** If arm C has been run, its
-result decides whether the rest is worth starting.
+recognition and synthesis are different problems and the result may not transfer.~~
+
+**Checked, and both halves need correcting.**
+
+**Arm C is not new.** Cao et al. (Interspeech 2017) tried articulatory multi-task learning in TTS,
+and it helped. Pre-Tacotron, so the modern re-test and the partial-supervision regime are both
+genuinely open — but this is a revisit, not a first, and it should be described as one.
+
+**The dysarthric-ASR claim is withdrawn.** That literature is input fusion essentially without
+exception, not auxiliary loss. What is established is articulatory *attributes* as an auxiliary task
+(Bell & Renals, Interspeech 2015; Lee et al., APSIPA 2019). Continuous *kinematics* as an auxiliary
+loss rests on a single unrefereed preprint.
+
+**And the shuffled control turns out to be the strongest thing in this section.** Bell & Renals
+asked precisely this question in 2015 — whether the gain comes from the linguistic content or merely
+from a low-dimensional secondary task reducing noise — and never closed it. Their 2017 follow-up
+varied target *cardinality* while holding the phonetic question set fixed, which isolates the wrong
+variable, and concluded the benefit was probably just diversity among arbitrary targets. Meanwhile
+MAXL (NeurIPS 2019) shows a randomly generated auxiliary hierarchy gives a **non-zero** gain in
+vision. So the shuffle is not a robustness check on arm C. It is the experiment, it answers a
+question the field's own foundational paper raised and abandoned, and the effect it has to subtract
+off is known to be non-zero.
 
 ## What could go wrong, stated in advance
 
@@ -289,8 +395,10 @@ should not be the plan; it should be the thing the plan might earn a look at.
 
 ## Running it
 
-**On your machine, not a cloud VM.** One pass over mngu0 is under three seconds and the parameter
-search is under two hours single-core, which any desktop parallelises to minutes. And the corpora
+**On your machine, not a cloud VM.** One pass over mngu0 is about twenty minutes and the parameter
+search is around 570 core-hours as it currently stands — a desktop parallelises the pass to a couple
+of minutes and does not rescue the search, which needs the restructuring described above rather than
+more cores. And the corpora
 carry licences: mngu0 and MOCHA both require agreeing to terms before download, and putting the
 data on third-party infrastructure may breach them. Local avoids the question.
 
@@ -302,11 +410,20 @@ exact fault this project spent a week removing, three times over — and it carr
 that the model being fitted is not the model anyone has listened to. The trajectory generator has
 to be the engine itself.
 
-    node lab/trajectories.js --in utterances.txt --out tracks.csv --voice john --rate 200
+    node lab/trajectories.js --in utterances.txt --out tracks.csv --voice john --rate 200 --actual
 
-One utterance a line, optionally `id<TAB>text` so the corpus's own identifiers come through. It
-renders no audio: fitting compares trajectories, and skipping the acoustics is what makes a corpus
-pass cost seconds.
+One utterance a line, optionally `id<TAB>text` so the corpus's own identifiers come through.
+
+**`--actual` is not optional for this project**, whatever the flag name suggests. Without it the CSV
+carries the planned articulator track — the one the mouth view draws, which no control parameter can
+move. With it, the runner traces the engine and inverts each frame back to a posture, and adds
+`act_*` columns plus `inv_rms` and `clamped`. Those last two are not decoration: `articulate` floors
+every section at 0.02, so a stop closure genuinely does not determine the tongue behind it, and a
+residual regressed against a high-`clamped` frame is a residual regressed against a guess. Drop them
+or say so.
+
+It still renders no audio — `processorOptions.artOnly` runs the articulation and stops, gated as
+producing bit-identical diameters and silence.
 
 **What comes back matters more than how it is run.** Not audio and not the corpus — the
 **per-frame residuals**, measured minus modelled, per articulator, joined to the linguistic

@@ -1,0 +1,15 @@
+# The corpora carry licences. mngu0 is distributed on the condition that it is not passed on, and
+# MOCHA's licence is non-commercial. Nothing measured goes in the repository — only what was fitted
+# from it, which is the same split lab/RECORDING.md already uses for the reference recording.
+data/*
+!data/README.md
+
+# The environment is reproducible from requirements.txt; the tree of wheels is not worth versioning.
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Generated tracks. Tens of megabytes per corpus pass, and derived by definition.
+out/
+*.csv

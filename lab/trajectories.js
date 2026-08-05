@@ -90,6 +90,27 @@ if (!P.VOICES[VOICE]) {
 }
 
 const v = { ...P.defaultVoice(), ...(P.VOICES[VOICE].v || {}) };
+
+// --set artT=0.03,artStiff=0.30
+//
+// The fitter has to be able to move the parameters, and it drives this file from Python. Every key
+// is checked against VOICE_SPEC and every value against that parameter's own range, because a typo
+// that silently did nothing would show up downstream as "the parameter has no effect", which is
+// precisely the conclusion this whole exercise exists to draw honestly.
+if (args.set) {
+  for (const pair of String(args.set).split(',')) {
+    const [k, raw] = pair.split('=');
+    const spec = P.VOICE_SPEC.find(p => p.k === k);
+    if (!spec) { console.error(`--set: no such parameter "${k}"`); process.exit(2); }
+    const x = Number(raw);
+    if (!Number.isFinite(x)) { console.error(`--set ${k}: "${raw}" is not a number`); process.exit(2); }
+    if (x < spec.lo || x > spec.hi) {
+      console.error(`--set ${k}=${x} is outside [${spec.lo}, ${spec.hi}]`); process.exit(2);
+    }
+    v[k] = x;
+  }
+}
+
 const n = Math.round(v.sect);
 const ARTS = ['jaw', 'bodyPos', 'bodyHi', 'tipPos', 'tipHi', 'lip'];
 

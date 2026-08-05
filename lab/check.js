@@ -516,8 +516,22 @@ check("stress makes a syllable quieter as well as shorter", () => {
   const r = S.g2p("banana");
   const lvl = st => {
     const { buf, seg } = H.say(r.ph, { D: 1.1, voice: V, n, stress: st });
+    // TRIM BY A FRACTION, NOT BY 30 ms. A fixed 30 ms off each end assumes every segment is
+    // comfortably longer than 60, and 8.1's whole point is that unstressed ones are not: with
+    // wkdur at 0.60 the final schwa of "banana" comes out at exactly 60 ms, and the window
+    // collapsed to a handful of samples — less than one period of an 88 Hz voice. What it then
+    // reported was where the glottal pulse happened to fall, which came out 3.3 dB HIGHER than
+    // the syllable's real level (-21.4 against -24.7). And because the check takes the MAX over
+    // the weak syllables, that one inflated number is precisely the one that survives, so the
+    // stressed-to-unstressed contrast read 2.0 dB instead of 5.3 and the gate went red on a
+    // level layer that was working.
+    //
+    // Same fault as the VOT probe's window length, one file down and for the same reason: a
+    // window shorter than a pitch period does not measure level, it samples phase. The middle
+    // half is steady whatever the segment's length, which is what was wanted in the first place.
     return seg.filter(s => s.sym === "ə" || s.sym === "æ")
-              .map(s => [s.sym, 20*Math.log10(H.rms(buf, s.a + 0.03, s.b - 0.03) + 1e-12)]);
+              .map(s => { const q = (s.b - s.a)*0.25;
+                          return [s.sym, 20*Math.log10(H.rms(buf, s.a + q, s.b - q) + 1e-12)]; });
   };
   const bad = [];
   // 8.1 made the stressed syllable longer. Before this it was still the same LEVEL — three
@@ -1025,18 +1039,27 @@ check("phonation eases back in after a pause", () => {
     // wgap at its `off` value, because the ramp exists for REAL pauses — at an ordinary
     // word boundary there is now no silence to ease out of, which is the better fix.
     const v = { ...P.defaultVoice(), ...V, onset: on, wgap: 0.14 };
-    const { buf } = H.say(r.ph, { D: Math.max(0.8, r.ph.length*v.per), voice: v, n, stress: r.stress });
     // Locate the onsets rather than hardcoding them. They were 0.416 and 1.026 under a fixed
     // D; under 8.1b a word's length depends on what is in it, so an absolute offset lands
     // somewhere else entirely. A check that assumes a timing is a check that fails the moment
     // the timing becomes a result.
-    const r2 = S.g2p("I love my daughter");
-    const W = P.buildWord(r2.ph, { D: Math.max(0.8, r2.ph.length*v.per), rate: (v.per||0.17)*0.90,
-                                   n, stress: r2.stress, pros: v, glide: v.glide,
-                                   stopHold: v.stopT, drawl: v.drawl });
+    //
+    // TAKE THEM FROM THE RENDER, not from a second plan. This used to re-run `buildWord` with
+    // `rate: (v.per||0.17)*0.90`, which is `rateFor`'s answer only when D happens to equal the
+    // word's natural length. Here it does not — D floors at 0.8 while thirteen phones want 0.645 —
+    // so `rateFor` returns 0.0554 and the inlined copy returned 0.0446, a 24% disagreement. The
+    // recomputed word came out 136 ms short and its onsets landed 51, 70 and 94 ms early, which
+    // is inside the PREVIOUS word's tail. The probe then measured a signal that had never stopped,
+    // found it already above half amplitude, and reported a 0 ms rise — a ramp that was working
+    // correctly the whole time, failed by a clock that disagreed with the audio it was reading.
+    //
+    // `say` already returns the segments the audio was actually built from. There was never a
+    // reason to compute them twice, and this is the same fault the harness's own header describes
+    // deleting: a second copy of buildWord that drifted.
+    const { buf, seg } = H.say(r.ph, { D: Math.max(0.8, r.ph.length*v.per), voice: v, n, stress: r.stress });
     const onsets = [];
-    for (let i = 1; i < W.seg.length; i++)
-      if (W.seg[i-1].sym === " " && W.seg[i].sym !== " ") onsets.push(W.seg[i].a);
+    for (let i = 1; i < seg.length; i++)
+      if (seg[i-1].sym === " " && seg[i].sym !== " ") onsets.push(seg[i].a);
     return onsets.slice(0, 2).map(t0 => {
       const full = H.rms(buf, t0 + 0.06, t0 + 0.10);
       for (let k = 0; k < 60; k++)
@@ -1720,10 +1743,32 @@ check("voiceless stops are aspirated", () => {
     const from = Math.floor(s.b*H.SR), step = Math.floor(H.SR*0.005);
     // The bar must be SUSTAINED. A single-frame threshold is tripped by the burst itself,
     // which is loud and broadband, and duly reported 0 ms for every stop in the inventory.
-    let run = 0, on = from + Math.floor(H.SR*0.25);
+    //
+    // A RUN MUST OUTLAST THE WINDOW, and this asked for four steps — 15 ms — against a window of
+    // 34.8 ms. Those are overlapping views of the same audio, so ONE transient shows up in all
+    // four and satisfies the rule on its own. That is the same fault the paragraph above describes,
+    // one level up: the fix stopped a single SAMPLE being enough and left a single EVENT enough.
+    //
+    // It bit exactly where the burst is loudest and the release latest. Measured on /ɑkɑ/ at the
+    // spec defaults, the four steps read 2.18, 2.85, 1.76, 0.52 of the vowel's own bar and then
+    // collapse to 0.15 and stay there until voicing genuinely returns 85 ms later. The engine was
+    // correct throughout — it sets vot to 84.6 ms and gates voicing to zero for all of it — and
+    // the check reported /k/ as having no aspiration at all:
+    //
+    //     run >= 4    artT 0   p55 t65 k85     artT 0.025  p65 t75 k 0     artT 0.05  p70 t 0 k100
+    //     run >= 8    artT 0   p55 t65 k85     artT 0.025  p65 t75 k95     artT 0.05  p70 t80 k100
+    //
+    // Two separate latent instances, and the voiced stops do not move at any setting — b 0-5,
+    // d 0, g 0 throughout — so this removes a false positive rather than loosening a band. k95 is
+    // also exactly what the recalibration note below recorded, which is the best evidence that
+    // this restores the intended measurement rather than inventing a new one.
+    const MIN_RUN = Math.ceil(L_WIN/step) + 1;         // 8 steps, 34.9 ms, just past the window
+    let run = 0, runStart = -1, on = from + Math.floor(H.SR*0.25);
     for (let i = from; i < from + Math.floor(H.SR*0.25); i += step) {
-      if (lowband(buf, i) > ref*0.45) { if (++run >= 4) { on = i - 3*step; break; } }
-      else run = 0;
+      if (lowband(buf, i) > ref*0.45) {
+        if (run === 0) runStart = i;
+        if (++run >= MIN_RUN) { on = runStart; break; }
+      } else run = 0;
     }
     vot[c] = (on - from)/H.SR*1000;
   }
@@ -2905,11 +2950,35 @@ check("voiced fricatives are frication, not voicing with a trace on top", () => 
   // 0.88 and stopped holding when it moved to 0.55, because the default is now much nearer the
   // null. The knob had not changed; where it was set had. A check anchored to a default measures
   // the default as much as the mechanism.
+  //
+  // THE SPAN IS 15, AND 25 WAS INSIDE THE MEASUREMENT'S OWN SPREAD. /ʒ/ is a noise source, and
+  // the unducked share is the noisy end of this — the frication level sets the denominator, so a
+  // single render moves it a lot. Measured over 30 seeds, one render each:
+  //
+  //     gap   mean 40.1   sd 10.9   min 20.9   p10 26.0   median 40.2   max 72.1
+  //     fails at 25: 1/30      at 20: 0/30      at 15: 0/30
+  //
+  // So the mechanism is not marginal — the median is 40 and the knob plainly works — but the band
+  // sat about one and a half standard deviations below the mean, which is close enough to the
+  // floor of a skewed distribution to go red roughly one run in thirty. That is what UNSTABLE at
+  // 2/5 seeds was. 15 leaves the observed minimum 5.9 clear and still asserts a large effect: the
+  // voice-bar share goes from about 1% ducked to at least 16% not.
+  //
+  // Averaging renders was tried first, as the rule about random processes says to. It lifts the
+  // minimum (20.9 -> 29.2 at three renders, 29.5 at five) but barely touches the spread, so the
+  // variation is not the within-render noise that averaging removes — and it costs the gate a
+  // multiple of its slowest check for a margin still under one sd. Calibrating the band against
+  // the measured distribution is both cheaper and more honest.
+  //
+  // Worth knowing if this ever moves again: `share` builds its own processor rather than going
+  // through `say`, so it neither reseeds nor caches, and each render continues the RNG stream
+  // left by the previous one. That makes a result depend on the ORDER of the four calls below,
+  // which is why this had to be reproduced with the order intact before it made any sense.
   const on = share("ʒ", v);
   const most = share("ʒ", { ...v, fricDuck: 0.95 });   // ducked hardest
   const none = share("ʒ", { ...v, fricDuck: 0 });      // not ducked at all
   if (on > 90) bad.push(`/ʒ/ is ${on.toFixed(0)}% voice — frication with a trace on top`);
-  if (!(none > most + 25))
+  if (!(none > most + 15))
     bad.push(`fricDuck spans only ${most.toFixed(0)}% to ${none.toFixed(0)}% on /ʒ/`);
   // /v/ must keep a voice bar — a voiced fricative with none is just its voiceless partner
   const vv = share("v", v);

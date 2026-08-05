@@ -2950,11 +2950,35 @@ check("voiced fricatives are frication, not voicing with a trace on top", () => 
   // 0.88 and stopped holding when it moved to 0.55, because the default is now much nearer the
   // null. The knob had not changed; where it was set had. A check anchored to a default measures
   // the default as much as the mechanism.
+  //
+  // THE SPAN IS 15, AND 25 WAS INSIDE THE MEASUREMENT'S OWN SPREAD. /ʒ/ is a noise source, and
+  // the unducked share is the noisy end of this — the frication level sets the denominator, so a
+  // single render moves it a lot. Measured over 30 seeds, one render each:
+  //
+  //     gap   mean 40.1   sd 10.9   min 20.9   p10 26.0   median 40.2   max 72.1
+  //     fails at 25: 1/30      at 20: 0/30      at 15: 0/30
+  //
+  // So the mechanism is not marginal — the median is 40 and the knob plainly works — but the band
+  // sat about one and a half standard deviations below the mean, which is close enough to the
+  // floor of a skewed distribution to go red roughly one run in thirty. That is what UNSTABLE at
+  // 2/5 seeds was. 15 leaves the observed minimum 5.9 clear and still asserts a large effect: the
+  // voice-bar share goes from about 1% ducked to at least 16% not.
+  //
+  // Averaging renders was tried first, as the rule about random processes says to. It lifts the
+  // minimum (20.9 -> 29.2 at three renders, 29.5 at five) but barely touches the spread, so the
+  // variation is not the within-render noise that averaging removes — and it costs the gate a
+  // multiple of its slowest check for a margin still under one sd. Calibrating the band against
+  // the measured distribution is both cheaper and more honest.
+  //
+  // Worth knowing if this ever moves again: `share` builds its own processor rather than going
+  // through `say`, so it neither reseeds nor caches, and each render continues the RNG stream
+  // left by the previous one. That makes a result depend on the ORDER of the four calls below,
+  // which is why this had to be reproduced with the order intact before it made any sense.
   const on = share("ʒ", v);
   const most = share("ʒ", { ...v, fricDuck: 0.95 });   // ducked hardest
   const none = share("ʒ", { ...v, fricDuck: 0 });      // not ducked at all
   if (on > 90) bad.push(`/ʒ/ is ${on.toFixed(0)}% voice — frication with a trace on top`);
-  if (!(none > most + 25))
+  if (!(none > most + 15))
     bad.push(`fricDuck spans only ${most.toFixed(0)}% to ${none.toFixed(0)}% on /ʒ/`);
   // /v/ must keep a voice bar — a voiced fricative with none is just its voiceless partner
   const vv = share("v", v);

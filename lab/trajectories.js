@@ -12,10 +12,28 @@
 // being fitted is not the model anyone has listened to. Python does the fitting and the
 // statistics, which is what it is good at. The trajectories come from here.
 //
-// It renders no audio. Fitting compares trajectories, and skipping the acoustics is what makes a
-// pass over a whole corpus cost seconds rather than hours — measured at 2.17 ms an utterance.
+// TWO TRACKS, AND THE DIFFERENCE BETWEEN THEM IS THE POINT.
+//
+// `--actual` was added because the default track is not what the engine speaks with. `buildWord`
+// emits six articulators AND the diameters `articulate` makes from them; they agree at the
+// keyframes and nowhere else. Between keyframes the worklet runs a critically damped follower over
+// the DIAMETERS, per section, while these six are smoothstepped with no mass at all. So `artT`,
+// `artCrit`, `artStiff`, `artPush`, `artFar` and `velT` — every gesture parameter there is — move
+// the tube and leave these columns exactly where they were. ROADMAP.md says as much at line 1623.
+// Fitting measured articulography against the plan alone would fit a quantity no control parameter
+// can reach.
+//
+// `--actual` traces the running worklet and reads each frame back into posture coordinates via
+// `lab/artspace.js`. Measured on "the quick brown fox…", voice john: 20.5% of frames sit in a tract
+// shape no posture reaches at artT=0, and 64.5% at artT=0.020. Transitions are interpolated in AREA
+// space, so the tract passes through shapes no tongue could hold — before any mass is added, and
+// three times more once it is.
+//
+// It costs what it costs: planning is 0.55 ms an utterance and tracing is 1042 ms, a factor of
+// 1895. The header used to quote 2.17 ms as though that covered the whole job. It covers the plan.
 //
 //   node lab/trajectories.js --in utterances.txt --out tracks.csv [--voice john] [--rate 200]
+//   node lab/trajectories.js --in utterances.txt --out tracks.csv --actual
 //
 // Input: one utterance per line. Blank lines and lines beginning # are ignored.
 //        A line may be "id<TAB>text" to carry the corpus's own identifier through.
@@ -47,16 +65,23 @@ const path = require('path');
 const P = require(path.join(__dirname, '..', 'engine', 'phonemes.js'));
 const S = require(path.join(__dirname, '..', 'engine', 'spelling.js'));
 
+// Pairs, except for bare flags — `--actual` used to eat the next argument as its value and then
+// silently drop it, which is the kind of thing that produces a corpus pass against the wrong voice.
+const BOOL = new Set(['actual']);
 const args = {};
-for (let i = 2; i < process.argv.length; i += 2) args[process.argv[i].replace(/^--/, '')] = process.argv[i + 1];
+for (let i = 2; i < process.argv.length; i++) {
+  const k = process.argv[i].replace(/^--/, '');
+  args[k] = BOOL.has(k) ? true : process.argv[++i];
+}
 
-const IN    = args.in;
-const OUT   = args.out || 'tracks.csv';
-const VOICE = args.voice || 'john';
-const RATE  = +(args.rate || 200);          // frames a second; EMA is commonly 100 to 500 Hz
+const IN     = args.in;
+const OUT    = args.out || 'tracks.csv';
+const VOICE  = args.voice || 'john';
+const RATE   = +(args.rate || 200);         // frames a second; EMA is commonly 100 to 500 Hz
+const ACTUAL = !!args.actual;
 
 if (!IN) {
-  console.error('usage: node lab/trajectories.js --in utterances.txt --out tracks.csv [--voice john] [--rate 200]');
+  console.error('usage: node lab/trajectories.js --in utterances.txt --out tracks.csv [--voice john] [--rate 200] [--actual]');
   process.exit(2);
 }
 if (!P.VOICES[VOICE]) {
@@ -69,7 +94,9 @@ const n = Math.round(v.sect);
 const ARTS = ['jaw', 'bodyPos', 'bodyHi', 'tipPos', 'tipHi', 'lip'];
 
 /** The articulator values at time t, interpolated between keyframes exactly as the page does when
- *  it draws the tract. Same smoothstep, so what is fitted is what is seen and heard. */
+ *  it draws the tract. Same smoothstep as `index.html`'s `artNow`, so this is precisely what is
+ *  SEEN. It is not what is heard: the worklet interpolates the diameters and then runs a follower
+ *  over them, and nothing makes the two agree. Use `--actual` for the one the tube uses. */
 function artAt(keys, t) {
   if (!keys || !keys.length) return null;
   if (t <= keys[0].t) return keys[0].A;
@@ -86,13 +113,68 @@ function artAt(keys, t) {
   return keys[keys.length - 1].A;
 }
 
+// Required only for --actual, because loading the harness evals the whole engine and the plan-only
+// path is meant to stay in the tens of milliseconds.
+const H  = ACTUAL ? require(path.join(__dirname, 'harness.js')) : null;
+const AS = ACTUAL ? require(path.join(__dirname, 'artspace.js')) : null;
+
+/**
+ * What the tract ACTUALLY did, read back as a posture, sampled at the output frame rate.
+ *
+ * The follower runs per section at the audio rate; we only need it at EMA rates, so the trace is
+ * decimated to `RATE` before inverting — the inversion is the expensive half and there is no point
+ * running it 344 times a second to emit 200.
+ *
+ * Warm-started off the previous frame, with a re-grid only when a frame fits much worse than the
+ * ones around it. That is not only for speed: several postures make the same tract shape, so an
+ * independent cold search per frame is free to land on a different equivalent branch each time,
+ * and the resulting jitter shows up as articulator VELOCITY that the engine never had.
+ */
+function actualTrack(W, stress) {
+  // artOnly: the tract still moves, nothing is synthesised. Bit-identical diameters, and the
+  // acoustics were most of the bill.
+  const p = H.makeProcessor(n, { artOnly: true });
+  p.port.onmessage({ data: { type: 'voice', v } });
+  p.port.onmessage({ data: { type: 'goal',
+    seq: { keys: W.keys, f0: P.buildF0(W.end, v, { stress, seg: W.seg }), end: W.end } } });
+
+  const out = [new Float32Array(128)];
+  const blocks = Math.ceil(W.end * H.SR / 128);
+  const every = Math.max(1, Math.round(H.SR / 128 / RATE));
+  const track = [];
+  let prev = null, runMed = 0.02;
+
+  for (let b = 0; b < blocks; b++) {
+    p.process([], [out]);
+    if (b % every) continue;
+    const tol = Math.max(0.004, runMed * 3);
+    const got = AS.fit(p.diam.subarray(0, n), n, { from: prev, warmTol: tol });
+    runMed = runMed * 0.98 + got.rms * 0.02;
+    prev = got.A;
+    track.push({ t: b * 128 / H.SR, A: got.A, rms: got.rms, clamped: got.clamped });
+  }
+  return track;
+}
+
+/** Nearest traced frame to t. The trace is on the audio block grid and the CSV is on the requested
+ *  frame grid; they are close but not identical, and interpolating a projection would be inventing
+ *  precision the inversion does not have. */
+function nearest(track, t) {
+  if (!track.length) return null;
+  let lo = 0, hi = track.length - 1;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (track[m].t < t) lo = m + 1; else hi = m; }
+  if (lo > 0 && Math.abs(track[lo - 1].t - t) < Math.abs(track[lo].t - t)) lo--;
+  return track[lo];
+}
+
 const lines = fs.readFileSync(IN, 'utf8').split(/\r?\n/)
   .map(l => l.trim()).filter(l => l && !l.startsWith('#'));
 
 const out = [];
-out.push(['utt','t','jaw','bodyPos','bodyHi','tipPos','tipHi','lip',
-          'phone','phone_i','pos_in_seg','stress','word_i','in_word',
-          'utt_pos','seg_dur','n_phones'].join(','));
+out.push([...['utt','t','jaw','bodyPos','bodyHi','tipPos','tipHi','lip'],
+          ...(ACTUAL ? ARTS.map(k => 'act_' + k).concat(['inv_rms','clamped']) : []),
+          ...['phone','phone_i','pos_in_seg','stress','word_i','in_word',
+              'utt_pos','seg_dur','n_phones']].join(','));
 
 let utts = 0, frames = 0, skipped = 0;
 const t0 = Date.now();
@@ -122,10 +204,13 @@ for (const line of lines) {
     }
   }
 
+  const track = ACTUAL ? actualTrack(W, r.stress) : null;
+
   const step = 1 / RATE;
   for (let t = 0; t <= W.end; t += step) {
     const A = artAt(W.art, t);
     if (!A) break;
+    const act = ACTUAL ? nearest(track, t) : null;
     let si = -1;
     for (let i = 0; i < W.seg.length; i++) if (t >= W.seg[i].a && t <= W.seg[i].b) { si = i; break; }
     const sg = si >= 0 ? W.seg[si] : null;
@@ -141,6 +226,10 @@ for (const line of lines) {
     out.push([
       id, t.toFixed(5),
       ...ARTS.map(k => A[k].toFixed(5)),
+      ...(ACTUAL ? (act ? ARTS.map(k => act.A[k].toFixed(5))
+                            .concat([act.rms.toFixed(5), act.clamped.toFixed(4)])
+                        : ARTS.map(() => '').concat(['', '']))
+                 : []),
       sym, si, inSeg === '' ? '' : (+inSeg).toFixed(4), stress,
       wi, inWord === '' ? '' : (+inWord).toFixed(4),
       (t / W.end).toFixed(4), dur.toFixed(5), r.ph.length,

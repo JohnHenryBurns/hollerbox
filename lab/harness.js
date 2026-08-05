@@ -60,13 +60,13 @@ function memo(key, make) {
   return v;
 }
 
-function makeProcessor(n) {
+function makeProcessor(n, opts) {
   global.sampleRate = SR;
   global.AudioWorkletProcessor = class { constructor(){ this.port = { onmessage:null, postMessage(){} }; } };
   let Proc = null;
   global.registerProcessor = (name, cls) => { Proc = cls; };
   eval(P.worklet);
-  return new Proc({ processorOptions: { n, velar: P.VELAR } });
+  return new Proc({ processorOptions: { n, velar: P.VELAR, ...(opts || {}) } });
 }
 
 /** Sustain one phoneme and return the audio. Memoised; see the note above makeProcessor. */

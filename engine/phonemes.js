@@ -630,6 +630,9 @@ VOICES.mngu0 = {
     'u': { jaw: 0.435, bodyPos: 0.674, bodyHi: 0.743, tipPos: 0.826, tipHi: 0.133, lip: 0.356 },
     'ɝ': { jaw: 0.526, bodyPos: 0.547, bodyHi: 0.456, tipPos: 0.807, tipHi: 0.067, lip: 0.559 },
     'ə': { jaw: 0.467, bodyPos: 0.606, bodyHi: 0.508, tipPos: 0.817, tipHi: 0.094, lip: 0.421 },
+    // LOT. The speller never produces it, so nothing in the app reaches this entry; the corpus
+    // fitting does, because the speaker's labels use it 770 times and it is his twelfth vowel.
+    'ɒ': { jaw: 0.638, bodyPos: 0.523, bodyHi: 0.340, tipPos: 0.800, tipHi: 0.026, lip: 0.484 },
   },
   note: 'Measured, not tuned: an RP speaker’s tract length, pitch, rate and vowel postures, the '
       + 'postures read off articulography through a map solved against his own formants.'
@@ -1038,6 +1041,15 @@ function buildWord(chain, opts){
   // formants are gated, so moving its duration is a change to make on purpose with the bench
   // watching, not a side effect of a timing step. Filed with 8.7, where dark /l/ lives.
   const stress = o.stress || null;         // parallel to chain, or null for "all stressed"
+  // IMPOSED DURATIONS, for fitting against a corpus. `durs` is parallel to chain, in seconds, and
+  // when present it replaces everything below that decides how long a segment is — the intrinsic
+  // lengths, the coda and stress effects, the stop closures, the sampled word gaps. The glides and
+  // the shapes are untouched: this is how RESEARCH.md stage 1 isolates the movement law from the
+  // duration model, by giving the planner the segment boundaries a speaker actually produced and
+  // asking only what the tract does between them. Each glide is centred on its boundary, so the
+  // hold of a segment is its imposed duration less half a glide at either end, and the clock the
+  // keyframes run on is the corpus's own. Absent, nothing here changes.
+  const durs = o.durs || null;
   const poly   = polyShorten(chain, polyK);
   let lastHeld = -1;
   chain.forEach((c,i)=>{ if(!isStop(c)&&!isPause(c)) lastHeld=i; });
@@ -1072,6 +1084,7 @@ function buildWord(chain, opts){
   // divide the pool in proportion. It is the same arithmetic with the causality reversed.
   const rate = o.rate;
   const sizeUp=()=>{
+    if(durs) return {pool:0, durs:durs.slice()};             // the corpus decided already
     let g=0; for(let i=1;i<chain.length;i++) g+=glideFor(i);
     const p = rate !== undefined
       ? wsum*rate                                             // the weights set the length
@@ -1164,7 +1177,8 @@ function buildWord(chain, opts){
       }
       // A real pause is silent. A word boundary is not — connected speech does not stop
       // between words — but a comma or a full stop is exactly the thing that does.
-      const quiet=(BREAK_GAP[sym] ? 1 : (wgap>=0.09 ? 1 : 0));
+      if(durs) gap = Math.max(0.005, durs[i]);                // a labelled silence is as long as it was
+      const quiet=(BREAK_GAP[sym] ? 1 : ((durs ? gap : wgap)>=0.09 ? 1 : 0));
       const prev=chain[i-1];
       // WHERE THE PREVIOUS SOUND ENDED, not where it began. `shape()` goes through baseFor,
       // and baseFor for a diphthong returns the posture of its FIRST target — /ɑ/ for /aɪ/ —
@@ -1206,8 +1220,12 @@ function buildWord(chain, opts){
     // worth of time. Turbulence needs about 45 ms of airflow before it reads as frication at
     // all, and a nasal needs a comparable stretch of murmur.
     const floorFor = c => isAp(c) ? 0.070 : FRICATIVE[c] ? 0.045 : c === 'h' ? 0.040 : 0;
-    const dur=Math.max(floorFor(sym),
-                       isStop(sym) ? closureFor(sym,stopHold,stopVc) : pool*vw[k++]/wsum);
+    // the glide that will be spent on the way INTO segment j; none out of a pause or off the end
+    const glideInto = j => (j>0 && j<chain.length && !isPause(chain[j])) ? glideFor(j) : 0;
+    const dur = durs
+      ? Math.max(0.005, durs[i] - glideInto(i)/2 - glideInto(i+1)/2)
+      : Math.max(floorFor(sym),
+                 isStop(sym) ? closureFor(sym,stopHold,stopVc) : pool*vw[k++]/wsum);
     if(i>0) t+=glideFor(i);
     seg.push({sym, a:t, b:t+dur});
     keys.push({t,d,b,nz,vl,fr,as,lv}); art.push({t,A});

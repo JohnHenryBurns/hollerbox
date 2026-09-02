@@ -171,6 +171,89 @@ shape* stage 0 was written around, and it is the check on any map fitted from co
 the constriction location and degree it implies for each vowel can be read off the image without
 either. Not yet done; `pydicom` is in the venv for it.
 
+## Stage 1, design
+
+`fit/stage1.py`. The question is how much of the measured articulator motion a target-and-interpolate
+model accounts for, so everything that is not the movement law is taken from the corpus:
+
+- **The model runs on the speaker's clock.** `lab/trajectories.js --seg` feeds the planner the
+  corpus's own phone string with the corpus's own segment durations (`buildWord`'s `durs`, which
+  replaces the duration model and nothing else; each glide is centred on its boundary). Stress and
+  word position come from the Festival utterance structures. So the two trajectories share a time
+  axis and no time-warping is needed.
+- **Two target sets.** *Engine*: the Edinburgh voice as shipped — the speaker's vowels through the
+  stage 0 map, the shared consonants. *Speaker*: his own mean measured posture for every phone
+  (`out/stage1/speaker_art.json`, from the training utterances, laid over the voice with `--art`).
+  The second exists because stage 0 registered only the vowels; every consonant target in the
+  shared table is still an acoustic knob with an anatomical name, and a transition into a vowel
+  from an anatomically wrong place is a wrong transition whatever the movement law does.
+- **Compared in diameter space, reported by tract region.** The measured posture goes forward
+  through `articulate` once and is cached; the model's diameters come straight off the running
+  engine (`--diam`), so the search never inverts. The inversion is kept for the posture-space
+  table, warm-started from the planned posture rather than the previous frame — started from the
+  previous frame, a parameter the diameters do not pin (tip position under a flat tip hump)
+  random-walks and reported an R² of −47 on the held-out set. In diameter space nothing is
+  invisible.
+- **Vowel frames are the trusted ones**, because the map was validated on vowels. All-frame numbers
+  are reported beside them with that caveat.
+- **Two static baselines** bracket the dynamic model: the current segment's target held flat, and
+  the speaker's per-phone mean posture — the best any lookup table can do.
+- **Fitted**: `artT artCrit artStiff artPush artFar` (the five the identifiability pass found) and
+  `glide`, by shrinking-step coordinate descent on 120 training utterances; scored on the corpus's
+  63-utterance test split, which the fit never sees.
+
+## Stage 1, measured
+
+Variance explained (R²) in diameter space on the 61 held-out test utterances, 39,519 frames, all
+models on the speaker's clock. `python -m fit.stage1 report`; the full table by tract region is in
+`out/stage1/stage1_r2_diam.csv`.
+
+    model                                        vowel frames   all frames
+    hold the engine's target, flat                   0.457        −0.174
+    speaker's phone mean (static lookup)             0.482         0.411
+    speaker's phone mean given both neighbours       0.568         0.507
+    engine targets · defaults                        0.439        −0.151
+    engine targets · no mass                         0.452        −0.204
+    speaker targets · no mass (pure interpolation)   0.454         0.405
+    speaker targets · defaults                       0.506         0.429
+    speaker targets · fitted                         0.530         0.438
+
+The fit (coordinate descent, 120 training utterances, vowel-frame diameter rms 0.347 → 0.339):
+`artT` 0.016, `artCrit` 0, `artStiff` 0.355, `artPush` 0.45, `artFar` 2.3, `glide` 0.03 — less
+mass than the default 0.025, no gesture treated as critical, stiffness keyed more to distance
+travelled, and the shortest transition the range allows. Read together: the speaker moves faster and
+more uniformly between targets than the engine's defaults do, and the one thing the follower is
+doing for him is the smoothing.
+
+**Read in three steps.**
+
+1. **With the engine's consonant targets the movement law is worth nothing.** 0.439 against 0.457
+   for holding the target flat: interpolating toward the shared table's consonants makes the vowel
+   frames slightly worse, and the fit on those targets drove mass and glide toward zero, which is
+   the optimiser turning the model into hold-the-target. The shared consonants are the acoustic
+   knobs stage 0 found; a transition out of a wrong place is a wrong transition.
+2. **With the speaker's own targets it is worth a little, and the mass is the part that works.**
+   0.506 with the follower, 0.454 without it, 0.482 for the best static table. Every tract region
+   gains except the lips, where the dynamic model loses to the static one (0.447 against 0.577) —
+   the lip follower is too slow, or the lips are not a critically damped mass, and either is a
+   finding for the engine.
+3. **The residual is structured, and this model captures half of the structure once fitted.** A
+   lookup that knows the neighbouring phones reaches 0.568. Between "phone" and "phone in context"
+   lie about nine points of variance; target-and-interpolate recovers two and a half of them at the
+   defaults and five when fitted. The other four are what stage 2 is about, and they are already
+   known to be there.
+
+On RESEARCH.md's own scale this sits on the line between "below ~50%" and the expected range — 53%
+in the trusted frames, 44% overall — and the instruction to suspect the mapping first applies. Two parts of the mapping are suspect
+by construction: the stage 0 map was fitted on vowel means and is here applied frame by frame to
+everything, and the speaker's consonant targets are that map's linear extrapolation, which never
+closes. The same-speaker MRI is the check on both.
+
+The posture-space table (`out/stage1/stage1_r2.csv`) is kept for completeness and is not the
+headline: tip position under a flat tip hump is not in the diameters, so its R² there is noise
+whatever the model. Per-frame residuals for stage 2, with the linguistic columns, are in
+`out/stage1/residuals_test_speaker_*.csv`.
+
 ## What this answered before any corpus arrived
 
 `python -m fit.identify` plants each control parameter at a known value, generates the trajectory it

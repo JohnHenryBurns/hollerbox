@@ -65,9 +65,25 @@ const path = require('path');
 const P = require(path.join(__dirname, '..', 'engine', 'phonemes.js'));
 const S = require(path.join(__dirname, '..', 'engine', 'spelling.js'));
 
+// TWO MORE THINGS, FOR STAGE 1.
+//
+//   --seg    the input is the corpus's own segmentation rather than text: each line is
+//            `id<TAB>sym/dur sym/dur/1 ...`, engine symbols with their labelled duration in seconds
+//            and `/1` on the phones of a stressed syllable; `_` is a pause. buildWord takes the
+//            durations as imposed (`o.durs`), so the model runs on the speaker's clock and the only
+//            thing left to differ is what the tract does between the boundaries.
+//   --diam   emit the tube's diameters themselves, `d_0..d_{n-1}`, from the running engine at the
+//            frame rate, and skip the posture inversion unless --actual is also given. The search
+//            compares in diameter space — the inversion was 95% of the cost and the comparison does
+//            not need it; the report at the end does.
+//
+// The voice's own postures are passed through now. They were not: the runner built every word from
+// the shared table whatever `--voice` said, which for a voice whose whole point is its measured
+// postures would have fitted the wrong tract without saying so.
+//
 // Pairs, except for bare flags — `--actual` used to eat the next argument as its value and then
 // silently drop it, which is the kind of thing that produces a corpus pass against the wrong voice.
-const BOOL = new Set(['actual']);
+const BOOL = new Set(['actual', 'seg', 'diam']);
 const args = {};
 for (let i = 2; i < process.argv.length; i++) {
   const k = process.argv[i].replace(/^--/, '');
@@ -79,6 +95,9 @@ const OUT    = args.out || 'tracks.csv';
 const VOICE  = args.voice || 'john';
 const RATE   = +(args.rate || 200);         // frames a second; EMA is commonly 100 to 500 Hz
 const ACTUAL = !!args.actual;
+const SEG    = !!args.seg;
+const DIAM   = !!args.diam;
+const TRACE  = ACTUAL || DIAM;
 
 if (!IN) {
   console.error('usage: node lab/trajectories.js --in utterances.txt --out tracks.csv [--voice john] [--rate 200] [--actual]');
@@ -90,6 +109,14 @@ if (!P.VOICES[VOICE]) {
 }
 
 const v = { ...P.defaultVoice(), ...(P.VOICES[VOICE].v || {}) };
+// --art postures.json   postures per engine symbol, laid over the voice's own. Stage 1 uses it to
+// give the model the SPEAKER's mean posture for every phone, consonants included, so that the only
+// thing left to differ from the measurement is the movement between targets.
+let ART_OVERRIDE = P.VOICES[VOICE].art || null;
+if (args.art) {
+  const extra = JSON.parse(fs.readFileSync(String(args.art), 'utf8').replace(/^﻿/, ''));
+  ART_OVERRIDE = { ...(ART_OVERRIDE || {}), ...extra };
+}
 
 // --set artT=0.03,artStiff=0.30
 //
@@ -134,9 +161,9 @@ function artAt(keys, t) {
   return keys[keys.length - 1].A;
 }
 
-// Required only for --actual, because loading the harness evals the whole engine and the plan-only
+// Required only for a trace, because loading the harness evals the whole engine and the plan-only
 // path is meant to stay in the tens of milliseconds.
-const H  = ACTUAL ? require(path.join(__dirname, 'harness.js')) : null;
+const H  = TRACE ? require(path.join(__dirname, 'harness.js')) : null;
 const AS = ACTUAL ? require(path.join(__dirname, 'artspace.js')) : null;
 
 /**
@@ -168,13 +195,40 @@ function actualTrack(W, stress) {
   for (let b = 0; b < blocks; b++) {
     p.process([], [out]);
     if (b % every) continue;
-    const tol = Math.max(0.004, runMed * 3);
-    const got = AS.fit(p.diam.subarray(0, n), n, { from: prev, warmTol: tol });
-    runMed = runMed * 0.98 + got.rms * 0.02;
-    prev = got.A;
-    track.push({ t: b * 128 / H.SR, A: got.A, rms: got.rms, clamped: got.clamped });
+    const row = { t: b * 128 / H.SR };
+    if (DIAM) row.d = Array.from(p.diam.subarray(0, n));
+    if (ACTUAL) {
+      const tol = Math.max(0.004, runMed * 3);
+      // START FROM THE PLAN, NOT THE PREVIOUS FRAME. Several postures make the same tract shape,
+      // and where the tip hump is nearly flat its position is not in the diameters at all. Warm-
+      // started off the previous frame, such a parameter random-walks from frame to frame and
+      // reports as articulator motion the engine never had — measured on the held-out set as an
+      // R² of −47 for tipPos. Started from the posture the planner asked for at this instant, a
+      // parameter the diameters cannot pin stays where the plan put it, which is the only honest
+      // value it has; the ones the diameters do pin are moved to where the tube actually is.
+      const planned = artAt(W.art, row.t);
+      const got = AS.fit(p.diam.subarray(0, n), n, { from: planned || prev, warmTol: tol });
+      runMed = runMed * 0.98 + got.rms * 0.02;
+      prev = got.A;
+      row.A = got.A; row.rms = got.rms; row.clamped = got.clamped;
+    }
+    track.push(row);
   }
   return track;
+}
+
+/** A `--seg` line: `id<TAB>sym/dur[/1] ...`. Returns what g2p would have, plus the durations. */
+function parseSeg(text) {
+  const ph = [], durs = [], stress = [];
+  for (const tok of text.split(/\s+/).filter(Boolean)) {
+    const parts = tok.split('/');
+    if (parts.length < 2) throw new Error('bad --seg token ' + tok);
+    const sym = parts[0] === '_' ? ' ' : parts[0];
+    const dur = Number(parts[1]);
+    if (!Number.isFinite(dur) || dur < 0) throw new Error('bad duration in ' + tok);
+    ph.push(sym); durs.push(dur); stress.push(parts[2] === '1' ? 1 : 0);
+  }
+  return { ph, durs, stress };
 }
 
 /** Nearest traced frame to t. The trace is on the audio block grid and the CSV is on the requested
@@ -194,6 +248,7 @@ const lines = fs.readFileSync(IN, 'utf8').split(/\r?\n/)
 const out = [];
 out.push([...['utt','t','jaw','bodyPos','bodyHi','tipPos','tipHi','lip'],
           ...(ACTUAL ? ARTS.map(k => 'act_' + k).concat(['inv_rms','clamped']) : []),
+          ...(DIAM ? Array.from({ length: n }, (_, i) => 'd_' + i) : []),
           ...['phone','phone_i','pos_in_seg','stress','word_i','in_word',
               'utt_pos','seg_dur','n_phones']].join(','));
 
@@ -206,12 +261,13 @@ for (const line of lines) {
   const text = tab > 0 ? line.slice(tab + 1) : line;
 
   let r;
-  try { r = S.g2p(text); } catch (e) { skipped++; continue; }
+  try { r = SEG ? parseSeg(text) : S.g2p(text); } catch (e) { skipped++; continue; }
   if (!r.ph.length) { skipped++; continue; }
 
   const D = Math.max(0.35, P.phraseTime(r.ph.length, v.per));
   const W = P.buildWord(r.ph, { D, rate: P.rateFor(r.ph, D, v), n, stress: r.stress, pros: v,
-                                glide: v.glide, stopHold: v.stopT, drawl: v.drawl });
+                                glide: v.glide, stopHold: v.stopT, drawl: v.drawl,
+                                art: ART_OVERRIDE, durs: SEG ? r.durs : undefined });
 
   // word index per segment: a gap ends a word
   const wordOf = [], wordSpan = [];
@@ -225,13 +281,13 @@ for (const line of lines) {
     }
   }
 
-  const track = ACTUAL ? actualTrack(W, r.stress) : null;
+  const track = TRACE ? actualTrack(W, r.stress) : null;
 
   const step = 1 / RATE;
   for (let t = 0; t <= W.end; t += step) {
     const A = artAt(W.art, t);
     if (!A) break;
-    const act = ACTUAL ? nearest(track, t) : null;
+    const act = TRACE ? nearest(track, t) : null;
     let si = -1;
     for (let i = 0; i < W.seg.length; i++) if (t >= W.seg[i].a && t <= W.seg[i].b) { si = i; break; }
     const sg = si >= 0 ? W.seg[si] : null;
@@ -251,6 +307,7 @@ for (const line of lines) {
                             .concat([act.rms.toFixed(5), act.clamped.toFixed(4)])
                         : ARTS.map(() => '').concat(['', '']))
                  : []),
+      ...(DIAM ? (act ? act.d.map(x => x.toFixed(4)) : Array.from({ length: n }, () => '')) : []),
       sym, si, inSeg === '' ? '' : (+inSeg).toFixed(4), stress,
       wi, inWord === '' ? '' : (+inWord).toFixed(4),
       (t / W.end).toFixed(4), dur.toFixed(5), r.ph.length,

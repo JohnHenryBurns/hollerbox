@@ -278,6 +278,54 @@ to a posture. The parameters are identifiable against that track because it is t
 - **Below ~50%** — either the mapping from stage 0 is wrong, or something fundamental is missing.
   Suspect the mapping first.
 
+#### Stage 1 — measured
+
+Run on 2026-09-01, the same day as stage 0, on the corpus's own train/test split: fitted on 120
+training utterances, scored on the 61 held-out test utterances, 39,519 frames. Full design and
+tables in [research/README.md](research/README.md).
+
+**The model runs on the speaker's clock.** `lab/trajectories.js --seg` feeds the planner the
+corpus's phone string with the corpus's segment durations, and `buildWord` takes them as imposed —
+so the duration model is out of the question and only the movement between boundaries is tested.
+Compared in diameter space, where nothing a posture does is invisible; the posture inversion is
+kept for a secondary table and warm-started from the plan, after the previous-frame warm start was
+caught random-walking an unidentifiable tip position into an R² of −47.
+
+**Variance explained, held out, vowel frames (all frames):**
+
+| | R² |
+|---|---|
+| hold the target flat | 0.457 (−0.17) |
+| the speaker's per-phone mean posture | 0.482 (0.41) |
+| the speaker's per-phone mean given both neighbours | **0.568 (0.51)** |
+| target-and-interpolate, engine consonant targets | 0.439 (−0.15) |
+| target-and-interpolate, speaker targets, no mass | 0.454 (0.41) |
+| target-and-interpolate, speaker targets, defaults | 0.506 (0.43) |
+| target-and-interpolate, speaker targets, fitted | **0.530 (0.44)** |
+
+**Three things this says.** With the shared consonant targets the movement law is worth nothing —
+it loses to holding the target flat, and the fit on those targets drove mass and glide toward zero.
+With the speaker's own targets for every phone it is worth something, and the critically damped
+follower is the part that works: 0.506 with it, 0.454 without, 0.530 fitted. And the residual is
+structured: a lookup that knows the neighbouring phones reaches 0.568, so about nine points of
+variance live between "phone" and "phone in context", and the fitted model recovers half of them.
+
+**What the fit chose is itself a description of the speaker.** `artT` 0.016 against the default
+0.025, `artCrit` 0, `artStiff` 0.355, `artFar` 2.3, `glide` at its floor of 0.03: less mass, no
+gesture singled out as critical, stiffness keyed to distance travelled, and the shortest transition
+allowed. He moves faster and more evenly between targets than the engine's defaults do, and what the
+follower contributes is the smoothing rather than the lag.
+
+**On this document's own scale this sits on the 50% line**, 53% in the trusted frames and 44%
+overall, with the instruction to suspect the mapping first — and two parts of the mapping are
+suspect by construction: the stage 0 map is applied frame by frame to consonants it was never fitted
+on, and the speaker's consonant targets are its linear extrapolation, which never closes. The
+same-speaker MRI is the check on both and is the next thing to do before stage 2 regresses anything.
+
+**One engine finding fell out.** The lips are the one region where the dynamic model loses to the
+static table (0.447 against 0.577). Either the lip follower is too slow or the lips are not a
+critically damped mass. Filed for the engine, not tuned away.
+
 ### Stage 2 — is the residual structured?
 
 The actual question. Regress the per-frame residual against everything linguistic that is

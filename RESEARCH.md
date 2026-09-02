@@ -1,11 +1,15 @@
 # Two questions about controlling a throat
 
-**Status: a proposal to argue with. Stage 0a is built; nothing beyond it is started.**
+**Status: a proposal to argue with. Stage 0a is built; stage 0 has been run once against mngu0
+and failed as first posed, for a reason that is the engine's and is diagnosed; it is re-posed and
+being run again.**
 
 *Stage 0a — making the engine's real trajectory observable — is done: `lab/artspace.js`,
 `lab/trajectories.js --actual`, `processorOptions.artOnly`, and two gate checks. It found three
-errors in this document, all corrected below and marked where they were. Corpus access is
-requested and not yet granted, so no measured data has been touched.*
+errors in this document, all corrected below and marked where they were. mngu0 arrived on
+2026-09-01 (day-1 EMA, alignments, audio, and the same speaker's static and dynamic MRI). Stage 0
+was run the same day; what it found is under "Stage 0 — measured" below, and in
+[research/README.md](research/README.md) with the numbers.*
 
 **One.** *What is the simplest law that reproduces the movements a brain produces?* How much of
 measured human articulator motion does a target-and-interpolate model account for, and what
@@ -162,6 +166,82 @@ those vowels land where the corpus says the articulators were.
 variability, stop. Everything downstream is comparing two things that are not the same thing.
 
 This is the stage most likely to end it, and it should be attempted first for exactly that reason.
+
+#### Stage 0 — measured
+
+**As first posed, it fails, and the failure is the engine's.** `research/fit/register.py` fits the
+most rigid registration that deserves the name — each posture parameter an affine function of the
+one coil that physically corresponds to it, twelve numbers over eleven vowel means — and tests it
+leave-one-vowel-out against the engine's own `ART` table, scored in units of the corpus's per-token
+scatter, which is what the kill criterion above asks for. Median miss 1.8 token-SDs; a quarter of
+parameter-vowel cells within one SD, half within two. Lip aperture registers. Body position and
+height register weakly. Jaw and tongue tip do not register at all.
+
+The reason is visible in the correlations across the eleven vowels: the engine's `jaw` follows the
+tongue-tip coil (r 0.60) rather than the jaw coil (−0.41), and its two tip parameters follow the
+dorsum and the jaw. **Three of the six posture parameters are acoustic knobs wearing anatomical
+names.** The table was solved against Peterson & Barney's formants, the inversion is many-to-one,
+and the solver took whichever shape rang right; nothing in the engine needed those parameters to
+be the articulators they are called until a corpus asked.
+
+**The targets are also the wrong dialect, by measurable amounts, and the misses fall where the
+dialects differ.** The speaker's own vowel formants, measured from the audio, agree with the
+engine's targets on F1 to a median 21 Hz — inside the speaker's own token-to-token IQR on every
+vowel but THOUGHT. F2 disagrees by the textbook RP–American differences: GOOSE 780 Hz fronter, KIT,
+DRESS and TRAP 200–300 Hz more central. A perfect registration would still have shown those.
+
+**So the kill criterion was aimed at the wrong thing.** "Can a static vowel be matched" assumed
+the engine's posture for that vowel was a posture. It is a tract shape with the right resonances,
+which is a weaker thing, and comparing coils to it compares two things that are not the same
+thing — the exact fault this stage exists to catch, caught one level earlier than expected.
+
+**Re-posed without the table.** The coils are measured; the speaker's formants are measured from
+the same tokens; the forward map from posture to formants is the engine's and is fixed. The one
+unknown is the reading of the coils, so the question becomes: *is there one affine reading of the
+six coils — one coil coordinate per parameter, twelve numbers, fixed across vowels — under which the
+tube reproduces this speaker's vowel formants?* `research/fit/jointmap.py` solves for that reading
+and tests it leave-one-vowel-out, with the held-out vowel's posture read off its coils and its
+formants compared with the speaker's in IQR units. If it passes, the map is anatomical by
+construction and the speaker's posture table falls out of it. If it fails, six parameters cannot
+describe this speaker's articulation, and the plan stops here as designed.
+
+**It passes on the full fit.** With the twelve numbers solved on all twelve vowels the tube
+reproduces the speaker's formants to a median 0.45 IQR; 75% of the twenty-four formant cells are
+within one IQR and 96% within two. The one miss beyond two is FLEECE's F2, 1650 against 2057 Hz:
+the tube cannot make a vowel that front and close from the posture the coils read out, which is a
+statement about the body hump's fixed width, and worth keeping. Every slope has the sign and the
+size a coil reading should: jaw −0.81 per cm of jaw height, lip +0.94 per cm of aperture, body
+position −0.56 per cm of the body coil's front–back position, tip position −0.087 per cm against a
+purely geometric −0.057 for a tract this long. The postures it implies are the ones a phonetician
+would draw — closed lips and a back body for THOUGHT, FOOT and GOOSE; a dropped jaw for TRAP, STRUT
+and PALM — and no parameter is doing another's job, which is what the engine's own table failed.
+
+It also nearly did not pass, and the reason is recorded because it will recur: Nelder–Mead from a
+neutral start converged to an objective of 57 with three slopes at zero, and coordinate descent
+from there could not move it — a genuine local minimum, not a stall. Started instead from the map
+`register.py` had fitted to the engine's table — wrong targets, right physical scale — it reached
+23. A twelve-dimensional fit is not to be trusted from one start.
+
+**And it holds out.** Refit twelve times without one vowel, that vowel's posture read off its
+coils by a map that never saw it: median 0.45 IQR, 75% of cells within one IQR, 92% within two.
+The two beyond are FLEECE's F2 (1530 against 2057) and LOT's F2 (1210 against 1066). **Stage 0
+passes its own kill criterion**, with a map fixed as of 2026-09-01 in `research/fit/mngu0_map.json`
+and, by the rule stated below under "what could go wrong", not to be refitted. The speaker's
+posture table for stage 1 is that map applied to each vowel's mean coil vector, and the engine's
+`ART` table is not part of the comparison anywhere downstream.
+
+**What the MRI is now for.** The static volumes hold the same speaker sustaining the same twelve
+vowels, airway black against tissue at 1.09 mm. That is the "independently known tract shape" the
+stage was written around, and its job has sharpened: not to register the engine's table, but to
+check the joint map — the constriction location and degree it implies per vowel can be read off
+the image with neither coils nor formants. Not yet done.
+
+**Two things the coils said before any model was consulted, both of which bear on stage 2.**
+Token-to-token scatter is 2 to 2.5 mm per coil, the same size as the spread between vowel means:
+connected speech barely visits its targets, and a "target" for this speaker is a distribution, not
+a point. And undershoot is already in the means — longer tokens sit further out on every vowel — so
+the first thing stage 2 will regress is visible in the first table, which is a validation of the
+instrument rather than a result, as the closing section of this document warns.
 
 ### Stage 1 — how far does target-and-interpolate get?
 

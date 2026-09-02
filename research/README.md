@@ -4,7 +4,9 @@ The fitting side of [RESEARCH.md](../RESEARCH.md). Node makes trajectories; Pyth
 on them.
 
 Nothing here models speech. `lab/trajectories.js` drives the same `buildWord` and the same worklet
-the browser loads, and this reads its CSV. A Python port of the engine would drift from the
+the browser loads, and this reads its CSV; `lab/posture.js` exposes the engine's own `articulate`
+and the tract's transfer function over stdin and stdout so postures can be pushed through the
+forward map without a second implementation. A Python port of the engine would drift from the
 original and would carry the extra hazard that the thing being fitted is not the thing anyone has
 listened to — `lab/README.md` records that fault being removed three times over.
 
@@ -20,6 +22,12 @@ Node needs nothing: `lab/` has no dependencies beyond the standard library.
     .venv/Scripts/python -m pytest -m "not slow"     # seconds
     .venv/Scripts/python -m pytest                   # includes the recovery run, ~20 s
 
+**A venv is not portable.** `pyvenv.cfg` records the absolute path of the interpreter that made it,
+so one created on another machine, or by another user, fails with *did not find executable at
+C:\Users\<someone-else>\...*. Delete it and make a new one. On a machine with only the Microsoft
+Store stub, `winget install Python.Python.3.13` gives a real interpreter; every pin in
+`requirements.txt` resolves on 3.13 as well as 3.14.
+
 **Do not let pip resolve pandas freely.** It picks 3.0.5 on Python 3.14, whose compiled extension is
 blocked by Windows Application Control — *"DLL load failed while importing properties: An
 Application Control policy has blocked this file"* — while numpy, scipy and matplotlib of the same
@@ -33,8 +41,13 @@ block is silent until import. `requirements.txt` pins 2.3.3, which loads.
 | `fit/tracks.py` | run `lab/trajectories.js`, read the CSV, compare two runs |
 | `fit/recover.py` | plant a parameter, hide it, search for it again |
 | `fit/identify.py` | which control parameters are readable from a trajectory at all |
-| `tests/` | the above, run against the real engine |
-| `data/` | corpora go here. Gitignored, and see below |
+| `fit/mngu0.py` | read the corpus: EST trackfiles, alignments, one row per phone token |
+| `fit/formants.py` | the speaker's own vowel formants, from the audio at token midpoints |
+| `fit/register.py` | stage 0 as first posed: read the engine's posture table off the coils. **Fails**, and says why |
+| `fit/jointmap.py` | stage 0 as it should be posed: one reading of the coils under which the tube makes this speaker's vowels |
+| `tests/` | the above, run against the real engine; the corpus tests skip where the data is absent |
+| `data/` | corpora go here. Gitignored, and see [data/README.md](data/README.md) for the layout and the coordinate convention |
+| `out/` | everything derived: the token table, formant tables, fit reports. Gitignored |
 
 ## The corpora do not go in the repository
 
@@ -45,6 +58,118 @@ the same split `lab/RECORDING.md` already applies to the reference recording.
 mngu0 is **not** at `mngu0.org`. That domain lapsed and now serves an unrelated Korean phonetics
 blog, and it returns HTTP 200, so a link-checker will not flag it. It is distributed from Korin
 Richmond's Edinburgh page by email approval.
+
+## Stage 0, measured
+
+The corpus arrived on 2026-09-01. Everything below is one speaker, mngu0 s1, day 1: 1,354
+utterances, 52,567 phone tokens, six coils at 200 Hz.
+
+### The coils, before any model is consulted
+
+Per-vowel means and standard deviations of the twelve midsagittal coordinates, over every token of
+the twelve monophthongs (`python -m fit.register` prints them). Two facts that shape everything
+after:
+
+- **Token-to-token scatter is 2 to 2.5 mm per coil**, and the spread *between* vowel means is the
+  same size: the between/within ratio is 1.6 for tongue-body height, the best separator, and below 1
+  for every front–back coordinate and for the lips. Connected speech barely visits its targets.
+- **Undershoot is already visible in the means.** Tokens longer than the vowel's median duration
+  sit further from the centre of the space than shorter ones, on every vowel — STRUT's body coil is
+  1.2 mm lower in long tokens than short. That is the structure stage 2 is about, and it is in the
+  first table.
+
+### Reading the engine's posture table off the coils does not work
+
+`fit/register.py` fits the most rigid map that could be called a registration: each of the six
+posture parameters an affine function of ONE coil coordinate, chosen by what the parameter is
+(jaw from the jaw coil's height, tongue-body position and height from the body coil, tip from the
+tip coil, lip from lip aperture), twelve numbers over eleven vowel means, tested leave-one-vowel-out
+against the engine's own `ART` table and scored in units of the per-token scatter — the kill
+criterion's own yardstick.
+
+    median miss 1.8 token-SDs; 24% of parameter-vowel cells within one SD, 53% within two
+    lip aperture registers (R² 0.64–0.73); body position and height weakly (0.16–0.34);
+    jaw 0.17; tongue tip 0.02–0.05, i.e. not at all
+
+**The failure is on the engine's side, and it is diagnosable.** Across the eleven vowels the
+engine's `jaw` correlates with the tongue-tip coil (r = 0.60) more than with the jaw coil
+(r = −0.41); its `tipPos` and `tipHi` correlate with the dorsum and the jaw, not the tip. Three of
+the six parameters are acoustic knobs wearing anatomical names: the posture table was solved
+against Peterson & Barney's formants, the inversion is many-to-one, and the solver took whichever
+shape rang right. Nothing in the engine ever needed those parameters to be the articulators they
+are called, until now.
+
+**The targets are also the wrong dialect, by measurable amounts.** `fit/formants.py` measures the
+speaker's own vowels from the audio (LPC roots, medians over up to 400 tokens of at least 80 ms,
+cross-checked against envelope peaks to within 19 Hz). Against the engine's American targets, F1
+agrees to a median 21 Hz — inside the speaker's own IQR on all but THOUGHT, where the engine's /ɔ/
+is 180 Hz too open. F2 disagrees by the textbook RP–American differences: GOOSE 780 Hz fronter,
+KIT 290 Hz, DRESS 255 and TRAP 195 more central. So even a perfect registration would have shown
+those vowels missing, and the misses it did show fall where the dialects differ.
+
+### The right question, and the instrument for it
+
+The engine's posture table was the wrong thing to register against, so `fit/jointmap.py` removes it
+from the problem. The coils are measured; the speaker's formants are measured from the same tokens;
+the forward map from posture to formants is the engine's. The one unknown is the reading of the
+coils, and the question becomes:
+
+> Is there one affine reading of the six coils — one coil coordinate per parameter, twelve numbers,
+> fixed across vowels — under which the tube reproduces this speaker's vowel formants?
+
+Solved by Nelder–Mead over the twelve numbers with the eleven postures pushed through the transfer
+function each step (about 0.5 s an evaluation), then leave-one-vowel-out with the held-out vowel's
+posture read off its coils and its formants compared with the speaker's in IQR units. The
+speaker-specific posture table falls out as a by-product, and the map is anatomical by construction.
+
+**On the full fit it passes.** Median |z| 0.45 IQR over the twenty-four formant cells; 75% within
+one IQR, 96% within two. The one cell beyond two is FLEECE's F2 (1650 against 2057 Hz). The map:
+
+    param    from     intercept  slope/cm       what the sign and size say
+    jaw      JAW_y       -1.764    -0.809       jaw lower -> more open; same scale register.py found
+    bodyPos  T2_x         2.800    -0.561       body coil further back -> constriction further back
+    bodyHi   T2_y         0.508     0.465       body coil higher -> narrower
+    tipPos   T1_x         1.015    -0.087       geometric expectation for a 17.5 cm tract is -0.057
+    tipHi    T1_y         0.175     0.155
+    lip      lipap       -1.834     0.943       wider aperture -> more open
+
+and the postures it reads off the vowel means are the ones a phonetician would draw: lip 0.29–0.36
+and body position 0.42–0.54 for THOUGHT, FOOT and GOOSE; jaw 0.70–0.76 for TRAP, STRUT and PALM
+against 0.44–0.50 for the close vowels. No parameter is doing another's job. Saved as
+`fit/mngu0_map.json`, with the postures, the coil means and the fit report inside it.
+
+**Optimiser note, because it will recur.** Nelder–Mead from a neutral start (slopes at zero)
+converged to an objective of 57 with jaw, body position and lip left constant, and every back
+rounded vowel's F2 several hundred hertz high. Coordinate descent from there moved nothing: a real
+local minimum. Started from the map `register.py` had fitted to the engine's table — wrong targets,
+right physical scale — the same optimiser reached 23. `jointmap.py` now runs three starts and takes
+the best; a twelve-dimensional fit is not to be believed from one.
+
+**Held out it holds.** The map fitted without a vowel, that vowel's posture read off its coils, its
+formants against the speaker's:
+
+    held-out: median |z| 0.45; within 1 IQR 75%, within 2 IQR 92%
+    beyond 2: FLEECE F2 1530 vs 2057 (z -3.7), LOT F2 1210 vs 1066 (z +2.4)
+
+**Stage 0 passes its own kill criterion.** The map is fixed as of 2026-09-01 and is not to be
+refitted (RESEARCH.md, "the mapping absorbs the finding"). What it settles for stage 1: the target
+posture for each of this speaker's vowels is the map applied to that vowel's mean coil vector, not
+the engine's `ART` entry; and the trajectory comparison happens in posture space via the same map
+applied frame by frame, which `fit/mngu0.py` already produces per token and can produce per frame.
+
+Two things it does not settle. FLEECE cannot be made front and close enough by this tube from any
+posture the coils read out, which bounds what stage 1 can explain for /i/ before it starts. And the
+map has been checked against acoustics only; the same-speaker MRI is the independent geometric check
+and has not been done.
+
+### What the same-speaker MRI is for
+
+The static MRI package holds one sagittal volume per sustained prompt for the same speaker — the
+twelve vowels in /hVt/ frames among them — at 1.09 mm in-plane, 4 mm slices. The midsagittal slice
+shows the airway black against tissue from lips to larynx. That is the *independently known tract
+shape* stage 0 was written around, and it is the check on any map fitted from coils and formants:
+the constriction location and degree it implies for each vowel can be read off the image without
+either. Not yet done; `pydicom` is in the venv for it.
 
 ## What this answered before any corpus arrived
 

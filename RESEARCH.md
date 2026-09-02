@@ -362,9 +362,24 @@ is wrong wherever the MRI says the map is wrong, and that a target agreeing with
 rewarded for it. So stage 1's 0.51–0.53 stands for vowel nuclei under a map the MRI vindicates there,
 and its gain over the shared table is inflated by an amount this comparison cannot measure. The
 kill criterion's own advice — suspect the mapping first — was right, and the MRI has now said
-exactly where: the map is a vowel instrument. The next step is the stage the plan literally
-described: a map fitted against independently known shapes for every phone, which the MRI now
-supplies, and then stage 1 again. Until then the residual table is not to be regressed.
+exactly where: the map is a vowel instrument.
+
+**The retrofit was done and it could not move.** `research/fit/mrimap.py` solves the twelve map
+numbers against the MRI profiles of all twenty-four phones, with the vowel formants as a second
+term, multi-start and leave-one-phone-out. It returns the stage 0 map almost unchanged, vowels at
+r 0.60 and consonants still anticorrelated. The coil means say why: at their midpoints in connected
+speech the consonants sit on the vowels — /t/'s tip coil is at −0.33 cm where KIT's is at −0.37,
+/k/'s body coil at 0.49 where GOOSE's is at 0.50. The coil is a centimetre behind the tip, contact is
+a millimetre inside 2.5 mm of scatter, and a 50 ms consonant is not the shape held for a scanner. No
+smooth reading of six flesh points can place a closure, so **the plan's assumption that six coils
+would serve the whole inventory was wrong for the consonants**, and that is a fact about the data,
+not the model. The question stays answerable for vowel nuclei, which is what stage 1 measured.
+
+**Stage 1 rerun on the MRI-anchored map** gives the same table shifted up two points — 0.525 at
+the defaults, 0.547 refitted (to the same parameters), against 0.503 for the phone lookup and 0.584
+for the context lookup — with the same ordering and gaps. So the stage 1 reading stands: over vowel nuclei,
+target-and-interpolate given this speaker's own targets recovers about half of the variance that
+knowing the neighbouring phones would, and the consonants are outside what the coils can say.
 
 ### Stage 2 — is the residual structured?
 

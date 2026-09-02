@@ -598,6 +598,42 @@ VOICES.john = {
   note: 'Tuned by ear: pressed, with jitter and a short tract for its pitch. Timing is calibrated '
       + 'against a recording rather than taken from the seed.'
 };
+// A MEASURED SPEAKER, not a tuned one. mngu0's speaker 1: a British RP man, recorded at Edinburgh
+// with electromagnetic articulography on his tongue, jaw and lips. Nothing in this voice was set by
+// ear. The tract length is 19.4 cm from his median F3 (2255 Hz; 5c/4L), the pitch arc sits around
+// his median F0 of 94 Hz, the rate is his 81 ms a sound, and the twelve vowel postures below are
+// where his coils sat at the middle of each vowel, read into the tube's six parameters through the
+// fixed map in research/fit/mngu0_map.json — solved so that the tube reproduces HIS formants, not
+// Peterson & Barney's (research/README.md, "Stage 0, measured").
+//
+// So this is the first voice whose vowels are an accent other than 1952 American, and the first
+// whose posture parameters are the articulators they are named after: GOOSE is fronted (bodyPos
+// 0.67 against the shared table's 0.49), THOUGHT is close and rounded, and the jaw is lowest on
+// TRAP, STRUT and PALM. Consonants are the shared inventory; the coils cannot see a closure.
+//
+// 'ɒ' (LOT) is in the map and not here, because the speller never produces it. The RP accent is
+// only as complete as the speller's own inventory, which is American; the vowel that word gets is
+// the vowel the speller assigns it, spoken with this man's tongue.
+VOICES.mngu0 = {
+  label: 'Edinburgh',
+  v: { rd: 0.95, press: 0.18, jit: 1.0, brth: 0.18, drawl: 0.08, open: 0.05,
+       per: 0.058, sect: 49, f0a: 86, f0b: 102, f0c: 77 },
+  art: {
+    'i': { jaw: 0.504, bodyPos: 0.708, bodyHi: 0.795, tipPos: 0.836, tipHi: 0.137, lip: 0.639 },
+    'ɪ': { jaw: 0.475, bodyPos: 0.634, bodyHi: 0.621, tipPos: 0.822, tipHi: 0.119, lip: 0.553 },
+    'ɛ': { jaw: 0.670, bodyPos: 0.565, bodyHi: 0.488, tipPos: 0.810, tipHi: 0.068, lip: 0.802 },
+    'æ': { jaw: 0.755, bodyPos: 0.560, bodyHi: 0.393, tipPos: 0.809, tipHi: 0.031, lip: 0.897 },
+    'ʌ': { jaw: 0.704, bodyPos: 0.572, bodyHi: 0.346, tipPos: 0.809, tipHi: 0.025, lip: 0.710 },
+    'ɑ': { jaw: 0.756, bodyPos: 0.489, bodyHi: 0.296, tipPos: 0.796, tipHi: 0.002, lip: 0.759 },
+    'ɔ': { jaw: 0.499, bodyPos: 0.421, bodyHi: 0.425, tipPos: 0.781, tipHi: 0.012, lip: 0.292 },
+    'ʊ': { jaw: 0.489, bodyPos: 0.537, bodyHi: 0.539, tipPos: 0.800, tipHi: 0.058, lip: 0.335 },
+    'u': { jaw: 0.435, bodyPos: 0.674, bodyHi: 0.743, tipPos: 0.826, tipHi: 0.133, lip: 0.356 },
+    'ɝ': { jaw: 0.526, bodyPos: 0.547, bodyHi: 0.456, tipPos: 0.807, tipHi: 0.067, lip: 0.559 },
+    'ə': { jaw: 0.467, bodyPos: 0.606, bodyHi: 0.508, tipPos: 0.817, tipHi: 0.094, lip: 0.421 },
+  },
+  note: 'Measured, not tuned: an RP speaker’s tract length, pitch, rate and vowel postures, the '
+      + 'postures read off articulography through a map solved against his own formants.'
+};
 const defaultVoice = () => Object.fromEntries(VOICE_SPEC.map(p => [p.k, p.d]));
 
 // ---- operations on a voice ----

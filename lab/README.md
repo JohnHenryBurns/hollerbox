@@ -155,6 +155,9 @@ broken build reached production through a masked exit code.
 | `check.js` | the gate. Twenty-two checks with calibrated bands |
 | `harness.js` | drives the shipping engine and the shipping phoneme layer — both are files it reads, not text it re-derives |
 | `tract.js` | a standalone Kelly–Lochbaum tract, **mirrors the worklet**. Used for transfer-function work where running the whole engine is overkill |
+| `posture.js` | postures in, diameters or formants out, as JSON over stdin/stdout. The seam `research/` uses to reach `articulate` and the transfer function without a second implementation |
+| `artspace.js` | the tract shape read back as a posture: `articulate` inverted, with a planted-posture recovery check |
+| `trajectories.js` | the model's articulator track per frame as CSV, for fitting against articulography; `--actual` traces the running engine |
 | `ship.sh` | the deploy gate |
 | `voice-fit.py` | measure a real recording: segment it, then F0, formants, H1–H2, spectral tilt per segment |
 | `fit-preset.js` | turn those measurements into a preset — tract length from F3, articulations solved per vowel, source from the voice-quality measures, and a seed |

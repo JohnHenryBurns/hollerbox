@@ -311,7 +311,7 @@ structured: a lookup that knows the neighbouring phones reaches 0.568, so about 
 variance live between "phone" and "phone in context", and the fitted model recovers half of them.
 
 **What the fit chose is itself a description of the speaker.** `artT` 0.016 against the default
-0.025, `artCrit` 0, `artStiff` 0.355, `artFar` 2.3, `glide` at its floor of 0.03: less mass, no
+0.025, `artCrit` 0, `artStiff` 0.355, `artFar` 2.3, `glide` 0.037 against a floor of 0.03: less mass, no
 gesture singled out as critical, stiffness keyed to distance travelled, and the shortest transition
 allowed. He moves faster and more evenly between targets than the engine's defaults do, and what the
 follower contributes is the smoothing rather than the lag.
@@ -325,6 +325,46 @@ same-speaker MRI is the check on both and is the next thing to do before stage 2
 **One engine finding fell out.** The lips are the one region where the dynamic model loses to the
 static table (0.447 against 0.577). Either the lip follower is too slow or the lips are not a
 critically damped mass. Filed for the engine, not tuned away.
+
+#### The same-speaker MRI, read
+
+Done on 2026-09-02, the check both stages owed. `research/fit/mri.py` reads each static volume's
+midsagittal slice into an airway width along the tract, on a roof found from the images (a trace by
+eye had sat on the tongue's mucosa, 11 mm too low — which is why it is found and not drawn). The
+roof runs 17.1 cm from the laryngeal vestibule to the upper lip, against the 19.4 cm the F3 median
+had implied; the F3 estimate was the one to doubt. Every prompt's overlay was checked by eye: K
+closes at the velum, T at the alveolar ridge, SIN narrows to a millimetre at the teeth. A width is
+not a diameter, so what is compared is the place of the tightest point, the profile correlation,
+and the tightest point against the rest of the tract.
+
+**Stage 0's map is vindicated on the vowels, independently of coils and formants.** Its postures
+correlate 0.60 with this speaker's airway profiles where the engine's Peterson & Barney table
+correlates −0.02. KIT and DRESS are the exceptions: the map puts their constriction far too far back.
+
+**The engine's consonants are 1.8 to 3.6 cm too far back for /s t l r k/** — /k/ closes at 0.48 of
+the tract where the speaker closes at 0.65, uvular rather than velar; his /r/ is an alveolar
+approximant where the engine's is a bunched palatal — and about right for labials, dentals and /ŋ/.
+
+**And stage 1's "speaker" consonant targets are geometrically wrong**, which changes how its result
+is read. They are the vowel-fitted map extrapolated to consonants; against the MRI they are
+anticorrelated (r −0.18) with a median place error of 3.9 cm. So of the gain from 0.439 to 0.506
+above, an unknown part is the map agreeing with itself on both sides of the comparison. The fix is
+targets from the anatomy: `research/fit/mri_fit.py` solves postures against the MRI profiles as
+shapes (median r 0.84, every constriction within a gridline), and stage 1 is re-scored with them
+below. They are geometric targets only — no acoustics was asked of them, and a /t/ fitted this way
+need not seal — so a voice built on them needs a joint geometric–acoustic solve, which is the next
+instrument.
+
+**Re-scored with MRI-fitted consonants, the model gets WORSE: 0.360 against the shared table's
+0.439, and −0.74 with every phone MRI-fitted.** Anatomically right targets lose to map-consistent
+ones, which says the comparison's measured side — coils read through the vowel-fitted stage 0 map —
+is wrong wherever the MRI says the map is wrong, and that a target agreeing with the map's error is
+rewarded for it. So stage 1's 0.51–0.53 stands for vowel nuclei under a map the MRI vindicates there,
+and its gain over the shared table is inflated by an amount this comparison cannot measure. The
+kill criterion's own advice — suspect the mapping first — was right, and the MRI has now said
+exactly where: the map is a vowel instrument. The next step is the stage the plan literally
+described: a map fitted against independently known shapes for every phone, which the MRI now
+supplies, and then stage 1 again. Until then the residual table is not to be regressed.
 
 ### Stage 2 — is the residual structured?
 

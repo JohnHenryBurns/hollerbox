@@ -49,6 +49,7 @@ block is silent until import. `requirements.txt` pins 2.3.3, which loads.
 | `fit/mri.py` | the static MRI read as an airway width profile along the tract, one per sustained prompt |
 | `fit/mri_compare.py` | the engine's postures against those profiles: constriction place, degree, profile correlation |
 | `fit/mri_fit.py` | postures fitted to the profiles — the geometric target for each phone, no acoustics in the loop |
+| `fit/mrimap.py` | the coil map solved against the MRI profiles for every phone, with the vowel formants; returns the vowel map, and says why |
 | `tests/` | the above, run against the real engine; the corpus and MRI tests skip where the data is absent |
 | `data/` | corpora go here. Gitignored, and see [data/README.md](data/README.md) for the layout and the coordinate convention |
 | `out/` | everything derived: the token table, formant tables, fit reports. Gitignored |
@@ -327,6 +328,61 @@ a joint geometric–acoustic solve, which is the obvious next instrument. Saved 
 
 The stage 1 report now scores two more target sets built from them: `mri-cons` (the map's vowels,
 MRI consonants) and `mri-all`. The rows are in `out/stage1/stage1_r2_diam.csv` and below.
+
+### The retrofit: the map solved against the MRI, and why it could not move
+
+`fit/mrimap.py` solves the same twelve numbers against the MRI profiles of all twenty-four phones
+(shape, as above) with the speaker's vowel formants as a second term, multi-start, then
+leave-one-phone-out. It converges to the stage 0 map almost unchanged — jaw −0.809, body position
+−0.559, lip 0.948 per cm, the tip slightly steeper — with the vowels at r 0.60 and the consonants
+still anticorrelated (median r −0.25, place error 2.9 cm). The objective barely left its starting
+point. Leave-one-phone-out gives the same numbers — vowels 0.60, consonants −0.25, formant median
+|z| 0.67 — so the map is not overfitting anything; it is at the limit of what its inputs carry.
+
+**The reason is in the coils, not the map.** Per-phone coil means at the consonants' midpoints in
+connected speech:
+
+    phone   T1_x   T1_y    T2_x   T2_y      phone   T1_x   T1_y    T2_x   T2_y
+    ɪ       2.21  −0.37    3.86   0.24      t       2.17  −0.33    3.82   0.13
+    u       2.16  −0.27    3.79   0.50      s       2.20  −0.37    3.81   0.01
+    i       2.05  −0.25    3.73   0.62      n       2.18  −0.29    3.83   0.09
+                                            k       2.04  −0.47    3.56   0.49
+
+A /t/ is KIT to the coils; a /k/ is GOOSE. The tip coil sits a centimetre behind the tongue tip,
+the contact that makes a stop is a millimetre-scale event inside 2.5 mm of token-to-token scatter,
+and a 50 ms consonant at twelve phones a second is not the shape a speaker holds for a scanner. No
+smooth reading of these six coordinates — linear or not — can put a closure where the MRI has it,
+so a nonlinear map was not tried. **The information is not in the data**, and the plan's assumption
+that six flesh points would do for the whole inventory was wrong for the consonants.
+
+### Stage 1 rerun on the MRI-anchored map
+
+`python -m fit.stage1 --map fit/mngu0_map_mri.json --tag mri {prepare,report,fit}`; everything
+under `out/stage1_mri/`. Held out, vowel frames (all frames):
+
+    hold the engine's target, flat                   0.474   (−0.197)
+    speaker's phone mean                             0.503   (0.436)
+    speaker's phone mean given both neighbours       0.584   (0.527)
+    engine targets · defaults                        0.450   (−0.178)
+    speaker targets · no mass                        0.476   (0.430)
+    speaker targets · defaults                       0.525   (0.452)
+    speaker targets · stage 1a's fitted dynamics     0.548   (0.461)
+    speaker targets · refitted on this map           0.547   (0.461)
+      (artT 0.016, artCrit 0, artStiff 0.52, artPush 0.45, artFar 2.19, glide 0.037 — the same answer)
+    MRI consonants + map vowels · defaults           0.373   (−0.413)
+    MRI every phone · defaults                      −0.732
+
+The same table as before, shifted up by about two points everywhere because the measured reference
+moved slightly with the map, with the same ordering and the same gaps: the movement law adds two to
+five points over a static table given map-consistent targets, anatomically right consonant targets
+lose, and the context lookup is the ceiling nobody reaches. Nothing about stage 1's reading changes.
+
+What this settles: the research question is answerable, with this corpus and this tube, for vowel
+nuclei, and the stage 1 numbers stand for exactly that. Consonant constrictions would need either
+the coils registered into the MRI's frame with the palate as a hard boundary — contact inferred from
+proximity rather than read from a height — or a different measurement. The map used for stage 1 is
+the MRI-anchored one, `fit/mngu0_map_mri.json`, because it is the one fitted against independent
+shapes; it is, for all practical purposes, the stage 0 map.
 
 ## What this answered before any corpus arrived
 

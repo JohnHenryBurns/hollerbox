@@ -54,8 +54,8 @@ from .mngu0 import DATA, LAB, filesets, read_lab, sensors, utterances
 REPO = Path(__file__).resolve().parents[2]
 RUNNER = REPO / "lab" / "trajectories.js"
 POSTURE = REPO / "lab" / "posture.js"
-OUT = REPO / "research" / "out" / "stage1"
-MAP = REPO / "research" / "fit" / "mngu0_map.json"
+OUT = REPO / "research" / "out" / "stage1"        # --tag changes this
+MAP = REPO / "research" / "fit" / "mngu0_map.json"   # --map changes this
 VOICE = "mngu0"
 
 ARTS = ["jaw", "bodyPos", "bodyHi", "tipPos", "tipHi", "lip"]
@@ -502,6 +502,8 @@ def report(args) -> None:
     # "mri-all": every phone fitted to the MRI. Both are scored at the defaults and at the parameters
     # fitted on the speaker targets, so the comparison isolates the targets.
     spk_fit = OUT / "fitted_speaker.json"
+    if not spk_fit.exists() and (REPO / "research" / "out" / "stage1" / "fitted_speaker.json").exists():
+        spk_fit = REPO / "research" / "out" / "stage1" / "fitted_speaker.json"      # stage 1a's dynamics, until refitted here
     spk_params = json.loads(spk_fit.read_text(encoding="utf-8"))["params"] if spk_fit.exists() else None
     for tset in ("engine", "speaker", "mri-cons", "mri-all"):
         path = targets_path(tset)
@@ -513,7 +515,7 @@ def report(args) -> None:
         f = OUT / f"fitted_{tset}.json"
         if f.exists():
             models[f"{tset} · fitted"] = (path, json.loads(f.read_text(encoding="utf-8"))["params"])
-        elif spk_params and tset.startswith("mri"):
+        elif spk_params:
             models[f"{tset} · speaker-fitted params"] = (path, spk_params)
     pd.set_option("display.width", 200)
 
@@ -646,6 +648,8 @@ def report(args) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--map", type=Path, help="the coil->posture map to read the measurement through (default fit/mngu0_map.json)")
+    ap.add_argument("--tag", help="output under out/stage1_<tag> instead of out/stage1")
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("prepare"); p.add_argument("--limit", type=int)
     p = sub.add_parser("objective"); p.add_argument("--train", type=int, default=60); p.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 2))
@@ -656,7 +660,13 @@ def main() -> None:
     p.add_argument("--targets", choices=["engine", "speaker"], default="engine")
     p = sub.add_parser("report"); p.add_argument("--train", type=int, default=300); p.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 2))
     args = ap.parse_args()
-    sys.stdout.reconfigure(line_buffering=True)
+    sys.stdout.reconfigure(line_buffering=True, encoding="utf-8")
+    global OUT, MAP
+    if args.map:
+        MAP = args.map.resolve()
+    if args.tag:
+        OUT = REPO / "research" / "out" / f"stage1_{args.tag}"
+    print(f"map {MAP.name}; output {OUT.relative_to(REPO)}")
     if args.cmd == "prepare":
         prepare(args)
     elif args.cmd == "objective":

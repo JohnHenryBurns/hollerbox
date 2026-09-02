@@ -618,21 +618,44 @@ VOICES.mngu0 = {
   label: 'Edinburgh',
   v: { rd: 0.95, press: 0.18, jit: 1.0, brth: 0.18, drawl: 0.08, open: 0.05,
        per: 0.058, sect: 49, f0a: 86, f0b: 102, f0c: 77 },
+  // THE WHOLE TABLE, SOLVED AGAINST HIS OWN ANATOMY AND ACOUSTICS AT ONCE (lab/solve-speaker.js):
+  // each phone's posture reproduces the MRI airway profile as a shape AND does what the sound must —
+  // stops and nasals seal where he seals, fricatives leave the channel the jet wants, /l r/ ring at
+  // the sonorant targets, vowels reproduce his measured formants. Two vowels kept the map's posture
+  // because the joint solve lost their formants (DRESS by 118 Hz of F1, GOOSE forced toward the
+  // sustained scan's near-closure); /f v/ stay shared because the MRI cannot see a labiodental gap.
+  // The voiced stops and fricatives share their voiceless partner's place. LOT (ɒ) is here for the
+  // corpus fitting; the speller never produces it.
   art: {
-    'i': { jaw: 0.504, bodyPos: 0.708, bodyHi: 0.795, tipPos: 0.836, tipHi: 0.137, lip: 0.639 },
-    'ɪ': { jaw: 0.475, bodyPos: 0.634, bodyHi: 0.621, tipPos: 0.822, tipHi: 0.119, lip: 0.553 },
+    'ɪ': { jaw: 0.702, bodyPos: 0.692, bodyHi: 0.900, tipPos: 1.000, tipHi: 0.701, lip: 0.539 },
     'ɛ': { jaw: 0.670, bodyPos: 0.565, bodyHi: 0.488, tipPos: 0.810, tipHi: 0.068, lip: 0.802 },
-    'æ': { jaw: 0.755, bodyPos: 0.560, bodyHi: 0.393, tipPos: 0.809, tipHi: 0.031, lip: 0.897 },
-    'ʌ': { jaw: 0.704, bodyPos: 0.572, bodyHi: 0.346, tipPos: 0.809, tipHi: 0.025, lip: 0.710 },
-    'ɑ': { jaw: 0.756, bodyPos: 0.489, bodyHi: 0.296, tipPos: 0.796, tipHi: 0.002, lip: 0.759 },
-    'ɔ': { jaw: 0.499, bodyPos: 0.421, bodyHi: 0.425, tipPos: 0.781, tipHi: 0.012, lip: 0.292 },
-    'ʊ': { jaw: 0.489, bodyPos: 0.537, bodyHi: 0.539, tipPos: 0.800, tipHi: 0.058, lip: 0.335 },
+    'æ': { jaw: 1.000, bodyPos: 0.614, bodyHi: 0.360, tipPos: 0.030, tipHi: 0.286, lip: 0.755 },
+    'ɒ': { jaw: 1.000, bodyPos: 0.519, bodyHi: 0.490, tipPos: 0.925, tipHi: 0.721, lip: 0.914 },
+    'ʌ': { jaw: 0.918, bodyPos: 0.502, bodyHi: 0.249, tipPos: 0.047, tipHi: 0.141, lip: 0.719 },
+    'ʊ': { jaw: 0.997, bodyPos: 0.560, bodyHi: 0.884, tipPos: 0.959, tipHi: 0.737, lip: 0.619 },
+    'i': { jaw: 0.000, bodyPos: 0.709, bodyHi: 0.992, tipPos: 0.929, tipHi: 1.000, lip: 0.799 },
     'u': { jaw: 0.435, bodyPos: 0.674, bodyHi: 0.743, tipPos: 0.826, tipHi: 0.133, lip: 0.356 },
-    'ɝ': { jaw: 0.526, bodyPos: 0.547, bodyHi: 0.456, tipPos: 0.807, tipHi: 0.067, lip: 0.559 },
-    'ə': { jaw: 0.467, bodyPos: 0.606, bodyHi: 0.508, tipPos: 0.817, tipHi: 0.094, lip: 0.421 },
-    // LOT. The speller never produces it, so nothing in the app reaches this entry; the corpus
-    // fitting does, because the speaker's labels use it 770 times and it is his twelfth vowel.
-    'ɒ': { jaw: 0.638, bodyPos: 0.523, bodyHi: 0.340, tipPos: 0.800, tipHi: 0.026, lip: 0.484 },
+    'ɝ': { jaw: 0.394, bodyPos: 0.605, bodyHi: 0.391, tipPos: 0.404, tipHi: 0.287, lip: 0.959 },
+    'ɑ': { jaw: 0.968, bodyPos: 0.560, bodyHi: 0.642, tipPos: 0.221, tipHi: 0.387, lip: 0.691 },
+    'ɔ': { jaw: 0.860, bodyPos: 0.552, bodyHi: 0.607, tipPos: 0.401, tipHi: 0.331, lip: 0.412 },
+    'ə': { jaw: 0.394, bodyPos: 0.588, bodyHi: 0.290, tipPos: 0.558, tipHi: 0.000, lip: 0.717 },
+    'θ': { jaw: 0.000, bodyPos: 0.895, bodyHi: 0.392, tipPos: 0.546, tipHi: 0.273, lip: 0.053 },
+    's': { jaw: 0.759, bodyPos: 0.941, bodyHi: 0.358, tipPos: 0.893, tipHi: 0.721, lip: 0.655 },
+    'ʃ': { jaw: 0.092, bodyPos: 0.735, bodyHi: 0.681, tipPos: 0.928, tipHi: 0.419, lip: 0.320 },
+    'm': { jaw: 0.099, bodyPos: 0.000, bodyHi: 0.000, tipPos: 0.974, tipHi: 0.797, lip: 0.129 },
+    'n': { jaw: 0.431, bodyPos: 0.855, bodyHi: 0.590, tipPos: 0.875, tipHi: 0.388, lip: 0.946 },
+    'ŋ': { jaw: 0.000, bodyPos: 0.564, bodyHi: 1.000, tipPos: 0.500, tipHi: 0.864, lip: 0.993 },
+    'r': { jaw: 0.307, bodyPos: 0.384, bodyHi: 0.245, tipPos: 0.693, tipHi: 0.749, lip: 0.541 },
+    'l': { jaw: 0.364, bodyPos: 0.828, bodyHi: 0.696, tipPos: 0.869, tipHi: 0.344, lip: 0.946 },
+    'p': { jaw: 0.133, bodyPos: 0.721, bodyHi: 0.703, tipPos: 0.865, tipHi: 0.399, lip: 0.199 },
+    't': { jaw: 0.000, bodyPos: 0.751, bodyHi: 0.509, tipPos: 0.855, tipHi: 0.735, lip: 0.439 },
+    'k': { jaw: 0.000, bodyPos: 0.650, bodyHi: 0.820, tipPos: 0.225, tipHi: 0.176, lip: 0.019 },
+    'b': { jaw: 0.133, bodyPos: 0.721, bodyHi: 0.703, tipPos: 0.865, tipHi: 0.399, lip: 0.199 },
+    'd': { jaw: 0.000, bodyPos: 0.751, bodyHi: 0.509, tipPos: 0.855, tipHi: 0.735, lip: 0.439 },
+    'g': { jaw: 0.000, bodyPos: 0.650, bodyHi: 0.820, tipPos: 0.225, tipHi: 0.176, lip: 0.019 },
+    'z': { jaw: 0.759, bodyPos: 0.941, bodyHi: 0.358, tipPos: 0.893, tipHi: 0.721, lip: 0.655 },
+    'ð': { jaw: 0.000, bodyPos: 0.895, bodyHi: 0.392, tipPos: 0.546, tipHi: 0.273, lip: 0.053 },
+    'ʒ': { jaw: 0.092, bodyPos: 0.735, bodyHi: 0.681, tipPos: 0.928, tipHi: 0.419, lip: 0.320 },
   },
   note: 'Measured, not tuned: an RP speaker’s tract length, pitch, rate and vowel postures, the '
       + 'postures read off articulography through a map solved against his own formants.'

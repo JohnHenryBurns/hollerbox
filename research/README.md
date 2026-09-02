@@ -506,6 +506,38 @@ anything in the phone string, its timing or its prosody, by a model free to be a
 likes. That is the floor of token-to-token variation for this speaker in this measurement, and no
 phone-driven control law will explain it. The per-frame tables are in `out/stage2/`.
 
+## Stage 2.5: the files for an ear
+
+`lab/solve-speaker.js` solved the Edinburgh voice's whole table against the MRI profiles (as
+shapes, warped onto the engine's sections) and the acoustics of each class at once; the report is
+in `out/mri/speaker_solved.log`. Stops and nasals seal at the speaker's places, /θ s ʃ l/ sit where
+he puts them, ten of twelve vowels reproduce his formants within an IQR with the MRI's shape. DRESS
+and GOOSE lost the trade (F1 118 Hz off; 210 Hz for GOOSE forced toward the sustained scan's
+near-closure) and keep the map's posture; /f v/ stay shared because the labiodental gap lies between
+lip and teeth, which are dark on the scan; /r/ keeps the bunched solution the ear needs. Against
+the MRI, `python -m fit.mri compare` moves the voice's consonants from r 0.02 to 0.65 and the median
+place error from 1.8 to 1.1 cm. The gate is green with the voice under test.
+
+`lab/listen.js` wrote the bench phrases under five conditions into `out/listen/`:
+
+    john_*                          the reference voice
+    edinburgh-before_*              the voice as it was: map vowels, shared consonants
+    edinburgh-mri_*                 the solved table, shipped dynamics
+    edinburgh-mri-fit-map_*         + the dynamics fitted through the map (artT 0.016, glide 0.037)
+    edinburgh-mri-fit-registered_*  + the dynamics fitted in the registered frame (artT 0, glide 0.128)
+
+What to listen for: /k/ and /t/ and /s/ in "good king kenneth kicked the cat" and "she sells sea
+shells", which moved forward by a centimetre or two; whether the two fitted dynamics sound more or
+less like a person than the shipped ones; and whether anything got worse. The judgement is not in
+this file because it cannot be made here.
+
+One number to hold beside the ear. In the registered frame — the coils in connected speech — the
+solved table held flat scores no better than the old one against the front-cavity shapes (R² −1.2
+against −0.9, frame correlation +0.04 against −0.05). The new table is closer to the sustained scan
+and to the acoustics; it is not closer to how this speaker's front cavity moves in running speech,
+which the sustained scan does not show. If the ear prefers it anyway, that is a finding about what
+the ear is listening to.
+
 ## What this answered before any corpus arrived
 
 `python -m fit.identify` plants each control parameter at a known value, generates the trajectory it

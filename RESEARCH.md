@@ -458,6 +458,28 @@ the parameters fitted to human trajectories, render the bench phrases, and liste
 measurably closer to a person's do not sound more like a person, that is the most interesting result
 available here and nobody else is positioned to find it.
 
+#### Stage 2.5 — set up, not judged
+
+The judging is an ear's, so this stage ends with files and a question. `lab/solve-speaker.js`
+solves every phone the MRI holds against the speaker's anatomy and the sound's acoustics at once —
+the MRI profile as a shape, brought onto the engine's sections through the landmarks, plus what
+the sound must do: stops and nasals seal where he seals, fricatives leave the channel the jet
+wants, /l r/ ring at the sonorant targets, vowels reproduce his measured formants. Against the MRI
+the Edinburgh voice's consonants go from r 0.02 to 0.65 and its place error from 1.8 cm to 1.1;
+the gate stays green with the voice under test. Two vowels kept the map's posture because the joint
+solve lost their formants, and /f v/ stay shared because the scan cannot see a labiodental gap.
+
+`lab/listen.js` renders the bench phrases to WAV under four conditions: the Edinburgh voice as it
+was, the voice with the solved table, and that voice under the two fitted dynamics — the ones
+fitted through the map (less mass, short glide) and the ones fitted in the registered frame (no
+mass, long glide) — with John beside them as the reference. The files are in
+`research/out/listen/`, named by condition and phrase.
+
+The question they ask is the one this stage was added for: whether a tract closer to a person's
+sounds more like a person. If the solved consonants sound better and the fitted dynamics do not,
+that is consistent with everything above — the targets were the larger error, and the movement
+law is not the one this speaker uses.
+
 ### Stage 3 — does it generalise?
 
 Refit on a second corpus without re-tuning. **SPIRE-EMA rather than MOCHA-TIMIT**: 38 speakers

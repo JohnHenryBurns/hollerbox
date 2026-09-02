@@ -91,7 +91,11 @@ function sustainRaw(sym, { n = 44, seconds = 1.2, voice = null, f0 = 110 } = {})
 }
 
 /** Build the same keyframes the page builds for a word. */
-function plan(chain, D, voice, n, stress) {
+// `art` is a voice's own posture table, or null for the shared one. It was always null here, so
+// no render the harness ever made used a voice's measured postures — the gate's per-voice checks
+// heard Edinburgh's vowels as the shared table's. Null by default, so every existing render is
+// bit-identical; a caller that wants the voice as the page speaks it passes VOICES[name].art.
+function plan(chain, D, voice, n, stress, art = null) {
   const v = { ...P.defaultVoice(), ...(voice || {}) };
   // n MUST match the processor. Hardcoding 44 while the tract was 50 left the last six
   // diameters undefined and the whole voice came out NaN.
@@ -107,7 +111,7 @@ function plan(chain, D, voice, n, stress) {
   // stretch factor below has something to be relative to.
   const W = P.buildWord(chain, { D, rate: P.rateFor(chain, D, v),
                                  drawl: v.drawl, glide: v.glide, stopHold: v.stopT,
-                                 open: 0, n, art: null, stress, pros: v });
+                                 open: 0, n, art, stress, pros: v });
   return { keys: W.keys, seg: W.seg, end: W.end, v };
 }
 
@@ -118,10 +122,10 @@ function plan(chain, D, voice, n, stress) {
 // much tail they want; without this, one of them pays full price for audio the other two have
 // already computed.
 function say(chain, opts = {}) {
-  const { D = null, voice = null, n = 44, extra = 0.9, stress = null } = opts;
+  const { D = null, voice = null, n = 44, extra = 0.9, stress = null, art = null } = opts;
   // stress belongs in the key. It changes the audio from 8.3 onward — an unstressed syllable
-  // is quieter — so a render cached without it would come back at the wrong level.
-  const key = "w|" + JSON.stringify([chain, D, n, voice, stress]);
+  // is quieter — so a render cached without it would come back at the wrong level. So does art.
+  const key = "w|" + JSON.stringify([chain, D, n, voice, stress, art]);
   let ent = CACHE.get(key);
   if (!ent || ent.extra < extra) {
     const need = Math.max(extra, ent ? ent.extra : 0.9);
@@ -134,11 +138,11 @@ function say(chain, opts = {}) {
   return { buf: ent.buf.length <= want ? ent.buf : ent.buf.subarray(0, want),
            seg: ent.seg, end: ent.end };
 }
-function sayRaw(chain, { D = null, voice = null, n = 44, extra = 0.9, stress = null } = {}) {
+function sayRaw(chain, { D = null, voice = null, n = 44, extra = 0.9, stress = null, art = null } = {}) {
   const vv = { ...P.defaultVoice(), ...(voice || {}) };
   if (n === 44 && vv.sect) n = Math.round(vv.sect);      // follow the voice unless told otherwise
   const dur = D !== null ? D : Math.max(0.5, Math.min(2.2, chain.length*(vv.per||0.17)));
-  const { keys, seg, end, v } = plan(chain, dur, voice, n, stress);
+  const { keys, seg, end, v } = plan(chain, dur, voice, n, stress, art);
   const p = makeProcessor(n);
   p.port.onmessage({ data: { type: "voice", v } });
   const f0 = P.buildF0(end, v, { stress, seg });

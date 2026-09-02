@@ -367,7 +367,7 @@ under `out/stage1_mri/`. Held out, vowel frames (all frames):
     speaker targets · defaults                       0.525   (0.452)
     speaker targets · stage 1a's fitted dynamics     0.548   (0.461)
     speaker targets · refitted on this map           0.547   (0.461)
-      (artT 0.016, artCrit 0, artStiff 0.56, artPush 0.45, artFar 2.3, glide 0.044 — the same answer)
+      (artT 0.016, artCrit 0, artStiff 0.52, artPush 0.45, artFar 2.19, glide 0.037 — the same answer)
     MRI consonants + map vowels · defaults           0.373   (−0.413)
     MRI every phone · defaults                      −0.732
 

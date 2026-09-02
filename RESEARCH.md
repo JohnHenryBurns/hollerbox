@@ -1,8 +1,11 @@
 # Two questions about controlling a throat
 
-**Status: a proposal to argue with. Stage 0a is built; stage 0 has been run once against mngu0
-and failed as first posed, for a reason that is the engine's and is diagnosed; it is re-posed and
-being run again.**
+**Status: stages 0, 1 and 2 have been run against mngu0, on 2026-09-01 and 02. Stage 0 failed as
+first posed and passed re-posed; the MRI then showed the map to be a vowel instrument; the coils
+were registered into the MRI's frame instead, which recovered the consonants; stage 1 there says
+target-and-interpolate loses to holding the target; stage 2 says the residual is structured, by
+the neighbours crossed with the within-segment clock, and not by prosody. Each is written into its
+section below, with the numbers in research/README.md.**
 
 *Stage 0a — making the engine's real trajectory observable — is done: `lab/artspace.js`,
 `lab/trajectories.js --actual`, `processorOptions.artOnly`, and two gate checks. It found three
@@ -416,6 +419,36 @@ neighbouring gesture, distance still to travel.
   finding worth publishing.
 - **Unstructured** → target-and-interpolate is adequate at this level. Publish that; it constrains
   what everyone else should be working on.
+
+#### Stage 2 — measured
+
+Run on 2026-09-02 on the registered-frame residual, three models with the speaker's own targets
+(held flat, interpolated, followed), regressed on the corpus's linguistic columns and scored held
+out; then a boosted tree on the same variables as the ceiling. `research/fit/stage2.py`; the
+tables are in research/README.md.
+
+**Structured.** About 44% of the residual's variance — some 18 points of the total — is predictable
+from the phone string and its timing, held out. The linear inventory finds a third of that; the
+rest is nonlinear in the same variables.
+
+**By the neighbours crossed with the within-segment clock.** Context alone reaches the ceiling and
+dropping the neighbours loses half of it. This is coarticulation with a time course. Interpolation
+absorbs part of it and the follower adds structured error of its own, proportional to the distance
+to the next target — the lag of a linear second-order system, which the fitted dynamics removed by
+removing the mass.
+
+**Not by prosody.** Stress, duration, rate, word and phrase position add under a point. With
+durations imposed from the corpus, whatever stress does to the front cavity it has already done
+through the durations.
+
+**A floor.** 56% of the residual, about 22 points of the total, is predictable from nothing in the
+phone string, its timing or its prosody, by a model free to be nonlinear. That is this speaker's
+token-to-token variation as this measurement sees it, and the ceiling on any phone-driven law.
+
+So the control principle this stage was written to find is describable: the shape at a moment
+depends on the current target, both neighbours, and the time within the segment, nonlinearly —
+and a blend of two targets in area space is the wrong function of those four things, worse than
+holding still.
 
 ### Stage 2.5 — does any of it sound better?
 

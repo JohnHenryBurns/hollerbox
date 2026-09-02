@@ -367,8 +367,22 @@ def defaults() -> dict[str, float]:
     return json.loads(done.stdout)
 
 
+MRI_ART = REPO / "research" / "out" / "mri" / "mri_art.json"
+VOWEL_SYMBOLS = {"i", "ɪ", "ɛ", "æ", "ʌ", "ɑ", "ɔ", "ʊ", "u", "ɝ", "ə", "ɒ", "o"}
+
+
 def targets_path(which: str) -> Path | None:
-    return OUT / "speaker_art.json" if which == "speaker" else None
+    """Where each target set's posture file is; the MRI sets are cut from fit/mri_fit.py's output."""
+    if which == "speaker":
+        return OUT / "speaker_art.json"
+    if which in ("mri-cons", "mri-all") and MRI_ART.exists():
+        art = json.loads(MRI_ART.read_text(encoding="utf-8"))["art"]
+        if which == "mri-cons":
+            art = {k: v for k, v in art.items() if k not in VOWEL_SYMBOLS}
+        dest = OUT / f"{which}_art.json"
+        dest.write_text(json.dumps(art, ensure_ascii=False, indent=1), encoding="utf-8")
+        return dest
+    return None
 
 
 def fit(args) -> None:
@@ -484,12 +498,23 @@ def report(args) -> None:
     # speaker's vowels, the shared consonants. "speaker" is his own mean posture for every phone.
     speaker_targets(corpus, train, targets_path("speaker"))
     models: dict[str, tuple[Path | None, dict]] = {}
-    for tset in ("engine", "speaker"):
-        models[f"{tset} · defaults"] = (targets_path(tset), dflt)
-        models[f"{tset} · no-mass"] = (targets_path(tset), {**dflt, "artT": 0.0})
+    # "mri-cons": the speaker's vowels through the map, his consonants fitted to his MRI (fit/mri_fit.py);
+    # "mri-all": every phone fitted to the MRI. Both are scored at the defaults and at the parameters
+    # fitted on the speaker targets, so the comparison isolates the targets.
+    spk_fit = OUT / "fitted_speaker.json"
+    spk_params = json.loads(spk_fit.read_text(encoding="utf-8"))["params"] if spk_fit.exists() else None
+    for tset in ("engine", "speaker", "mri-cons", "mri-all"):
+        path = targets_path(tset)
+        if tset.startswith("mri") and path is None:
+            continue
+        models[f"{tset} · defaults"] = (path, dflt)
+        if tset in ("engine", "speaker"):
+            models[f"{tset} · no-mass"] = (path, {**dflt, "artT": 0.0})
         f = OUT / f"fitted_{tset}.json"
         if f.exists():
-            models[f"{tset} · fitted"] = (targets_path(tset), json.loads(f.read_text(encoding="utf-8"))["params"])
+            models[f"{tset} · fitted"] = (path, json.loads(f.read_text(encoding="utf-8"))["params"])
+        elif spk_params and tset.startswith("mri"):
+            models[f"{tset} · speaker-fitted params"] = (path, spk_params)
     pd.set_option("display.width", 200)
 
     # engine postures per symbol, for the hold baseline: the voice's own table over the shared one

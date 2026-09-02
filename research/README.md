@@ -45,7 +45,11 @@ block is silent until import. `requirements.txt` pins 2.3.3, which loads.
 | `fit/formants.py` | the speaker's own vowel formants, from the audio at token midpoints |
 | `fit/register.py` | stage 0 as first posed: read the engine's posture table off the coils. **Fails**, and says why |
 | `fit/jointmap.py` | stage 0 as it should be posed: one reading of the coils under which the tube makes this speaker's vowels |
-| `tests/` | the above, run against the real engine; the corpus tests skip where the data is absent |
+| `fit/stage1.py` | stage 1: the model on the speaker's clock, compared in diameter space, with baselines and the residual table |
+| `fit/mri.py` | the static MRI read as an airway width profile along the tract, one per sustained prompt |
+| `fit/mri_compare.py` | the engine's postures against those profiles: constriction place, degree, profile correlation |
+| `fit/mri_fit.py` | postures fitted to the profiles — the geometric target for each phone, no acoustics in the loop |
+| `tests/` | the above, run against the real engine; the corpus and MRI tests skip where the data is absent |
 | `data/` | corpora go here. Gitignored, and see [data/README.md](data/README.md) for the layout and the coordinate convention |
 | `out/` | everything derived: the token table, formant tables, fit reports. Gitignored |
 
@@ -217,11 +221,27 @@ models on the speaker's clock. `python -m fit.stage1 report`; the full table by 
     speaker targets · no mass (pure interpolation)   0.454         0.405
     speaker targets · defaults                       0.506         0.429
     speaker targets · fitted                         0.530         0.438
+    MRI consonants + map vowels · defaults           0.360        −0.409
+    MRI consonants + map vowels · fitted params      0.343        −0.4
+    MRI every phone · defaults                      −0.736        (worse)
+
+**The last three rows are the MRI check's verdict on this table, and it is not the one hoped for.**
+Targets fitted to the speaker's own anatomy score WORSE than the shared table, and far worse than the
+map-derived "speaker" targets. That cannot be because the anatomy is wrong; it is because the
+measured side of this comparison is not the coils but the coils READ THROUGH THE STAGE 0 MAP — a
+map fitted on vowel means. Where the MRI shows that map to be wrong (every consonant, and KIT and
+DRESS), the reference is wrong, and a target that agrees with the map's error scores better than a
+target that agrees with the speaker. The "speaker" targets are the map's own extrapolation, so they
+agree with it by construction. So: the 0.506–0.530 is a real result about vowel nuclei under a map
+the MRI vindicates there, and the gain over the shared table is inflated by an amount this
+comparison cannot measure. The honest next step is a map fitted against the MRI postures for every
+phone — stage 0 as the plan literally described it, with the MRI as the independently known shape —
+and then this table again.
 
 The fit (coordinate descent, 120 training utterances, vowel-frame diameter rms 0.347 → 0.339):
-`artT` 0.016, `artCrit` 0, `artStiff` 0.355, `artPush` 0.45, `artFar` 2.3, `glide` 0.03 — less
+`artT` 0.016, `artCrit` 0, `artStiff` 0.355, `artPush` 0.45, `artFar` 2.3, `glide` 0.037 — less
 mass than the default 0.025, no gesture treated as critical, stiffness keyed more to distance
-travelled, and the shortest transition the range allows. Read together: the speaker moves faster and
+travelled, and a transition near the shortest the range allows. Read together: the speaker moves faster and
 more uniformly between targets than the engine's defaults do, and the one thing the follower is
 doing for him is the smoothing.
 
@@ -253,6 +273,60 @@ The posture-space table (`out/stage1/stage1_r2.csv`) is kept for completeness an
 headline: tip position under a flat tip hump is not in the diameters, so its R² there is noise
 whatever the model. Per-frame residuals for stage 2, with the linguistic columns, are in
 `out/stage1/residuals_test_speaker_*.csv`.
+
+## The same speaker's MRI
+
+`fit/mri.py` reads each static volume's midsagittal slice into an airway width along the tract.
+The roof — hard palate, velum at rest, posterior pharyngeal wall — is found from the images rather
+than traced: the union of air over six open vowels, and a semi-polar sweep from a centre inside the
+tongue takes each ray's last air pixel as the roof. A first trace by eye had put the palate 11 mm
+too low, on the tongue's own mucosa; that is why it is found. The roof runs 17.1 cm from the
+laryngeal vestibule to the upper lip. Along its normals, every 2 mm, the dark run from roof to
+tongue is the width; a closure is zero. Overlays for every prompt are in `out/mri/profile_*.png` and
+were checked by eye: K closes at the velum, T at the alveolar ridge, SIN narrows to a millimetre at
+the teeth, FLEECE braces against the front palate with a 22 mm pharynx behind it.
+
+A width is not the engine's equivalent diameter, so what is compared (`fit/mri_compare.py`) is what
+survives the unknown shape factor: where the tightest point is, how the profile correlates, and how
+the tightest point stands against the rest of the tract. The larynx end (u < 0.12) and the last 2%
+at the lips, where teeth are as dark as air, are left out.
+
+### What the MRI says about the three posture sets
+
+Median over phones, held against the MRI profile; location error is the model's tightest point
+against the image's, in centimetres along the tract.
+
+    posture set                          vowels: r    consonants: |Δ place|   consonants: r
+    engine (shared ART, P&B)               -0.02            1.8 cm                0.02
+    edinburgh (stage 0 map vowels)          0.60            1.8 cm                0.02   (same consonants)
+    speaker (stage 1's coil means)          0.58            3.9 cm               -0.18
+
+- **Stage 0's map is independently vindicated on the vowels.** Its postures correlate 0.60 with the
+  speaker's own airway where the engine's American table correlates not at all. The exceptions are
+  KIT and DRESS, whose constriction the map puts 5 to 9 cm too far back (r −0.2 to −0.5); FLEECE,
+  GOOSE, PALM, THOUGHT, LOT, STRUT, TRAP all correlate 0.5 to 0.93.
+- **The engine's consonants are in roughly the right place for labials, dentals and /ŋ/, and 1.8 to
+  3.6 cm too far back for /s t l r k/.** /k/ closes at 0.48 of the tract where this speaker closes at
+  0.65 — uvular rather than velar. /r/ is a bunched palatal at 0.71 where his is an alveolar
+  approximant at 0.92. FIN cannot be scored: the labiodental gap is between lip and teeth, and teeth
+  are dark.
+- **The "speaker" consonant targets stage 1 used are geometrically wrong.** They are the vowel-fitted
+  map extrapolated to consonants, and against the MRI they are anticorrelated (r −0.18) with a
+  median place error of 3.9 cm — /r/ lands in the pharynx. So the gain stage 1 saw from them
+  (0.439 → 0.506) is at least partly the map agreeing with itself on both sides of the comparison,
+  not anatomy. That is the caveat stage 1's own text asked for, now with a number.
+
+### Postures fitted to the MRI
+
+`fit/mri_fit.py` solves the six parameters against each profile as a normalised shape (batched random
+search through `lab/posture.js`, then coordinate descent). Median r 0.84 against 0.28 before, and
+every tightest point within a gridline of the image's. These are GEOMETRIC targets: nothing acoustic
+was asked of them, several vowels spend the tip parameter shaping the pharynx, and a /t/ fitted this
+way need not seal well enough to stop air. They are for the trajectory comparison. A voice would need
+a joint geometric–acoustic solve, which is the obvious next instrument. Saved as `out/mri/mri_art.json`.
+
+The stage 1 report now scores two more target sets built from them: `mri-cons` (the map's vowels,
+MRI consonants) and `mri-all`. The rows are in `out/stage1/stage1_r2_diam.csv` and below.
 
 ## What this answered before any corpus arrived
 

@@ -52,6 +52,7 @@ block is silent until import. `requirements.txt` pins 2.3.3, which loads.
 | `fit/mrimap.py` | the coil map solved against the MRI profiles for every phone, with the vowel formants; returns the vowel map, and says why |
 | `fit/register_mri.py` | the coils registered into the MRI's frame: palate envelope, rigid registration, tongue contour, airway width per frame |
 | `fit/stage1r.py` | stage 1 on that measurement: frames inverted through the tube, consonants included, front third of the tract |
+| `fit/stage2.py` | stage 2: the residual regressed on the linguistic columns, nested and held out, with a boosted-tree ceiling |
 | `tests/` | the above, run against the real engine; the corpus and MRI tests skip where the data is absent |
 | `data/` | corpora go here. Gitignored, and see [data/README.md](data/README.md) for the layout and the coordinate convention |
 | `out/` | everything derived: the token table, formant tables, fit reports. Gitignored |
@@ -460,6 +461,50 @@ the coils registered into the MRI's frame with the palate as a hard boundary —
 proximity rather than read from a height — or a different measurement. The map used for stage 1 is
 the MRI-anchored one, `fit/mngu0_map_mri.json`, because it is the one fitted against independent
 shapes; it is, for all practical purposes, the stage 0 map.
+
+## Stage 2, measured: the residual is structured, and by what
+
+`fit/stage2.py`. The residual is the registered-frame one — measured tube shape minus the model's,
+per frame, over the trusted sections — for three models with the speaker's own targets, so it is
+about movement and not about where the targets are: the target held flat, pure interpolation, the
+follower at the defaults. Reduced to a signed mean per region per frame and regressed on the
+corpus's linguistic columns, nested by family, scored by held-out R² on the test utterances; then
+a gradient-boosted tree on the same variables, which bounds what those variables carry at all.
+
+    held-out R² of the residual (all sections)      hold    interp   follower
+    linear: phone                                   0.079    0.087    0.100
+      + neighbours                                  0.104    0.107    0.123
+      + within-segment clock                        0.109    0.108    0.134
+      + clock x neighbours                          0.151    0.121    0.155
+      + distance to travel                          0.153    0.129    0.185
+      + prosody (stress, dur, rate, position)       0.156    0.136    0.190
+    boosted: all variables                          0.436    0.421    0.460
+    boosted: context only (phone, neighbours, clock, travel)   0.424    0.415    0.457
+    boosted: no neighbours (phone, clock, prosody)  0.203    0.210    0.284
+
+**Structured, substantially.** About 44% of the residual's variance is predictable from the phone
+string and its timing, held out — some 18 points of the total shape variance, three times what the
+linear inventory finds. The plan's "structured" branch is the one that came in.
+
+**By the neighbours crossed with the clock, above all.** Context alone reaches the ceiling; drop
+the neighbours and half of it goes. The linear increments say the same in smaller numbers: the
+within-segment clock crossed with what came before and what comes next is the largest family
+(+0.04 for the held target), and it is the one interpolation absorbs (0.151 → 0.121). This is
+coarticulation with a time course, and a linear blend of two shapes in area space gets part of it.
+
+**Not by prosody.** Stress, duration, rate, position in word and phrase add under one point to the
+linear model and the boosted "no neighbours" set is mostly phone × clock. Whatever stress does to
+this speaker's front cavity, it does through the durations, which this comparison imposed.
+
+**The follower adds structured error of its own.** Its residual is the most predictable (0.46), and
+the family that separates it from the flat target is distance to travel: +0.030 against +0.002.
+The follower lags in proportion to how far the target is, which is what a linear second-order
+system does, and what the fitted dynamics removed by setting the mass to zero.
+
+**What is left.** 56% of the residual — about 22 points of total variance — is not predictable from
+anything in the phone string, its timing or its prosody, by a model free to be as nonlinear as it
+likes. That is the floor of token-to-token variation for this speaker in this measurement, and no
+phone-driven control law will explain it. The per-frame tables are in `out/stage2/`.
 
 ## What this answered before any corpus arrived
 

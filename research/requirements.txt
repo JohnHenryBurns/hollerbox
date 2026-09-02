@@ -20,3 +20,6 @@ pandas==2.3.3
 matplotlib==3.11.1
 statsmodels==0.14.6      # stage 2 wants mixed effects; scipy alone will not do it
 pytest==9.1.1
+scikit-learn==1.9.0          # stage 2: the boosted-tree ceiling on the residual
+pyarrow==25.0.1               # stage 2 caches its frame table as parquet
+pydicom==3.0.2             # the static MRI

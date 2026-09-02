@@ -375,6 +375,30 @@ smooth reading of six flesh points can place a closure, so **the plan's assumpti
 would serve the whole inventory was wrong for the consonants**, and that is a fact about the data,
 not the model. The question stays answerable for vowel nuclei, which is what stage 1 measured.
 
+**The consonants come back by registration, not by a map.** `research/fit/register_mri.py` puts
+the coils into the MRI's frame — the palate found as the upper envelope of 670,000 tongue-coil
+positions, a rigid registration onto the MRI roof (11.8°, 2 mm rms), a tongue contour through the
+coils with a tip sized so that /t d n/ close at the ridge and vowels do not — and reads the airway
+width along the MRI's own gridlines, frame by frame. Over the stretch the coils can vouch for, from
+the dorsum coil to the lips, the consonants then land where the MRI has them: median place error
+0.4 cm, /t/ at 0.93 against 0.91, /k/ at 0.67 against 0.67, where the affine map had them 3.9 cm
+off and anticorrelated. What six coils could not say through any smooth reading they can say as
+geometry. The pharynx stays unmeasured. Each frame is then inverted through the tube itself
+(`stage1r.py`, per-frame r 0.85), so stage 1 can be scored in the tube's space with a measurement
+that sees a closure.
+
+**Scored there, the movement law loses to a step function.** Over the front third of the tract,
+all frames, held out: the speaker's own target held flat 0.608; pure interpolation between targets
+0.582; the critically damped follower 0.558, and 0.582 once fitted — the fit removes the mass and
+stretches the glide, which is interpolation by another name; a per-phone lookup 0.631; a lookup that
+knows the neighbours 0.694. Every region loses, the alveolar ridge most. The map-space comparison above had
+the follower gaining a few points — but it could not see a consonant and its measurement was the
+map's own smooth reading of the coils. Where closures are measured, interpolating in area space
+between targets makes the front cavity worse than not moving. That is the answer to this section's
+question for the tongue tip and the front cavity: target-and-interpolate, as this engine does it,
+is not the law; and the engine's vowel targets in that region have the wrong gradient outright,
+narrowing toward the lips where the speaker narrows toward the ridge.
+
 **Stage 1 rerun on the MRI-anchored map** gives the same table shifted up two points — 0.525 at
 the defaults, 0.547 refitted (to the same parameters), against 0.503 for the phone lookup and 0.584
 for the context lookup — with the same ordering and gaps. So the stage 1 reading stands: over vowel nuclei,

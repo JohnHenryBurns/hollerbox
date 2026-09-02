@@ -50,6 +50,8 @@ block is silent until import. `requirements.txt` pins 2.3.3, which loads.
 | `fit/mri_compare.py` | the engine's postures against those profiles: constriction place, degree, profile correlation |
 | `fit/mri_fit.py` | postures fitted to the profiles — the geometric target for each phone, no acoustics in the loop |
 | `fit/mrimap.py` | the coil map solved against the MRI profiles for every phone, with the vowel formants; returns the vowel map, and says why |
+| `fit/register_mri.py` | the coils registered into the MRI's frame: palate envelope, rigid registration, tongue contour, airway width per frame |
+| `fit/stage1r.py` | stage 1 on that measurement: frames inverted through the tube, consonants included, front third of the tract |
 | `tests/` | the above, run against the real engine; the corpus and MRI tests skip where the data is absent |
 | `data/` | corpora go here. Gitignored, and see [data/README.md](data/README.md) for the layout and the coordinate convention |
 | `out/` | everything derived: the token table, formant tables, fit reports. Gitignored |
@@ -376,6 +378,81 @@ The same table as before, shifted up by about two points everywhere because the 
 moved slightly with the map, with the same ordering and the same gaps: the movement law adds two to
 five points over a static table given map-consistent targets, anatomically right consonant targets
 lose, and the context lookup is the ceiling nobody reaches. Nothing about stage 1's reading changes.
+
+### The consonants, recovered by registration instead of a map
+
+`fit/register_mri.py` puts the coils into the MRI's frame, so the palate is a wall and a closure is
+a closure, with no map at all:
+
+1. **The palate in coil coordinates** is the upper envelope of where the tongue coils ever go —
+   the 99.5th percentile of height in each 2 mm bin of front–back position over 670,000 frames.
+   Every /t d n s/ puts the tip coil there and every /k g ŋ/ the body coil.
+2. **A rigid registration** — rotation and translation, both frames being metric — lays that
+   envelope on the MRI roof over the hard palate, with the upper-incisor reference coil pinned to
+   the incisors in the image. Rotation 11.8°, the envelope on the roof to 2.0 mm rms. The check
+   that it is right is the signed distance from every coil to the roof, per phone: the body coil
+   reaches the roof for /k g ŋ/ and for FLEECE, sits 12 mm off it for PALM, and 2.5% of all frames
+   fall above the roof, almost all under the velum, which hangs lower at rest than during speech.
+3. **The tongue as a contour** through the three coils, carried on to a tip whose length and
+   angle are calibrated so that /t d n/ midpoints close at the ridge and vowels do not (12 mm,
+   turned 20° up), and carried back down the root as a flagged guess; the lips from the lip coils
+   less the flesh between them, sized so /p b m/ read closed. The width at each MRI roof gridline
+   is the distance along its normal to that contour.
+
+**It works where the coils are.** Per phone, the median coil-derived profile at token midpoints
+against the MRI's sustained profile, over the stretch from the dorsum coil to the lips (MRI u
+0.66–0.98, the front third of the tract): consonants at a median r of 0.64 and a median place error
+of 0.4 cm — /t/ at 0.93 against the MRI's 0.91, /k/ at 0.67 against 0.67, /s ʃ n l r θ p m/ all
+within a centimetre — where the affine map had them anticorrelated and 3.9 cm off. Behind the
+dorsum coil nothing is measured; the pharynx is out of every comparison that follows.
+
+**And the tube cannot be scored against it directly.** Compared as normalised shapes, the tube's
+targets score below zero against the measured widths in every model, holding-the-target included,
+while lookups built in the measured space score 0.6. Two representations, not one. The tube CAN
+represent these widths — fitted per phone over the trusted sections the reachable correlation is
+0.96, with every closure in place — so `fit/stage1r.py invert` inverts every measured frame into
+the tube's six parameters, seeded from its phone's fitted posture and refined by batched descent
+(per-frame r 0.85), and stage 1 compares diameters to diameters as before, with a measurement that
+now sees a consonant. Engine sections are matched to MRI positions through the anatomy — velum to
+velum, ridge to ridge — because the tube seals its /d/ at 0.80 of its length and the speaker at
+0.91, and at equal fractions every model failed together.
+
+### Stage 1 in the registered frame
+
+`python -m fit.stage1r {prepare,invert,report,fit}`; everything under `out/stage1r/`. Held out,
+variance explained of the tube shape (normalised log diameters) over the trusted sections, all
+frames (vowel frames / consonant frames):
+
+    hold the Edinburgh table's target                −0.90   (−0.38 / −1.02)
+    hold the speaker's prior (his own fitted target)  0.608   (0.632 / 0.601)
+    speaker's phone mean                              0.631   (0.640 / 0.627)
+    speaker's phone mean given both neighbours        0.694   (0.694 / 0.692)
+    prior targets · no mass (pure interpolation)      0.582   (0.547 / 0.588)
+    prior targets · defaults                          0.558   (0.548 / 0.558)
+    prior targets · fitted                            0.582   (0.545 / 0.589)
+      (artT 0, artCrit 3.2, artStiff 0.235, artPush 0.15, artFar 1.4, glide 0.128 — the fit
+       removes the mass and stretches the glide: it turns the follower back into interpolation)
+
+**Three things this says, and the third reverses stage 1's headline.**
+
+1. **The engine's vowel targets have the wrong gradient in the front cavity.** Held flat, the
+   Edinburgh table scores below zero against a measurement that sees the front third of the
+   tract. The coils, agreeing with the MRI, narrow toward the alveolar ridge in KIT and TRAP; the
+   map-derived targets put the body hump behind the region and open toward the lips. This is the
+   KIT/DRESS fault the MRI check named, now measured on every frame. Consonant targets agree
+   (/k/ at r 0.96 against the measured mean).
+2. **With the speaker's own targets, consonants are in and the numbers are sane**: 56–58% of the
+   shape variance over all frames, consonant frames as well as vowels, against a lookup ceiling of
+   63% per phone and 69% per context.
+3. **The movement law loses to a step function.** Holding the same target flat scores 0.608; pure
+   interpolation between targets 0.582; the critically damped follower on top 0.558; the follower
+   fitted, 0.582 — the fit sets the mass to zero and stretches the glide to 0.13 s, which is to
+   say it turns itself back into interpolation and can do no better. Every region loses, the
+   alveolar ridge most (0.33 held → 0.14 with the follower), which is where the tongue tip's
+   dynamics live. In the map-space comparison the follower had gained two to five points;
+   that comparison could not see a consonant and its measurement was the map's own smooth reading.
+   Here, where closures are measured, interpolating in area space between targets makes the front
+   cavity's shape worse than not moving at all.
 
 What this settles: the research question is answerable, with this corpus and this tube, for vowel
 nuclei, and the stage 1 numbers stand for exactly that. Consonant constrictions would need either

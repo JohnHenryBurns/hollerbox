@@ -389,8 +389,9 @@ that sees a closure.
 
 **Scored there, the movement law loses to a step function.** Over the front third of the tract,
 all frames, held out: the speaker's own target held flat 0.608; pure interpolation between targets
-0.582; the critically damped follower 0.558; a per-phone lookup 0.631; a lookup that knows the
-neighbours 0.694. Every region loses, the alveolar ridge most. The map-space comparison above had
+0.582; the critically damped follower 0.558, and 0.582 once fitted — the fit removes the mass and
+stretches the glide, which is interpolation by another name; a per-phone lookup 0.631; a lookup that
+knows the neighbours 0.694. Every region loses, the alveolar ridge most. The map-space comparison above had
 the follower gaining a few points — but it could not see a consonant and its measurement was the
 map's own smooth reading of the coils. Where closures are measured, interpolating in area space
 between targets makes the front cavity worse than not moving. That is the answer to this section's

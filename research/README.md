@@ -429,7 +429,9 @@ frames (vowel frames / consonant frames):
     speaker's phone mean given both neighbours        0.694   (0.694 / 0.692)
     prior targets · no mass (pure interpolation)      0.582   (0.547 / 0.588)
     prior targets · defaults                          0.558   (0.548 / 0.558)
-    prior targets · fitted                            (see fit_prior.log)
+    prior targets · fitted                            0.582   (0.545 / 0.589)
+      (artT 0, artCrit 3.2, artStiff 0.235, artPush 0.15, artFar 1.4, glide 0.128 — the fit
+       removes the mass and stretches the glide: it turns the follower back into interpolation)
 
 **Three things this says, and the third reverses stage 1's headline.**
 
@@ -443,9 +445,11 @@ frames (vowel frames / consonant frames):
    shape variance over all frames, consonant frames as well as vowels, against a lookup ceiling of
    63% per phone and 69% per context.
 3. **The movement law loses to a step function.** Holding the same target flat scores 0.608; pure
-   interpolation between targets 0.582; the critically damped follower on top 0.558. Every region
-   loses, the alveolar ridge most (0.33 held → 0.14 with the follower), which is where the tongue
-   tip's dynamics live. In the map-space comparison the follower had gained two to five points;
+   interpolation between targets 0.582; the critically damped follower on top 0.558; the follower
+   fitted, 0.582 — the fit sets the mass to zero and stretches the glide to 0.13 s, which is to
+   say it turns itself back into interpolation and can do no better. Every region loses, the
+   alveolar ridge most (0.33 held → 0.14 with the follower), which is where the tongue tip's
+   dynamics live. In the map-space comparison the follower had gained two to five points;
    that comparison could not see a consonant and its measurement was the map's own smooth reading.
    Here, where closures are measured, interpolating in area space between targets makes the front
    cavity's shape worse than not moving at all.

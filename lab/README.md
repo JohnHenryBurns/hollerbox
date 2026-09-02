@@ -158,6 +158,8 @@ broken build reached production through a masked exit code.
 | `posture.js` | postures in, diameters or formants out, as JSON over stdin/stdout. The seam `research/` uses to reach `articulate` and the transfer function without a second implementation |
 | `artspace.js` | the tract shape read back as a posture: `articulate` inverted, with a planted-posture recovery check |
 | `trajectories.js` | the model's articulator track per frame as CSV, for fitting against articulography; `--actual` traces the running engine |
+| `solve-speaker.js` | a speaker's whole posture table solved against his MRI airway profiles and his acoustics at once; made the Edinburgh voice's table |
+| `listen.js` | the bench phrases rendered to WAV for a given voice, posture file and parameter overrides — stage 2.5's instrument, which is an ear |
 | `ship.sh` | the deploy gate |
 | `voice-fit.py` | measure a real recording: segment it, then F0, formants, H1–H2, spectral tilt per segment |
 | `fit-preset.js` | turn those measurements into a preset — tract length from F3, articulations solved per vowel, source from the voice-quality measures, and a seed |

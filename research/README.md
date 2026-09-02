@@ -49,6 +49,7 @@ block is silent until import. `requirements.txt` pins 2.3.3, which loads.
 | `fit/mri.py` | the static MRI read as an airway width profile along the tract, one per sustained prompt |
 | `fit/mri_compare.py` | the engine's postures against those profiles: constriction place, degree, profile correlation |
 | `fit/mri_fit.py` | postures fitted to the profiles — the geometric target for each phone, no acoustics in the loop |
+| `fit/mrimap.py` | the coil map solved against the MRI profiles for every phone, with the vowel formants; returns the vowel map, and says why |
 | `tests/` | the above, run against the real engine; the corpus and MRI tests skip where the data is absent |
 | `data/` | corpora go here. Gitignored, and see [data/README.md](data/README.md) for the layout and the coordinate convention |
 | `out/` | everything derived: the token table, formant tables, fit reports. Gitignored |

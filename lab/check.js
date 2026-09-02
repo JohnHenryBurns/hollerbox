@@ -2802,15 +2802,25 @@ check("the Mouth view defines its geometry once", () => {
   const redef = (fn.match(/=>\s*-?\(?\s*u\s*<\s*0\.30/g) || []).length;
   if (redef) bad.push(`${redef} local copy of the roof curve inside drawMouth`);
   if (/A\.bodyHi\s*\*\s*0\.78/.test(fn)) bad.push("the tongue curve is written out again");
-  for (const f of ["ROOF", "NASAL_ROOF", "NASAL_FLOOR", "TONGUE_AT"])
+  for (const f of ["ROOF", "NASAL_ROOF", "NASAL_FLOOR", "CM_PER_V", "TRACT_CM"])
     if (!new RegExp("const " + f + "\\b").test(code)) bad.push(`no shared ${f}`);
+  // THE TONGUE IS THE TUBE. It was a fifth copy of the shape, its own hump and tip with constants
+  // chosen to look right, and it disagreed with the airway about where the tongue was. Now it is
+  // the roof minus the diameter `articulate` gives that section, in centimetres on the drawn scale,
+  // so it cannot disagree with the tube — and a sealed stop draws sealed. The lips read the same
+  // array. Anything that reintroduces a separate tongue curve fails here.
+  if (/TONGUE_AT/.test(code)) bad.push("a separate tongue curve is back (TONGUE_AT)");
+  if (!/const TONGUE\s*=\s*u\s*=>\s*ROOF\(nOpen,\s*u\)\s*\+\s*dd\[/.test(fn))
+    bad.push("drawMouth does not draw the tongue from the tube's diameters");
+  if (!/lipGap\s*=\s*dd\[N-1\]\s*\/\s*cmv/.test(fn)) bad.push("the lip gap is not the last section's diameter");
+  if ((fn.match(/articulate\(A,\s*N\)/g) || []).length !== 1) bad.push("drawMouth should call articulate exactly once a frame");
 
   // and the shapes must not intersect, which is what the duplication caused
   // Evaluated against the PAGE'S OWN declarations, not a copy — a check that reimplements the
   // thing it checks is the fault it exists to catch, and an earlier version of this did exactly
   // that and stayed green while the page broke.
   const decls = (code.match(/const V_HINGE[\s\S]*?(?=function drawMouth)/) || [""])[0];
-  if (!/VELUM_AT/.test(decls) || !/TONGUE_AT/.test(decls)) bad.push("cannot find the page's geometry");
+  if (!/VELUM_AT/.test(decls) || !/CM_PER_V/.test(decls)) bad.push("cannot find the page's geometry");
   else {
     let G;
     try {

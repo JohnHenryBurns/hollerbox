@@ -1744,14 +1744,23 @@ const ROOF = (open, u) => u < V_TIP ? PHARYNX(u)
 // because there is nothing there — that gap IS the port.
 const NASAL_FLOOR = (open, u) => u < V_HINGE ? VELUM_AT(open, u) : PALATE(u);
 
-const TONGUE_AT = (A, u) => {
-  let v = 0.46 + 0.20*A.jaw;
-  const xb = (u - A.bodyPos)/0.30;
-  if (Math.abs(xb) < 1) v -= A.bodyHi*0.78*0.5*(1 + Math.cos(Math.PI*xb));
-  const xt = (u - A.tipPos)/0.085;
-  if (Math.abs(xt) < 1) v -= A.tipHi*0.86*0.5*(1 + Math.cos(Math.PI*xt));
-  return v;
-};
+// THE TONGUE IS THE TUBE, DRAWN TO SCALE. It used to be its own curve — a hump and a tip with
+// constants chosen to look right — which was the fifth copy of the shape and disagreed with the
+// airway about where the tongue was. Now the tongue surface is the roof minus the diameter the tube
+// actually has at that section, in centimetres, on the same scale the length is drawn at. A sealed
+// stop draws sealed; a vowel's gap is the gap the sound passes through.
+//
+// The horizontal axis is the tract's length: 6.4 S of canvas for `sect` sections at 3.97 mm each
+// (350 m/s over two passes at 44.1 kHz). One vertical unit is 2.1 S, so it is 0.328 of the tract
+// length in centimetres — 5.7 cm at 44 sections. That one number is what makes the diameters
+// drawable without a second guess about their size.
+const TRACT_CM = () => N * 350 / (2 * 44100) * 100;
+const CM_PER_V = () => 0.328 * TRACT_CM();
+// And how far the jaw itself drops: measured on mngu0's speaker through the fixed map in
+// research/fit/mngu0_map.json, one unit of `jaw` is 1.24 cm of jaw-coil height (slope -0.809 per
+// cm). The old 0.95 vertical units was 5.4 cm, four times what a jaw does. The tongue and lips no
+// longer need this — they move with the diameters — so it is only the mandible line now.
+const JAW_CM_PER_UNIT = 1.24;
 
 function drawMouth(){
   if(!mw) return;
@@ -1759,6 +1768,10 @@ function drawMouth(){
   const g=mctx, W=mw, H=mh, S=Math.min(W/9, H/7);
   const cx=W*0.5-S*0.6, cy=H*0.52;
   const X=u=>cx+(u-0.5)*S*6.4, Y=v=>cy+v*S*2.1;   // u: glottis(0)->lips(1), v: down
+
+  // the tube itself, once per frame: the tongue, the lips and the air path all read from it
+  const dd = articulate(A, N), cmv = CM_PER_V();
+  const TONGUE = u => ROOF(nOpen, u) + dd[Math.max(0, Math.min(N-1, Math.round(u*(N-1))))] / cmv;
 
   g.clearRect(0,0,W,H);
   g.lineWidth=Math.max(1.5,S*0.045);
@@ -1804,8 +1817,8 @@ function drawMouth(){
     g.strokeStyle=MOUTH_FLAP; g.stroke();
   }
 
-  // ---- the jaw line: opens downward ----
-  const jawDrop=0.30+A.jaw*0.95;
+  // ---- the jaw line: opens downward, by what a jaw drops ----
+  const jawDrop=0.30+A.jaw*JAW_CM_PER_UNIT/cmv;
   g.beginPath();
   for(let u=0.42;u<=1.0001;u+=0.02){
     const w=(u-0.42)/0.58;
@@ -1815,13 +1828,10 @@ function drawMouth(){
   }
   g.strokeStyle=MOUTH_FIXED; g.stroke();
 
-  // ---- the tongue: a body that humps, and a tip that can rise ----
+  // ---- the tongue: the underside of the tube, section by section ----
   g.beginPath();
   const pts=[];
-  // the fifth copy of a curve that is now defined once — this one drew the tongue while the
-  // airway used its own identical version to decide where the air went, so the two could and
-  // did disagree about where the tongue was
-  for(let u=0.06;u<=0.97;u+=0.015) pts.push([X(u), Y(TONGUE_AT(A,u))]);
+  for(let u=0.06;u<=0.97;u+=0.015) pts.push([X(u), Y(TONGUE(u))]);
   pts.forEach((pt,i)=>i? g.lineTo(pt[0],pt[1]) : g.moveTo(pt[0],pt[1]));
   const last=pts[pts.length-1];
   g.lineTo(last[0],Y(1.5)); g.lineTo(pts[0][0],Y(1.5)); g.closePath();
@@ -1830,8 +1840,8 @@ function drawMouth(){
   g.fillStyle=grad; g.fill();
   g.strokeStyle=MOUTH_TONGUE; g.stroke();
 
-  // ---- lips ----
-  const lipGap=0.05+A.lip*0.52, lx=X(1.0);
+  // ---- lips: the gap is the last section's diameter, so /b/ and /p/ draw shut ----
+  const lipGap=dd[N-1]/cmv, lx=X(1.0);
   g.lineWidth=Math.max(2.5,S*0.10); g.lineCap='round';
   g.strokeStyle=MOUTH_FLAP;
   g.beginPath(); g.moveTo(lx-S*0.18,Y(-0.34)); g.lineTo(lx+S*0.10,Y(-lipGap*0.5-0.02)); g.stroke();
@@ -1844,7 +1854,6 @@ function drawMouth(){
   // state is the thing this diagram can do that a textbook figure cannot — the path visibly
   // switches to the nose on an /m/ and dead-ends at the closure of a /d/.
   {
-    const dd = articulate(A, N);
     let seal = -1;                                  // first section tight enough to stop the air
     for(let i=1;i<N-1;i++) if(dd[i] < 0.06){ seal = i/(N-1); break; }
     g.lineWidth = Math.max(2.5, S*0.085);
@@ -1856,7 +1865,7 @@ function drawMouth(){
     g.beginPath();
     let started = false;
     for(let u=0.04; u<=stopAt+1e-9; u+=0.02){
-      const mid = ( ROOF(nOpen,u) + TONGUE_AT(A,u) ) / 2;
+      const mid = ( ROOF(nOpen,u) + TONGUE(u) ) / 2;
       const x=X(u), y=Y(mid);
       started ? g.lineTo(x,y) : (g.moveTo(x,y), started=true);
     }
@@ -1874,7 +1883,7 @@ function drawMouth(){
       const tip = VELUM_TIP(nOpen);
       const port = Math.max(NASO_BK + 0.02, tip.u - 0.05);
       const under = u => NASAL_FLOOR(nOpen, u);
-      g.moveTo(X(port), Y((ROOF(nOpen,port) + TONGUE_AT(A,port))/2));
+      g.moveTo(X(port), Y((ROOF(nOpen,port) + TONGUE(port))/2));
       g.lineTo(X(port), Y((NASAL_ROOF(port) + under(port))/2));
       for(let u=port; u<=0.99; u+=0.02) g.lineTo(X(u), Y((NASAL_ROOF(u) + under(u))/2));
       g.stroke();
@@ -1883,8 +1892,7 @@ function drawMouth(){
   }
 
   // ---- where the tract is narrowest, which is what makes the sound ----
-  const d=articulate(A,N);
-  let mn=9,mi=0; for(let i=1;i<N-1;i++) if(d[i]<mn){mn=d[i];mi=i;}
+  let mn=9,mi=0; for(let i=1;i<N-1;i++) if(dd[i]<mn){mn=dd[i];mi=i;}
   const u=mi/(N-1);
   g.lineWidth=Math.max(1.2,S*0.03);
   g.strokeStyle = mn<0.25 ? '#ff8c42' : 'rgba(185,198,204,.45)';
